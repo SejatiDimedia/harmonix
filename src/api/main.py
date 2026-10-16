@@ -7,19 +7,35 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
+from contextlib import asynccontextmanager
 from sse_starlette.sse import EventSourceResponse
 
 from src.agent.manual_loop import ManualAgentLoop
 from src.config import settings
 from src.db.connection import check_db_health
+from src.rag.glossary import seed_glossary_if_empty
 
 logging.basicConfig(level=settings.log_level)
 logger = logging.getLogger("harnessly.api")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifecycle events: seed metric glossary on startup."""
+    try:
+        if await check_db_health():
+            await seed_glossary_if_empty()
+            logger.info("Auto-seeded metric glossary at startup.")
+    except Exception as e:
+        logger.warning("Could not auto-seed metric glossary at startup: %s", e)
+    yield
+
 
 app = FastAPI(
     title="Harnessly Data Analyst Agent API",
     description="Production-grade text-to-SQL agent with full harness, guardrails, and SSE streaming.",
     version="0.1.0",
+    lifespan=lifespan,
 )
 
 app.add_middleware(

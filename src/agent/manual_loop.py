@@ -18,6 +18,7 @@ from src.config import settings
 from src.llm.provider import BaseLLMProvider, get_llm_provider
 from src.tools.base import BaseTool
 from src.tools.database import GetSchemaTool, RunSQLTool
+from src.tools.glossary import SearchGlossaryTool
 
 logger = logging.getLogger(__name__)
 
@@ -25,21 +26,23 @@ SYSTEM_PROMPT = """Anda adalah Senior Data Analyst AI Agent profesional untuk da
 Tugas Anda adalah menjawab pertanyaan pengguna secara akurat, berbasis data, dan terstruktur.
 
 ATURAN KERJA & HARNESS:
-1. Grounding & Schema Discovery:
+1. Metric Grounding & Business Glossary:
+   - Jika pertanyaan pengguna menyinggung istilah bisnis atau metrik (seperti GMV, Delivered Rate, AOV, Pelanggan Aktif, Rasio Pembatalan), panggil tool `search_glossary` terlebih dahulu untuk melihat definisi resmi dan rumus SQL yang disetujui perusahaan.
+2. Grounding & Schema Discovery:
    - JANGAN menebak nama tabel atau nama kolom.
-   - Panggil tool `get_schema` terlebih dahulu untuk memeriksa tabel dan kolom yang relevan beserta tipe data dan sampelnya.
-2. Safe SQL Generation:
+   - Panggil tool `get_schema` untuk memeriksa tabel dan kolom yang relevan beserta tipe data dan sampelnya.
+3. Safe SQL Generation:
    - Tulis HANYA query SELECT yang valid untuk dialek PostgreSQL.
    - Dilarang keras melakukan operasi penulisan (INSERT, UPDATE, DELETE, DROP, ALTER, dsb).
    - Hindari full-scan tanpa filter pada tabel besar jika tidak diperlukan.
    - Gunakan alias kolom yang jelas dan format numerik yang rapi.
-3. Eksekusi & Observasi:
+4. Eksekusi & Observasi:
    - Gunakan tool `run_sql` untuk mengeksekusi query.
    - Jika query menghasilkan error, perbaiki sintaks SQL berdasarkan pesan error pada langkah berikutnya.
-4. Jawaban Akhir:
+5. Jawaban Akhir:
    - Sajikan jawaban yang menjawab pertanyaan pengguna secara langsung.
    - Sertakan ringkasan temuan kunci dalam poin-poin yang mudah dipahami bisnis.
-   - Jelaskan metrik yang digunakan secara transparan.
+   - Jelaskan metrik dan rumus yang digunakan secara transparan (sitasi).
 """
 
 
@@ -56,7 +59,7 @@ class ManualAgentLoop:
         total_timeout_seconds: int | None = None,
     ):
         self.llm = llm or get_llm_provider()
-        tool_instances = tools or [GetSchemaTool(), RunSQLTool()]
+        tool_instances = tools or [SearchGlossaryTool(), GetSchemaTool(), RunSQLTool()]
         self.tools: dict[str, BaseTool] = {t.name: t for t in tool_instances}
         self.openai_tools = [t.to_openai_schema() for t in tool_instances]
 
@@ -216,6 +219,21 @@ class ManualAgentLoop:
                         }
                         # Pause loop waiting for human resolution
                         return
+
+                    # Collect metric definitions from glossary search
+                    if tool_name == "search_glossary" and isinstance(observation, dict):
+                        for m in observation.get("metrics", []):
+                            m_name = m.get("metric_name", "")
+                            m_def = m.get("business_definition", "")
+                            m_formula = m.get("calculation_formula", "")
+                            full_def = f"{m_name}: {m_def} (Formula: {m_formula})"
+                            citations.append(
+                                Citation(
+                                    sql_query=m.get("recommended_sql", ""),
+                                    metric_definition=full_def,
+                                    source_tables=m.get("relevant_tables", []),
+                                )
+                            )
 
                     # Collect tables and SQL queries for final citations
                     if tool_name == "run_sql" and isinstance(observation, dict):
