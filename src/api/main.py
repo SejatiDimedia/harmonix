@@ -1,4 +1,4 @@
-"""FastAPI application with SSE streaming, healthcheck, and approval endpoints."""
+"""FastAPI application with SSE streaming, state persistence, checkpointing, and HITL endpoints."""
 
 import json
 import logging
@@ -11,9 +11,12 @@ from contextlib import asynccontextmanager
 from sse_starlette.sse import EventSourceResponse
 
 from src.agent.manual_loop import ManualAgentLoop
+from src.agent.models import AgentTaskStatus
+from src.agent.state import get_task_record, save_task_checkpoint, init_task_state_table
 from src.config import settings
 from src.db.connection import check_db_health
 from src.rag.glossary import seed_glossary_if_empty
+from src.tools.database import RunSQLTool
 
 logging.basicConfig(level=settings.log_level)
 logger = logging.getLogger("harnessly.api")
@@ -21,19 +24,20 @@ logger = logging.getLogger("harnessly.api")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Lifecycle events: seed metric glossary on startup."""
+    """Lifecycle events: seed metric glossary and initialize task state tables on startup."""
     try:
         if await check_db_health():
             await seed_glossary_if_empty()
-            logger.info("Auto-seeded metric glossary at startup.")
+            await init_task_state_table()
+            logger.info("Auto-seeded metric glossary and initialized state tables at startup.")
     except Exception as e:
-        logger.warning("Could not auto-seed metric glossary at startup: %s", e)
+        logger.warning("Startup initialization error: %s", e)
     yield
 
 
 app = FastAPI(
     title="Harnessly Data Analyst Agent API",
-    description="Production-grade text-to-SQL agent with full harness, guardrails, and SSE streaming.",
+    description="Production-grade text-to-SQL agent with full harness, guardrails, state persistence, and SSE streaming.",
     version="0.1.0",
     lifespan=lifespan,
 )
@@ -47,7 +51,7 @@ app.add_middleware(
 )
 
 
-# In-memory approval store for pending HITL requests (will be backed by DB in M3)
+# In-memory approval store for pending HITL requests
 pending_approvals: dict[str, dict] = {}
 
 
@@ -64,6 +68,10 @@ class ChatRequest(BaseModel):
 class ApprovalRequest(BaseModel):
     decision: Literal["approved", "rejected"] = Field(..., description="Approval decision")
     reason: str | None = Field(default=None, description="Optional feedback or rejection reason")
+
+
+class ResumeTaskRequest(BaseModel):
+    feedback: str | None = Field(default=None, description="Optional feedback or guidance for resuming agent")
 
 
 # ==============================================================================
@@ -96,7 +104,11 @@ async def chat_stream(request: ChatRequest):
 
     async def event_generator():
         try:
-            async for event in agent.run(user_query=request.query, task_id=request.task_id):
+            async for event in agent.run(
+                user_query=request.query,
+                task_id=request.task_id,
+                session_id=request.session_id,
+            ):
                 # If approval required, store in pending store
                 if event["event"] == "approval_required":
                     appr_data = event["data"]
@@ -118,6 +130,15 @@ async def chat_stream(request: ChatRequest):
     return EventSourceResponse(event_generator())
 
 
+@app.get("/v1/tasks/{task_id}", tags=["Agent"])
+async def get_task(task_id: str):
+    """Retrieve current state, checkpoints, or final result of an agent task."""
+    record = await get_task_record(task_id)
+    if not record:
+        raise HTTPException(status_code=404, detail=f"Task '{task_id}' not found.")
+    return record.model_dump()
+
+
 @app.post("/v1/approvals/{approval_id}", tags=["Agent"])
 async def submit_approval(approval_id: str, request: ApprovalRequest):
     """Approve or reject a risky query that triggered the human-in-the-loop approval gate."""
@@ -128,16 +149,115 @@ async def submit_approval(approval_id: str, request: ApprovalRequest):
     item["decision"] = request.decision
     item["reason"] = request.reason
 
+    task_id = item.get("task_id")
+    if task_id:
+        record = await get_task_record(task_id)
+        if record and record.pending_approval:
+            record.pending_approval["decision"] = request.decision
+            record.pending_approval["reason"] = request.reason
+            await save_task_checkpoint(
+                task_id=task_id,
+                status=AgentTaskStatus.RESUMED if request.decision == "approved" else AgentTaskStatus.WAITING_APPROVAL,
+                current_step=record.current_step,
+                messages=record.messages,
+                user_query=record.user_query,
+                session_id=record.session_id,
+                pending_approval=record.pending_approval,
+            )
+
     return {
         "approval_id": approval_id,
         "status": "processed",
         "decision": request.decision,
+        "task_id": task_id,
     }
+
+
+@app.post("/v1/tasks/{task_id}/resume", tags=["Agent"])
+async def resume_task_stream(task_id: str, request: ResumeTaskRequest | None = None):
+    """Resume execution of a paused or waiting-approval task with SSE streaming."""
+    record = await get_task_record(task_id)
+    if not record:
+        raise HTTPException(status_code=404, detail=f"Task '{task_id}' not found.")
+
+    if record.status not in (AgentTaskStatus.WAITING_APPROVAL, AgentTaskStatus.RESUMED, AgentTaskStatus.RUNNING):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Task cannot be resumed because its status is '{record.status.value}'.",
+        )
+
+    resume_messages = list(record.messages)
+    pending_appr = record.pending_approval or {}
+    decision = pending_appr.get("decision")
+
+    # If resuming from approval gate, resolve the pending tool call
+    if pending_appr and "tool_call_id" in pending_appr:
+        tool_call_id = pending_appr.get("tool_call_id")
+        tool_name = pending_appr.get("tool_name", "run_sql")
+        sanitized_query = pending_appr.get("sanitized_query", "")
+
+        if decision == "approved":
+            sql_tool = RunSQLTool()
+            obs = await sql_tool.execute(query=sanitized_query, is_approved=True)
+            resume_messages.append({
+                "role": "tool",
+                "tool_call_id": tool_call_id,
+                "name": tool_name,
+                "content": json.dumps(obs, ensure_ascii=False),
+            })
+        else:
+            reason = pending_appr.get("reason") or "Rejected by human operator."
+            obs = {
+                "status": "rejected",
+                "message": f"Query was rejected by operator. Reason: {reason}",
+                "query": sanitized_query,
+            }
+            resume_messages.append({
+                "role": "tool",
+                "tool_call_id": tool_call_id,
+                "name": tool_name,
+                "content": json.dumps(obs, ensure_ascii=False),
+            })
+
+    if request and request.feedback:
+        resume_messages.append({
+            "role": "user",
+            "content": f"Operator Feedback: {request.feedback}",
+        })
+
+    agent = ManualAgentLoop()
+
+    async def event_generator():
+        try:
+            async for event in agent.run(
+                user_query=record.user_query,
+                task_id=task_id,
+                session_id=record.session_id,
+                resume_messages=resume_messages,
+                initial_step=record.current_step,
+            ):
+                if event["event"] == "approval_required":
+                    appr_data = event["data"]
+                    appr_id = appr_data.get("approval_id")
+                    if appr_id:
+                        pending_approvals[appr_id] = appr_data
+                yield {
+                    "event": event["event"],
+                    "data": json.dumps(event["data"], ensure_ascii=False),
+                }
+        except Exception as e:
+            logger.error("Error in resume event generator: %s", e)
+            yield {
+                "event": "error",
+                "data": json.dumps({"message": f"Resume execution error: {e}"}),
+            }
+
+    return EventSourceResponse(event_generator())
 
 
 @app.get("/", response_class=HTMLResponse, tags=["UI"])
 async def web_ui():
-    """Minimal zero-cost chat UI for testing agent streaming and SQL results."""
+    """Minimal zero-cost chat UI for testing agent streaming, HITL approval, and SQL results."""
     return """
     <!DOCTYPE html>
     <html lang="id">
@@ -159,7 +279,7 @@ async def web_ui():
         <main class="flex-1 max-w-4xl w-full mx-auto p-4 flex flex-col gap-4">
             <div id="messages" class="flex-1 overflow-y-auto space-y-4 min-h-[400px] p-2">
                 <div class="bg-slate-800/60 p-4 rounded-xl border border-slate-700/60 text-slate-300 text-sm">
-                    👋 Halo! Saya Data Analyst Agent. Anda dapat menanyakan tren penjualan, perbandingan produk, atau metrik e-commerce. Seluruh query SQL tervalidasi AST & read-only secara aman.
+                    👋 Halo! Saya Data Analyst Agent. Anda dapat menanyakan tren penjualan, perbandingan produk, atau metrik e-commerce. Seluruh query SQL tervalidasi AST, read-only, dan tersimpan dalam state machine PostgreSQL secara persisten.
                 </div>
             </div>
 
@@ -186,6 +306,17 @@ async def web_ui():
             const queryInput = document.getElementById('queryInput');
             const submitBtn = document.getElementById('submitBtn');
             const healthBadge = document.getElementById('healthBadge');
+            const approvalBanner = document.getElementById('approvalBanner');
+            const approvalReason = document.getElementById('approvalReason');
+            const approvalSQL = document.getElementById('approvalSQL');
+            const btnApprove = document.getElementById('btnApprove');
+            const btnReject = document.getElementById('btnReject');
+
+            let currentApprovalId = null;
+            let currentTaskId = null;
+            let currentStatusEl = null;
+            let currentContentEl = null;
+            let currentAgentBox = null;
 
             async function checkHealth() {
                 try {
@@ -201,12 +332,80 @@ async def web_ui():
             }
             checkHealth();
 
+            async function readSSEStream(response, statusEl, contentEl, agentBox) {
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    buffer += decoder.decode(value, { stream: true });
+
+                    const lines = buffer.split('\\n');
+                    buffer = lines.pop();
+
+                    let currentEvent = 'message';
+                    for (const line of lines) {
+                        if (line.startsWith('event: ')) {
+                            currentEvent = line.replace('event: ', '').trim();
+                        } else if (line.startsWith('data: ')) {
+                            const dataStr = line.replace('data: ', '').trim();
+                            try {
+                                const parsed = JSON.parse(dataStr);
+                                if (currentEvent === 'step_start') {
+                                    statusEl.textContent = `⚡ Step ${parsed.step}/${parsed.max_steps}: Analyzing & executing...`;
+                                } else if (currentEvent === 'token') {
+                                    contentEl.textContent += parsed.delta;
+                                } else if (currentEvent === 'approval_required') {
+                                    currentApprovalId = parsed.approval_id;
+                                    currentTaskId = parsed.task_id;
+                                    currentStatusEl = statusEl;
+                                    currentContentEl = contentEl;
+                                    currentAgentBox = agentBox;
+
+                                    statusEl.textContent = `⚠️ Menunggu Approval Manusia`;
+                                    statusEl.className = 'text-xs text-amber-400 font-mono';
+                                    approvalReason.textContent = (parsed.risk_reasons || []).join(", ");
+                                    approvalSQL.textContent = parsed.sanitized_query || '';
+                                    approvalBanner.classList.remove('hidden');
+                                } else if (currentEvent === 'final_result') {
+                                    statusEl.textContent = `✅ Selesai dalam ${parsed.total_steps} langkah`;
+                                    statusEl.className = 'text-xs text-emerald-400 font-mono';
+                                    
+                                    if (parsed.sql_queries && parsed.sql_queries.length > 0) {
+                                        const sqlBox = document.createElement('div');
+                                        sqlBox.className = 'mt-3 p-2 bg-slate-950 rounded border border-slate-800 text-xs text-cyan-300 font-mono overflow-x-auto';
+                                        sqlBox.innerHTML = '<strong>SQL Query (Sanitized):</strong><br>' + parsed.sql_queries.join('<br>');
+                                        agentBox.appendChild(sqlBox);
+                                    }
+
+                                    if (parsed.tables && parsed.tables.length > 0) {
+                                        parsed.tables.forEach(t => {
+                                            const tbl = document.createElement('table');
+                                            tbl.className = 'w-full text-xs text-left border-collapse mt-2 border border-slate-700';
+                                            let ths = t.columns.map(c => `<th class="border border-slate-700 p-1 bg-slate-900">${c}</th>`).join('');
+                                            let trs = t.rows.map(r => `<tr>${r.map(val => `<td class="border border-slate-800 p-1">${val ?? 'NULL'}</td>`).join('')}</tr>`).join('');
+                                            tbl.innerHTML = `<thead><tr>${ths}</tr></thead><tbody>${trs}</tbody>`;
+                                            agentBox.appendChild(tbl);
+                                        });
+                                    }
+                                } else if (currentEvent === 'error') {
+                                    statusEl.textContent = `❌ ${parsed.message}`;
+                                    statusEl.className = 'text-xs text-rose-400 font-mono';
+                                }
+                            } catch (err) {}
+                        }
+                    }
+                    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                }
+            }
+
             chatForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const q = queryInput.value.trim();
                 if (!q) return;
 
-                // Append user message
                 const userBox = document.createElement('div');
                 userBox.className = 'bg-cyan-950/40 border border-cyan-800/50 p-3 rounded-xl ml-auto max-w-[80%] text-sm text-cyan-100';
                 userBox.textContent = q;
@@ -214,7 +413,6 @@ async def web_ui():
                 queryInput.value = '';
                 submitBtn.disabled = true;
 
-                // Agent message placeholder
                 const agentBox = document.createElement('div');
                 agentBox.className = 'bg-slate-800/80 border border-slate-700 p-4 rounded-xl text-sm space-y-3';
                 agentBox.innerHTML = '<div class="text-xs text-cyan-400 font-mono animate-pulse">⏳ Agent loop planning...</div><div class="content whitespace-pre-wrap"></div>';
@@ -230,68 +428,52 @@ async def web_ui():
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ query: q })
                     });
-
-                    const reader = response.body.getReader();
-                    const decoder = new TextDecoder();
-                    let buffer = '';
-
-                    while (true) {
-                        const { done, value } = await reader.read();
-                        if (done) break;
-                        buffer += decoder.decode(value, { stream: true });
-
-                        const lines = buffer.split('\\n');
-                        buffer = lines.pop(); // keep last incomplete chunk
-
-                        let currentEvent = 'message';
-                        for (const line of lines) {
-                            if (line.startsWith('event: ')) {
-                                currentEvent = line.replace('event: ', '').trim();
-                            } else if (line.startsWith('data: ')) {
-                                const dataStr = line.replace('data: ', '').trim();
-                                try {
-                                    const parsed = JSON.parse(dataStr);
-                                    if (currentEvent === 'step_start') {
-                                        statusEl.textContent = `⚡ Step ${parsed.step}/${parsed.max_steps}: Analyzing & executing...`;
-                                    } else if (currentEvent === 'token') {
-                                        contentEl.textContent += parsed.delta;
-                                    } else if (currentEvent === 'final_result') {
-                                        statusEl.textContent = `✅ Selesai dalam ${parsed.total_steps} langkah`;
-                                        statusEl.className = 'text-xs text-emerald-400 font-mono';
-                                        
-                                        // Render SQL citations if present
-                                        if (parsed.sql_queries && parsed.sql_queries.length > 0) {
-                                            const sqlBox = document.createElement('div');
-                                            sqlBox.className = 'mt-3 p-2 bg-slate-950 rounded border border-slate-800 text-xs text-cyan-300 font-mono overflow-x-auto';
-                                            sqlBox.innerHTML = '<strong>SQL Query (Sanitized):</strong><br>' + parsed.sql_queries.join('<br>');
-                                            agentBox.appendChild(sqlBox);
-                                        }
-
-                                        // Render Tables if present
-                                        if (parsed.tables && parsed.tables.length > 0) {
-                                            parsed.tables.forEach(t => {
-                                                const tbl = document.createElement('table');
-                                                tbl.className = 'w-full text-xs text-left border-collapse mt-2 border border-slate-700';
-                                                let ths = t.columns.map(c => `<th class="border border-slate-700 p-1 bg-slate-900">${c}</th>`).join('');
-                                                let trs = t.rows.map(r => `<tr>${r.map(val => `<td class="border border-slate-800 p-1">${val ?? 'NULL'}</td>`).join('')}</tr>`).join('');
-                                                tbl.innerHTML = `<thead><tr>${ths}</tr></thead><tbody>${trs}</tbody>`;
-                                                agentBox.appendChild(tbl);
-                                            });
-                                        }
-                                    } else if (currentEvent === 'error') {
-                                        statusEl.textContent = `❌ ${parsed.message}`;
-                                        statusEl.className = 'text-xs text-rose-400 font-mono';
-                                    }
-                                } catch (err) {}
-                            }
-                        }
-                        messagesDiv.scrollTop = messagesDiv.scrollHeight;
-                    }
+                    await readSSEStream(response, statusEl, contentEl, agentBox);
                 } catch (err) {
                     statusEl.textContent = `❌ Error: ${err.message}`;
                 } finally {
                     submitBtn.disabled = false;
                 }
+            });
+
+            btnApprove.addEventListener('click', async () => {
+                if (!currentApprovalId || !currentTaskId) return;
+                approvalBanner.classList.add('hidden');
+                currentStatusEl.textContent = `⚡ Melanjutkan tugas setelah persetujuan...`;
+                currentStatusEl.className = 'text-xs text-cyan-400 font-mono animate-pulse';
+
+                await fetch(`/v1/approvals/${currentApprovalId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ decision: 'approved' })
+                });
+
+                const resumeResp = await fetch(`/v1/tasks/${currentTaskId}/resume`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ feedback: 'Query disetujui.' })
+                });
+                await readSSEStream(resumeResp, currentStatusEl, currentContentEl, currentAgentBox);
+            });
+
+            btnReject.addEventListener('click', async () => {
+                if (!currentApprovalId || !currentTaskId) return;
+                approvalBanner.classList.add('hidden');
+                currentStatusEl.textContent = `⚡ Melanjutkan tugas dengan query alternatif...`;
+                currentStatusEl.className = 'text-xs text-rose-400 font-mono animate-pulse';
+
+                await fetch(`/v1/approvals/${currentApprovalId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ decision: 'rejected', reason: 'Query ditolak oleh human operator.' })
+                });
+
+                const resumeResp = await fetch(`/v1/tasks/${currentTaskId}/resume`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ feedback: 'Query ditolak, gunakan pendekatan lain.' })
+                });
+                await readSSEStream(resumeResp, currentStatusEl, currentContentEl, currentAgentBox);
             });
         </script>
     </body>

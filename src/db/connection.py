@@ -16,13 +16,18 @@ from src.config import settings
 
 logger = logging.getLogger(__name__)
 
+import sys
+from sqlalchemy.pool import NullPool
+
+use_null_pool = "pytest" in sys.modules or settings.app_env == "test"
+
 # Create global async engine
 engine: AsyncEngine = create_async_engine(
     settings.database_url,
     echo=False,
-    pool_size=5,
-    max_overflow=10,
+    poolclass=NullPool if use_null_pool else None,
     pool_pre_ping=True,
+    **({} if use_null_pool else {"pool_size": 5, "max_overflow": 10}),
 )
 
 # Async session factory

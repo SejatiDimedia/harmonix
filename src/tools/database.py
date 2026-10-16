@@ -136,7 +136,7 @@ class RunSQLTool(BaseTool):
     def __init__(self, guardrail: SQLGuardrail | None = None):
         self.guardrail = guardrail or SQLGuardrail()
 
-    async def execute(self, query: str) -> dict[str, Any]:
+    async def execute(self, query: str, is_approved: bool = False) -> dict[str, Any]:
         """Validate, assess risk, and execute SQL query."""
         # 1. AST Validation & limit enforcement
         try:
@@ -150,15 +150,16 @@ class RunSQLTool(BaseTool):
             }
 
         # 2. Risk Assessment (FR-25: approval gate for high risk)
-        risk_assessment = self.guardrail.assess_risk(sanitized_query)
-        if risk_assessment.requires_approval:
-            return {
-                "status": "approval_required",
-                "message": "This query requires human approval before execution.",
-                "sanitized_query": sanitized_query,
-                "risk_reasons": risk_assessment.risk_reasons,
-                "sensitive_columns": risk_assessment.sensitive_columns_accessed,
-            }
+        if not is_approved:
+            risk_assessment = self.guardrail.assess_risk(sanitized_query)
+            if risk_assessment.requires_approval:
+                return {
+                    "status": "approval_required",
+                    "message": "This query requires human approval before execution.",
+                    "sanitized_query": sanitized_query,
+                    "risk_reasons": risk_assessment.risk_reasons,
+                    "sensitive_columns": risk_assessment.sensitive_columns_accessed,
+                }
 
         # 3. Execution with statement timeout
         timeout_ms = settings.sql_execution_timeout_seconds * 1000

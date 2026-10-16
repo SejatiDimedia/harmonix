@@ -21,14 +21,14 @@ class Settings(BaseSettings):
     log_level: str = Field(default="INFO", description="Logging level")
 
     # Database settings
-    db_host: str = Field(default="localhost")
-    db_port: int = Field(default=5432)
+    db_host: str = Field(default="127.0.0.1")
+    db_port: int = Field(default=5433)
     db_user: str = Field(default="harnessly_user")
     db_password: str = Field(default="harnessly_pass")
     db_name: str = Field(default="harnessly_db")
     db_schema: str = Field(default="analytics")
     database_url: str = Field(
-        default="postgresql+asyncpg://harnessly_user:harnessly_pass@localhost:5432/harnessly_db",
+        default="postgresql+asyncpg://harnessly_user:harnessly_pass@127.0.0.1:5433/harnessly_db",
         description="Async SQLAlchemy database connection URL",
     )
 

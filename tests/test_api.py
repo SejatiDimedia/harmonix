@@ -47,3 +47,61 @@ async def test_approval_endpoint_404():
             json={"decision": "approved", "reason": "Looks safe to me"},
         )
         assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_get_task_endpoint():
+    """Verify /v1/tasks/{task_id} returns 404 for unknown task and 200 for saved task."""
+    from src.agent.models import AgentTaskStatus
+    from src.agent.state import save_task_checkpoint
+
+    test_task_id = "test_api_task_123"
+    await save_task_checkpoint(
+        task_id=test_task_id,
+        status=AgentTaskStatus.RUNNING,
+        current_step=1,
+        messages=[{"role": "user", "content": "Halo"}],
+        user_query="Halo",
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        # Unknown task
+        resp_404 = await client.get("/v1/tasks/non_existent_task")
+        assert resp_404.status_code == 404
+
+        # Known task
+        resp_200 = await client.get(f"/v1/tasks/{test_task_id}")
+        assert resp_200.status_code == 200
+        data = resp_200.json()
+        assert data["task_id"] == test_task_id
+        assert data["status"] == "RUNNING"
+        assert data["current_step"] == 1
+
+
+@pytest.mark.asyncio
+async def test_task_resume_stream():
+    """Verify /v1/tasks/{task_id}/resume resumes execution and streams SSE."""
+    from src.agent.models import AgentTaskStatus
+    from src.agent.state import save_task_checkpoint
+
+    test_task_id = "test_resume_task_456"
+    await save_task_checkpoint(
+        task_id=test_task_id,
+        status=AgentTaskStatus.WAITING_APPROVAL,
+        current_step=1,
+        messages=[{"role": "user", "content": "Analisis data"}],
+        user_query="Analisis data",
+        pending_approval={"decision": "approved"},
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        async with client.stream("POST", f"/v1/tasks/{test_task_id}/resume", json={"feedback": "Lanjutkan"}) as resp:
+            assert resp.status_code == 200
+            assert "text/event-stream" in resp.headers.get("content-type", "")
+            lines = []
+            async for line in resp.aiter_lines():
+                if line:
+                    lines.append(line)
+            events = [line for line in lines if line.startswith("event: ")]
+            assert len(events) > 0
+

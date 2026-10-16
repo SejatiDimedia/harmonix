@@ -1,4 +1,7 @@
-"""Manual Agent Loop implementation without external orchestration frameworks (FR-01)."""
+"""Manual Agent Loop implementation without external orchestration frameworks (FR-01).
+
+Includes Checkpointing, State Machine (FR-19), Short-term Memory (FR-16), and PII Masking (FR-24).
+"""
 
 import asyncio
 import json
@@ -14,11 +17,14 @@ from src.agent.models import (
     Citation,
     TableData,
 )
+from src.agent.state import get_session_history, save_task_checkpoint
 from src.config import settings
 from src.llm.provider import BaseLLMProvider, get_llm_provider
 from src.tools.base import BaseTool
 from src.tools.database import GetSchemaTool, RunSQLTool
 from src.tools.glossary import SearchGlossaryTool
+from src.tools.pii import PIIMasker
+from src.tools.sandbox import CalculateTool
 
 logger = logging.getLogger(__name__)
 
@@ -36,10 +42,12 @@ ATURAN KERJA & HARNESS:
    - Dilarang keras melakukan operasi penulisan (INSERT, UPDATE, DELETE, DROP, ALTER, dsb).
    - Hindari full-scan tanpa filter pada tabel besar jika tidak diperlukan.
    - Gunakan alias kolom yang jelas dan format numerik yang rapi.
-4. Eksekusi & Observasi:
+4. Perhitungan Tambahan & Statistik:
+   - Jika memerlukan perhitungan persentase rumit, rasio, pertumbuhan, atau statistik yang sulit di SQL, gunakan tool `calculate` untuk menjalankan Python secara aman.
+5. Eksekusi & Observasi:
    - Gunakan tool `run_sql` untuk mengeksekusi query.
    - Jika query menghasilkan error, perbaiki sintaks SQL berdasarkan pesan error pada langkah berikutnya.
-5. Jawaban Akhir:
+6. Jawaban Akhir:
    - Sajikan jawaban yang menjawab pertanyaan pengguna secara langsung.
    - Sertakan ringkasan temuan kunci dalam poin-poin yang mudah dipahami bisnis.
    - Jelaskan metrik dan rumus yang digunakan secara transparan (sitasi).
@@ -47,7 +55,7 @@ ATURAN KERJA & HARNESS:
 
 
 class ManualAgentLoop:
-    """Production-grade agent loop with step bounds, token budgeting, and approval gating."""
+    """Production-grade agent loop with step bounds, token budgeting, and state persistence."""
 
     def __init__(
         self,
@@ -59,7 +67,12 @@ class ManualAgentLoop:
         total_timeout_seconds: int | None = None,
     ):
         self.llm = llm or get_llm_provider()
-        tool_instances = tools or [SearchGlossaryTool(), GetSchemaTool(), RunSQLTool()]
+        tool_instances = tools or [
+            SearchGlossaryTool(),
+            GetSchemaTool(),
+            RunSQLTool(),
+            CalculateTool(),
+        ]
         self.tools: dict[str, BaseTool] = {t.name: t for t in tool_instances}
         self.openai_tools = [t.to_openai_schema() for t in tool_instances]
 
@@ -72,32 +85,40 @@ class ManualAgentLoop:
         self,
         user_query: str,
         task_id: str | None = None,
+        session_id: str | None = None,
         chat_history: list[dict[str, str]] | None = None,
+        resume_messages: list[dict[str, Any]] | None = None,
+        initial_step: int = 0,
     ) -> AsyncIterator[dict[str, Any]]:
-        """Run the manual agent loop and yield streaming SSE events.
-
-        Yields dictionaries with 'event' and 'data' keys conforming to PRD specs:
-        - event: 'step_start'
-        - event: 'token'
-        - event: 'approval_required'
-        - event: 'final_result'
-        - event: 'error'
-        """
+        """Run the manual agent loop and yield streaming SSE events."""
         task_id = task_id or f"task_{uuid.uuid4().hex[:8]}"
         start_time = time.perf_counter()
 
-        # Build initial messages
-        messages: list[dict[str, Any]] = [{"role": "system", "content": SYSTEM_PROMPT}]
-        if chat_history:
-            messages.extend(chat_history)
-        messages.append({"role": "user", "content": user_query})
+        # Build initial messages (or restore from resumed state)
+        if resume_messages:
+            messages = resume_messages
+            logger.info("Resuming task %s from checkpoint with %d messages.", task_id, len(messages))
+        else:
+            messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+            # Load short-term conversation memory from session if available (FR-16)
+            if session_id:
+                try:
+                    past_turns = await get_session_history(session_id=session_id)
+                    if past_turns:
+                        messages.extend(past_turns)
+                except Exception as e:
+                    logger.warning("Could not load session history for %s: %s", session_id, e)
+
+            if chat_history:
+                messages.extend(chat_history)
+            messages.append({"role": "user", "content": user_query})
 
         total_tokens = 0
         executed_sqls: list[str] = []
         captured_tables: list[TableData] = []
         citations: list[Citation] = []
 
-        step = 0
+        step = initial_step
         final_answer_text = ""
 
         while step < self.max_steps:
@@ -106,10 +127,24 @@ class ManualAgentLoop:
 
             # 1. Total Timeout Check (FR-02, FR-27)
             if elapsed_time > self.total_timeout:
+                err_msg = f"Task exceeded maximum total timeout of {self.total_timeout}s."
+                try:
+                    await save_task_checkpoint(
+                        task_id=task_id,
+                        status=AgentTaskStatus.FAILED,
+                        current_step=step,
+                        messages=messages,
+                        user_query=user_query,
+                        session_id=session_id,
+                        error_message=err_msg,
+                    )
+                except Exception as e:
+                    logger.warning("Checkpoint save failed on timeout: %s", e)
+
                 yield {
                     "event": "error",
                     "data": {
-                        "message": f"Task exceeded maximum total timeout of {self.total_timeout}s.",
+                        "message": err_msg,
                         "task_id": task_id,
                         "status": AgentTaskStatus.FAILED.value,
                     },
@@ -118,15 +153,42 @@ class ManualAgentLoop:
 
             # 2. Token Budget Check (FR-29)
             if total_tokens > self.max_token_budget:
+                err_msg = f"Task exceeded token budget limit of {self.max_token_budget} tokens."
+                try:
+                    await save_task_checkpoint(
+                        task_id=task_id,
+                        status=AgentTaskStatus.FAILED,
+                        current_step=step,
+                        messages=messages,
+                        user_query=user_query,
+                        session_id=session_id,
+                        error_message=err_msg,
+                    )
+                except Exception as e:
+                    logger.warning("Checkpoint save failed on token budget: %s", e)
+
                 yield {
                     "event": "error",
                     "data": {
-                        "message": f"Task exceeded token budget limit of {self.max_token_budget} tokens.",
+                        "message": err_msg,
                         "task_id": task_id,
                         "status": AgentTaskStatus.FAILED.value,
                     },
                 }
                 return
+
+            # Save checkpoint: Step in progress (RUNNING)
+            try:
+                await save_task_checkpoint(
+                    task_id=task_id,
+                    status=AgentTaskStatus.RUNNING,
+                    current_step=step,
+                    messages=messages,
+                    user_query=user_query,
+                    session_id=session_id,
+                )
+            except Exception as e:
+                logger.debug("Running checkpoint save: %s", e)
 
             # Yield step start notification
             yield {
@@ -203,21 +265,39 @@ class ManualAgentLoop:
                         except Exception as e:
                             observation = {"error": f"Tool execution failed: {e}"}
 
-                    # Check if tool triggered an Approval Gate (FR-25)
+                    # Check if tool triggered an Approval Gate (FR-25, FR-19)
                     if isinstance(observation, dict) and observation.get("status") == "approval_required":
                         approval_id = f"appr_{uuid.uuid4().hex[:8]}"
+                        approval_payload = {
+                            "approval_id": approval_id,
+                            "task_id": task_id,
+                            "step": step,
+                            "tool_call_id": tool_call.id,
+                            "tool_name": tool_name,
+                            "sanitized_query": observation.get("sanitized_query"),
+                            "risk_reasons": observation.get("risk_reasons", []),
+                            "sensitive_columns": observation.get("sensitive_columns", []),
+                        }
+
+                        # Persist WAITING_APPROVAL state to DB (non-blocking thread suspension)
+                        try:
+                            await save_task_checkpoint(
+                                task_id=task_id,
+                                status=AgentTaskStatus.WAITING_APPROVAL,
+                                current_step=step,
+                                messages=messages,
+                                user_query=user_query,
+                                session_id=session_id,
+                                pending_approval=approval_payload,
+                            )
+                        except Exception as e:
+                            logger.warning("Approval checkpoint save failed: %s", e)
+
                         yield {
                             "event": "approval_required",
-                            "data": {
-                                "approval_id": approval_id,
-                                "task_id": task_id,
-                                "step": step,
-                                "sanitized_query": observation.get("sanitized_query"),
-                                "risk_reasons": observation.get("risk_reasons", []),
-                                "sensitive_columns": observation.get("sensitive_columns", []),
-                            },
+                            "data": approval_payload,
                         }
-                        # Pause loop waiting for human resolution
+                        # Safely pause loop waiting for human resolution
                         return
 
                     # Collect metric definitions from glossary search
@@ -272,14 +352,31 @@ class ManualAgentLoop:
             else:
                 final_answer_text = f"{warning} Berikut adalah data parsial yang berhasil diperoleh."
 
+        # Apply PII Masking on final output (FR-24)
+        masked_answer = PIIMasker.mask_text(final_answer_text)
+
         final_response = AgentFinalResponse(
-            answer_text=final_answer_text,
+            answer_text=masked_answer,
             sql_queries=executed_sqls,
             tables=captured_tables,
             citations=citations,
             total_steps=step,
             token_usage={"total_tokens": total_tokens},
         )
+
+        # Persist COMPLETED task state in PostgreSQL
+        try:
+            await save_task_checkpoint(
+                task_id=task_id,
+                status=AgentTaskStatus.COMPLETED,
+                current_step=step,
+                messages=messages,
+                user_query=user_query,
+                session_id=session_id,
+                final_result=final_response.model_dump(),
+            )
+        except Exception as e:
+            logger.warning("Completion checkpoint save failed: %s", e)
 
         yield {
             "event": "final_result",
