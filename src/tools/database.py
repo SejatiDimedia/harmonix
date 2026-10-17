@@ -203,10 +203,20 @@ class RunSQLTool(BaseTool):
                 }
             except Exception as e:
                 duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
+                err_str = str(e)
+                hint = ""
+                if "does not exist" in err_str:
+                    if "customer_id" in err_str and "order_items" in query.lower():
+                        hint = " [HINT: Tabel order_items TIDAK memiliki customer_id. Hubungkan customers ke orders via customer_id, lalu orders ke order_items via order_id!]"
+                    elif "customer_name" in err_str and "order_items" in query.lower():
+                        hint = " [HINT: Kolom customer_name berada di tabel analytics.customers, bukan order_items!]"
+                    elif '"' in err_str:
+                        hint = " [HINT: Di PostgreSQL, nilai teks/string harus menggunakan petik tunggal '...', bukan petik ganda \"...\"!]"
                 return {
                     "status": "error",
                     "error_type": "DatabaseExecutionError",
-                    "message": str(e),
+                    "error": err_str + hint,
+                    "message": err_str + hint,
                     "execution_time_ms": duration_ms,
                     "sanitized_query": sanitized_query,
                 }

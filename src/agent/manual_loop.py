@@ -37,11 +37,29 @@ Tugas Anda adalah menjawab pertanyaan pengguna secara akurat, berbasis data, dan
 DATABASE SCHEMA OVERVIEW:
 Database analitik PostgreSQL memiliki skema `analytics` dengan tabel-tabel berikut:
 - `analytics.orders`: Informasi transaksi pesanan (order_id, customer_id, order_status, order_purchase_timestamp, order_delivered_timestamp)
-- `analytics.order_items`: Rincian item per pesanan (order_id, order_item_id, product_id, price, freight_value). Hubungkan ke `analytics.products` via `product_id`.
+- `analytics.order_items`: Rincian item per pesanan (order_id, order_item_id, product_id, price, freight_value).
 - `analytics.products`: Master katalog produk (product_id, product_category_name, price, weight_g)
 - `analytics.customers`: Master data pelanggan (customer_id, customer_unique_id, customer_name, email, phone_number, city, state)
 - `analytics.order_payments`: Transaksi pembayaran (order_id, payment_sequential, payment_type, payment_installments, payment_value)
 - `analytics.reviews`: Review dan rating pelanggan (review_id, order_id, review_score, review_comment_message)
+
+RELASI ANTAR TABEL (RELATIONAL JOIN PATHS):
+- `customers` ke `orders`: `customers.customer_id = orders.customer_id`
+- `orders` ke `order_items`: `orders.order_id = order_items.order_id`
+- `order_items` ke `products`: `order_items.product_id = products.product_id`
+- `orders` ke `order_payments`: `orders.order_id = order_payments.order_id`
+
+PERINGATAN RELASI:
+- Tabel `order_items` TIDAK MEMILIKI kolom `customer_id`!
+- Untuk mencari customer yang membeli produk tertentu, WAJIB melakukan JOIN melalui tabel `orders`:
+  FROM analytics.customers c
+  JOIN analytics.orders o ON c.customer_id = o.customer_id
+  JOIN analytics.order_items oi ON o.order_id = oi.order_id
+  JOIN analytics.products p ON oi.product_id = p.product_id
+
+ATURAN NILAI STRING POSTGRESQL:
+- Nilai teks/string di PostgreSQL WAJIB menggunakan petik tunggal (`'...'`), BUKAN petik ganda (`"..."`). Petik ganda dianggap nama kolom!
+- Kategori produk dalam database tersimpan dalam bahasa Inggris: `'Electronics'`, `'Home & Living'`, `'Fashion'`, `'Books'`. Gunakan `p.product_category_name ILIKE '%electr%'` untuk kategori elektronik.
 
 ATURAN KERJA & HARNESS:
 1. EKSEKUSI DATA WAJIB (JANGAN HANYA MEMBERIKAN QUERY):
@@ -138,6 +156,7 @@ class ManualAgentLoop:
         executed_sqls: list[str] = []
         captured_tables: list[TableData] = []
         citations: list[Citation] = []
+        failed_sqls: set[str] = set()
 
         step = initial_step
         final_answer_text = ""
@@ -337,8 +356,19 @@ class ManualAgentLoop:
                         input_data=tool_args,
                     )
 
+                    norm_sql = ""
+                    if tool_name == "run_sql":
+                        norm_sql = " ".join(str(tool_args.get("query", "")).split()).lower()
+
                     if tool_name not in self.tools:
                         observation = {"error": f"Tool '{tool_name}' is not allowed or unrecognized."}
+                    elif tool_name == "run_sql" and norm_sql in failed_sqls:
+                        observation = {
+                            "status": "error",
+                            "error": "Query ini persis sama dengan query yang sudah gagal sebelumnya! JANGAN ulangi query yang sama.",
+                            "message": "Query ini persis sama dengan query yang sudah gagal sebelumnya! JANGAN ulangi query yang sama. Periksa relasi: customers -> orders (via customer_id) -> order_items (via order_id) -> products (via product_id). Gunakan petik tunggal untuk string ('Electronics').",
+                            "hint": "Gunakan JOIN 4 tabel yang benar: customers c JOIN orders o ON c.customer_id = o.customer_id JOIN order_items oi ON o.order_id = oi.order_id JOIN products p ON oi.product_id = p.product_id WHERE p.product_category_name ILIKE '%electr%'",
+                        }
                     else:
                         tool_instance = self.tools[tool_name]
                         try:
@@ -349,13 +379,17 @@ class ManualAgentLoop:
                         except Exception as e:
                             observation = {"error": f"Tool execution failed: {e}"}
 
+                        if tool_name == "run_sql" and isinstance(observation, dict):
+                            if observation.get("status") == "error" and norm_sql:
+                                failed_sqls.add(norm_sql)
+
                     # Determine tool span status
                     tool_status = SpanStatus.SUCCESS
                     tool_err_msg = None
                     if isinstance(observation, dict):
-                        if "error" in observation:
+                        if "error" in observation or observation.get("status") == "error":
                             tool_status = SpanStatus.ERROR
-                            tool_err_msg = str(observation["error"])
+                            tool_err_msg = str(observation.get("error") or observation.get("message"))
                         elif observation.get("status") == "approval_required":
                             tool_status = SpanStatus.APPROVAL_REQUIRED
 

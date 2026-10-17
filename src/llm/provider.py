@@ -326,8 +326,19 @@ class OpenAICompatibleProvider(BaseLLMProvider):
                 if match:
                     fn_name = match.group(1)
                     raw_args = match.group(2)
+                    fn_args = {}
                     try:
                         fn_args = json.loads(raw_args)
+                    except Exception:
+                        try:
+                            s_fixed = re.sub(r'\\([^"\\/bfnrtu])', r'\1', raw_args)
+                            fn_args = json.loads(s_fixed)
+                        except Exception:
+                            m_query = re.search(r'["\']query["\']\s*:\s*["\'](SELECT\s+.*?)["\']\s*\}', raw_args, re.IGNORECASE | re.DOTALL)
+                            if m_query:
+                                fn_args = {"query": m_query.group(1).replace(r'\%', '%').strip()}
+
+                    if fn_args:
                         tool_calls.append(
                             ToolCall(
                                 id=f"call_extracted_{uuid.uuid4().hex[:6]}",
@@ -336,8 +347,6 @@ class OpenAICompatibleProvider(BaseLLMProvider):
                             )
                         )
                         content = content.replace(match.group(0), "").strip()
-                    except Exception as e:
-                        logger.debug("Failed parsing extracted tool call args: %s", e)
 
             usage_data = data.get("usage", {})
             usage = LLMUsage(

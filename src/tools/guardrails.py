@@ -86,6 +86,12 @@ class SQLGuardrail:
         if not cleaned_sql:
             raise SQLValidationError("SQL query is empty.")
 
+        # Pre-sanitize SQL literals and wildcards often emitted malformed by small LLMs
+        cleaned_sql = cleaned_sql.replace(r"\%", "%").replace(r"\_", "_")
+        cleaned_sql = re.sub(r'\b(I?LIKE)\s+"([^"]+)"', r"\1 '\2'", cleaned_sql, flags=re.IGNORECASE)
+        cleaned_sql = re.sub(r"\b(I?LIKE)\s+([%_][^%_\s\';]*[%_])", r"\1 '\2'", cleaned_sql, flags=re.IGNORECASE)
+        cleaned_sql = re.sub(r'(=|!=|<>)\s+"([A-Z][a-zA-Z0-9_ &]*)"', r"\1 '\2'", cleaned_sql)
+
         # 1. Parse using sqlglot for PostgreSQL dialect
         try:
             parsed_expressions = sqlglot.parse(cleaned_sql, read="postgres")

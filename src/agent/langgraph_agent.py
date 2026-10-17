@@ -33,12 +33,30 @@ Tugas Anda adalah menjawab pertanyaan analitik database secara akurat, berbasis 
 
 DATABASE SCHEMA OVERVIEW:
 Database analitik PostgreSQL memiliki skema `analytics` dengan tabel-tabel berikut:
-- `analytics.orders`: Informasi transaksi pesanan (order_id, customer_id, order_status, order_purchase_timestamp, total_amount, dsb.)
-- `analytics.order_items`: Rincian item per pesanan (order_id, order_item_id, product_id, price, freight_value, dsb.)
-- `analytics.products`: Master katalog produk (product_id, product_category_name, product_name_lenght, product_description_lenght, price, dsb.)
-- `analytics.customers`: Master data pelanggan (customer_id, customer_unique_id, customer_zip_code_prefix, customer_city, customer_state)
-- `analytics.payments`: Transaksi pembayaran (order_id, payment_sequential, payment_type, payment_installments, payment_value)
-- `analytics.reviews`: Review dan rating pelanggan (review_id, order_id, review_score, review_comment_message, dsb.)
+- `analytics.orders`: Informasi transaksi pesanan (order_id, customer_id, order_status, order_purchase_timestamp, order_delivered_timestamp)
+- `analytics.order_items`: Rincian item per pesanan (order_id, order_item_id, product_id, price, freight_value)
+- `analytics.products`: Master katalog produk (product_id, product_category_name, price, weight_g)
+- `analytics.customers`: Master data pelanggan (customer_id, customer_unique_id, customer_name, email, phone_number, city, state)
+- `analytics.order_payments`: Transaksi pembayaran (order_id, payment_sequential, payment_type, payment_installments, payment_value)
+- `analytics.reviews`: Review dan rating pelanggan (review_id, order_id, review_score, review_comment_message)
+
+RELASI ANTAR TABEL (RELATIONAL JOIN PATHS):
+- `customers` ke `orders`: `customers.customer_id = orders.customer_id`
+- `orders` ke `order_items`: `orders.order_id = order_items.order_id`
+- `order_items` ke `products`: `order_items.product_id = products.product_id`
+- `orders` ke `order_payments`: `orders.order_id = order_payments.order_id`
+
+PERINGATAN RELASI:
+- Tabel `order_items` TIDAK MEMILIKI kolom `customer_id`!
+- Untuk mencari customer yang membeli produk tertentu, WAJIB melakukan JOIN melalui tabel `orders`:
+  FROM analytics.customers c
+  JOIN analytics.orders o ON c.customer_id = o.customer_id
+  JOIN analytics.order_items oi ON o.order_id = oi.order_id
+  JOIN analytics.products p ON oi.product_id = p.product_id
+
+ATURAN NILAI STRING POSTGRESQL:
+- Nilai teks/string di PostgreSQL WAJIB menggunakan petik tunggal (`'...'`), BUKAN petik ganda (`"..."`). Petik ganda dianggap nama kolom!
+- Kategori produk dalam database tersimpan dalam bahasa Inggris: `'Electronics'`, `'Home & Living'`, `'Fashion'`, `'Books'`. Gunakan `p.product_category_name ILIKE '%electr%'` untuk kategori elektronik.
 
 ATURAN KERJA & HARNESS:
 1. Metric Grounding & Business Glossary:
