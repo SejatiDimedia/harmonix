@@ -85,6 +85,13 @@ DEFAULT_METRICS: list[MetricGlossaryItem] = [
         sql_expression="SELECT ROUND(COUNT(CASE WHEN order_status = 'canceled' THEN 1 END) * 100.0 / COUNT(*), 2) AS cancellation_rate FROM analytics.orders;",
         relevant_tables=["orders"],
     ),
+    MetricGlossaryItem(
+        metric_name="Customer Spending (Total Belanja Pelanggan)",
+        business_definition="Total akumulasi nominal transaksi belanja yang dibayarkan oleh seorang pelanggan.",
+        calculation_formula="SUM(payment_value) GROUP BY customer_id",
+        sql_expression="SELECT c.customer_name, c.city, c.email, SUM(op.payment_value) AS total_belanja FROM analytics.customers c JOIN analytics.orders o ON c.customer_id = o.customer_id JOIN analytics.order_payments op ON o.order_id = op.order_id GROUP BY c.customer_id, c.customer_name, c.city, c.email;",
+        relevant_tables=["customers", "orders", "order_payments"],
+    ),
 ]
 
 
@@ -121,18 +128,11 @@ async def init_glossary_table() -> None:
 
 
 async def seed_glossary_if_empty() -> None:
-    """Seed the default metric glossary if the table is currently empty."""
+    """Seed or sync the default metric glossary in the knowledge base."""
     await init_glossary_table()
 
     async with get_db_session() as session:
-        count_res = await session.execute(text("SELECT COUNT(*) FROM analytics.metric_glossary;"))
-        count = count_res.scalar() or 0
-
-        if count > 0:
-            logger.info("Glossary table already seeded (%d metrics).", count)
-            return
-
-        logger.info("Seeding metric glossary with default e-commerce metrics...")
+        logger.info("Syncing metric glossary with default e-commerce metrics...")
         for item in DEFAULT_METRICS:
             # Generate embedding text: metric name + definition + formula
             text_to_embed = f"{item.metric_name}: {item.business_definition} Formula: {item.calculation_formula}"

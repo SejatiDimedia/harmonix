@@ -383,9 +383,9 @@ class ManualAgentLoop:
                     elif tool_name == "run_sql" and norm_sql in failed_sqls:
                         observation = {
                             "status": "error",
-                            "error": "Query ini persis sama dengan query yang sudah gagal sebelumnya! JANGAN ulangi query yang sama.",
-                            "message": "Query ini persis sama dengan query yang sudah gagal sebelumnya! JANGAN ulangi query yang sama. Periksa relasi: customers -> orders (via customer_id) -> order_items (via order_id) -> products (via product_id). Gunakan petik tunggal untuk string ('Electronics').",
-                            "hint": "Gunakan JOIN 4 tabel yang benar: customers c JOIN orders o ON c.customer_id = o.customer_id JOIN order_items oi ON o.order_id = oi.order_id JOIN products p ON oi.product_id = p.product_id WHERE p.product_category_name ILIKE '%electr%'",
+                            "error": "Query ini identik dengan query yang baru saja gagal dieksekusi sebelumnya. Jangan ulangi query yang sama.",
+                            "message": "Query ini identik dengan query yang baru saja gagal dieksekusi sebelumnya. Ubah pendekatan Anda: periksa kembali nama kolom, gunakan tool `get_schema` untuk melihat struktur tabel, atau tinjau kembali kondisi JOIN dan klausa agregasi Anda.",
+                            "hint": "Gunakan tool `get_schema` untuk memeriksa skema tabel atau ubah klausa JOIN/WHERE/HAVING Anda.",
                         }
                     else:
                         tool_instance = self.tools[tool_name]
@@ -508,15 +508,19 @@ class ManualAgentLoop:
 
             # 5. Check if agent is attempting to finalize prematurely without running SQL on an analytical question
             if not executed_sqls and step < 3:
+                resp_text = llm_response.content or ""
+                has_unexecuted_sql = bool(re.search(r'```(?:sql)?\s*SELECT\b|\bSELECT\s+[a-zA-Z0-9_.*,\s]+\s+FROM\s+', resp_text, re.IGNORECASE))
                 q_lower = user_query.lower()
                 is_analytical = any(w in q_lower for w in [
                     "berapa", "kategori", "siapa", "mana", "total", "rata", "pesanan",
                     "produk", "customer", "pelanggan", "penjualan", "transaksi", "status",
-                    "data", "terbanyak", "terlaris", "termahal", "paling"
+                    "data", "terbanyak", "terlaris", "termahal", "paling",
+                    "how", "what", "which", "who", "top", "sales", "average", "count"
                 ])
                 is_greeting = any(g in q_lower for g in ["halo", "hai", "hello", "hi", "siapa kamu"]) and not is_analytical
-                if is_analytical and not is_greeting:
-                    logger.info("Agent attempted to conclude without running SQL on an analytical query. Nudging tool execution.")
+
+                if (has_unexecuted_sql or is_analytical) and not is_greeting:
+                    logger.info("Agent concluded without running SQL. Nudging tool execution.")
                     messages.append({
                         "role": "assistant",
                         "content": llm_response.content or "",

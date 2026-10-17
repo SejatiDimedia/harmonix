@@ -68,6 +68,14 @@ class SQLGuardrail:
     def __init__(self, max_row_limit: int | None = None):
         self.max_row_limit = max_row_limit or settings.sql_max_row_limit
 
+    @staticmethod
+    def _pre_sanitize_llm_sql(sql: str) -> str:
+        """Normalize common SQL syntax quirks emitted by LLMs (unescaped wildcards, unquoted LIKE)."""
+        s = sql.replace(r"\%", "%").replace(r"\_", "_")
+        s = re.sub(r'\b(I?LIKE)\s+"([^"]+)"', r"\1 '\2'", s, flags=re.IGNORECASE)
+        s = re.sub(r"\b(I?LIKE)\s+([%_][^%_\s\';]*[%_])", r"\1 '\2'", s, flags=re.IGNORECASE)
+        return s
+
     def validate_and_sanitize(self, sql_query: str) -> str:
         """Validate that the query is strictly a single, read-only SELECT statement
 
@@ -82,15 +90,9 @@ class SQLGuardrail:
         Raises:
             SQLValidationError: If the query fails AST safety checks.
         """
-        cleaned_sql = sql_query.strip()
+        cleaned_sql = self._pre_sanitize_llm_sql(sql_query.strip())
         if not cleaned_sql:
             raise SQLValidationError("SQL query is empty.")
-
-        # Pre-sanitize SQL literals and wildcards often emitted malformed by small LLMs
-        cleaned_sql = cleaned_sql.replace(r"\%", "%").replace(r"\_", "_")
-        cleaned_sql = re.sub(r'\b(I?LIKE)\s+"([^"]+)"', r"\1 '\2'", cleaned_sql, flags=re.IGNORECASE)
-        cleaned_sql = re.sub(r"\b(I?LIKE)\s+([%_][^%_\s\';]*[%_])", r"\1 '\2'", cleaned_sql, flags=re.IGNORECASE)
-        cleaned_sql = re.sub(r'(=|!=|<>)\s+"([A-Z][a-zA-Z0-9_ &]*)"', r"\1 '\2'", cleaned_sql)
 
         # 1. Parse using sqlglot for PostgreSQL dialect
         try:

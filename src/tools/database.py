@@ -205,17 +205,13 @@ class RunSQLTool(BaseTool):
                 duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
                 err_str = str(e)
                 hint = ""
-                if "does not exist" in err_str:
-                    if any(c in err_str.lower() for c in ["order_total", "order_value", "total_order_value", "total_amount"]):
-                        hint = " [HINT: Tabel orders TIDAK memiliki kolom harga/order_value. Nilai transaksi ada di tabel analytics.order_payments (kolom payment_value). Hubungkan orders ke order_payments dan gunakan: GROUP BY c.customer_id, c.customer_name, c.city, c.email HAVING SUM(op.payment_value) > ...!]"
-                    elif "customer_id" in err_str and "order_items" in query.lower():
-                        hint = " [HINT: Tabel order_items TIDAK memiliki customer_id. Hubungkan customers ke orders via customer_id, lalu orders ke order_items via order_id!]"
-                    elif "customer_name" in err_str and "order_items" in query.lower():
-                        hint = " [HINT: Kolom customer_name berada di tabel analytics.customers, bukan order_items!]"
-                    elif '"' in err_str:
-                        hint = " [HINT: Di PostgreSQL, nilai teks/string harus menggunakan petik tunggal '...', bukan petik ganda \"...\"!]"
-                elif "aggregate functions are not allowed in where" in err_str.lower():
-                    hint = " [HINT: Fungsi agregasi SUM()/COUNT() tidak boleh di klausa WHERE! Gunakan klausa HAVING setelah GROUP BY: GROUP BY c.customer_id, c.customer_name, c.city, c.email HAVING SUM(...) > ...]"
+                err_lower = err_str.lower()
+                if "does not exist" in err_lower:
+                    hint = " [PETUNJUK: Tabel atau kolom tidak ditemukan di database. Panggil tool `get_schema` untuk melihat struktur tabel dan nama kolom yang valid.]"
+                elif "aggregate functions are not allowed in where" in err_lower:
+                    hint = " [PETUNJUK: Fungsi agregasi (seperti SUM, COUNT, AVG) tidak diizinkan di klausa WHERE. Gunakan klausa HAVING setelah GROUP BY.]"
+                elif '"' in err_str and "column" in err_lower:
+                    hint = " [PETUNJUK: Di PostgreSQL, konstanta string teks harus menggunakan petik tunggal '...', bukan petik ganda \"...\".]"
                 return {
                     "status": "error",
                     "error_type": "DatabaseExecutionError",
