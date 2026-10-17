@@ -58,6 +58,15 @@ CREATE TABLE IF NOT EXISTS analytics.order_payments (
     PRIMARY KEY (order_id, payment_sequential)
 );
 
+-- 6. Reviews Table
+CREATE TABLE IF NOT EXISTS analytics.reviews (
+    review_id VARCHAR(50) PRIMARY KEY,
+    order_id VARCHAR(50) REFERENCES analytics.orders(order_id),
+    review_score INT NOT NULL CHECK (review_score BETWEEN 1 AND 5),
+    review_comment_message TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- ==============================================================================
 -- Seed Initial Realistic Data
 -- ==============================================================================
@@ -133,3 +142,17 @@ VALUES
 ('ord_009', 1, 'credit_card', 2, 270000.00),
 ('ord_010', 1, 'bank_transfer', 1, 1525000.00)
 ON CONFLICT (order_id, payment_sequential) DO NOTHING;
+
+-- Seed Reviews
+INSERT INTO analytics.reviews (review_id, order_id, review_score, review_comment_message, created_at)
+VALUES
+('rev_001', 'ord_001', 5, 'Barang sangat bagus, pengiriman cepat!', '2024-01-19 09:00:00'),
+('rev_002', 'ord_002', 5, 'Kualitas pakaian memuaskan.', '2024-01-25 14:00:00'),
+('rev_003', 'ord_003', 4, 'Bagus tapi pengemasan agak tipis.', '2024-01-30 10:00:00'),
+('rev_004', 'ord_004', 5, 'Produk elektronik berfungsi normal, mantap!', '2024-02-09 11:30:00'),
+('rev_005', 'ord_006', 3, 'Cukup baik sesuai harga.', '2024-02-22 13:00:00'),
+('rev_006', 'ord_007', 5, 'Buku original, pelayanan ramah.', '2024-02-27 16:00:00'),
+('rev_007', 'ord_009', 5, 'Sangat puas belanja di sini!', '2024-03-10 12:00:00'),
+('rev_008', 'ord_010', 5, 'Pelayanan cepat dan terpercaya.', '2024-03-14 15:30:00')
+ON CONFLICT (review_id) DO NOTHING;
+
