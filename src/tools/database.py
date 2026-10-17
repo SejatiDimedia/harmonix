@@ -206,12 +206,16 @@ class RunSQLTool(BaseTool):
                 err_str = str(e)
                 hint = ""
                 if "does not exist" in err_str:
-                    if "customer_id" in err_str and "order_items" in query.lower():
+                    if any(c in err_str.lower() for c in ["order_total", "order_value", "total_order_value", "total_amount"]):
+                        hint = " [HINT: Tabel orders TIDAK memiliki kolom harga/order_value. Nilai transaksi ada di tabel analytics.order_payments (kolom payment_value). Hubungkan orders ke order_payments dan gunakan: GROUP BY c.customer_id, c.customer_name, c.city, c.email HAVING SUM(op.payment_value) > ...!]"
+                    elif "customer_id" in err_str and "order_items" in query.lower():
                         hint = " [HINT: Tabel order_items TIDAK memiliki customer_id. Hubungkan customers ke orders via customer_id, lalu orders ke order_items via order_id!]"
                     elif "customer_name" in err_str and "order_items" in query.lower():
                         hint = " [HINT: Kolom customer_name berada di tabel analytics.customers, bukan order_items!]"
                     elif '"' in err_str:
                         hint = " [HINT: Di PostgreSQL, nilai teks/string harus menggunakan petik tunggal '...', bukan petik ganda \"...\"!]"
+                elif "aggregate functions are not allowed in where" in err_str.lower():
+                    hint = " [HINT: Fungsi agregasi SUM()/COUNT() tidak boleh di klausa WHERE! Gunakan klausa HAVING setelah GROUP BY: GROUP BY c.customer_id, c.customer_name, c.city, c.email HAVING SUM(...) > ...]"
                 return {
                     "status": "error",
                     "error_type": "DatabaseExecutionError",

@@ -48,6 +48,24 @@ RELASI ANTAR TABEL (RELATIONAL JOIN PATHS):
 - `orders` ke `order_items`: `orders.order_id = order_items.order_id`
 - `order_items` ke `products`: `order_items.product_id = products.product_id`
 - `orders` ke `order_payments`: `orders.order_id = order_payments.order_id`
+- `orders` ke `reviews`: `orders.order_id = reviews.order_id`
+
+LOKASI KOLOM KEUANGAN & TOTAL BELANJA:
+- Tabel `analytics.orders` HANYA berisi status dan tanggal pesanan, TIDAK MEMILIKI kolom harga/order_value/order_total/total_order_value!
+- Nilai pembayaran transaksi pelanggan disimpan di tabel `analytics.order_payments` pada kolom `payment_value`.
+- Harga per item barang disimpan di tabel `analytics.order_items` pada kolom `price`.
+- Untuk mencari pelanggan yang belanja lebih dari X (misal > 500.000):
+  Hubungkan `customers` -> `orders` -> `order_payments` dan gunakan `GROUP BY` dengan klausa `HAVING`, BUKAN `WHERE`:
+  SELECT c.customer_name, c.city, c.email, SUM(op.payment_value) AS total_belanja
+  FROM analytics.customers c
+  JOIN analytics.orders o ON c.customer_id = o.customer_id
+  JOIN analytics.order_payments op ON o.order_id = op.order_id
+  GROUP BY c.customer_id, c.customer_name, c.city, c.email
+  HAVING SUM(op.payment_value) > 500000
+
+ATURAN AGREGASI SQL POSTGRESQL:
+- DILARANG menggunakan fungsi agregasi seperti SUM(), COUNT(), AVG() di dalam klausa WHERE! (Contoh salah: WHERE SUM(...) > 500000).
+- Fungsi agregasi WAJIB diletakkan di klausa HAVING setelah GROUP BY! (Contoh benar: GROUP BY c.customer_id, c.customer_name, c.city, c.email HAVING SUM(op.payment_value) > 500000).
 
 PERINGATAN RELASI:
 - Tabel `order_items` TIDAK MEMILIKI kolom `customer_id`!
