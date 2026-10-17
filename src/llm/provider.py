@@ -1,9 +1,10 @@
 """LLM Provider layer: Unified interface for Zero-Cost models (Mock, Ollama, Gemini, Groq)."""
 
+import asyncio
 import json
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, AsyncIterator
+from typing import Any, AsyncIterator, Callable
 from pydantic import BaseModel, Field
 import httpx
 
@@ -267,25 +268,227 @@ class OpenAICompatibleProvider(BaseLLMProvider):
 
 
 # ==============================================================================
+# 3. Resilient Fallback & Routing Providers (FR-28)
+# ==============================================================================
+
+class FallbackLLMProvider(BaseLLMProvider):
+    """Resilient provider that wraps a primary provider with automatic fallback (FR-28).
+
+    If the primary provider hits a rate limit (HTTP 429), server error (HTTP 5xx),
+    or connection timeout, it performs retries with exponential backoff.
+    If the error persists, it automatically and seamlessly delegates the request
+    to the secondary/fallback provider (e.g. local offline Ollama or Mock).
+    """
+
+    def __init__(
+        self,
+        primary: BaseLLMProvider,
+        fallback: BaseLLMProvider,
+        max_retries: int = 2,
+        backoff_base_seconds: float = 0.5,
+    ):
+        self.primary = primary
+        self.fallback = fallback
+        self.max_retries = max_retries
+        self.backoff_base_seconds = backoff_base_seconds
+        self.last_used_provider: str = getattr(primary, "model", primary.__class__.__name__)
+        self.fallback_triggered: bool = False
+
+    def _is_fallback_trigger(self, err: Exception) -> bool:
+        """Determines whether an exception warrants retry or fallback routing."""
+        err_msg = str(err).lower()
+        trigger_keywords = [
+            "429",
+            "rate limit",
+            "rate_limit",
+            "quota",
+            "resource_exhausted",
+            "too many requests",
+            "overloaded",
+            "503",
+            "502",
+            "504",
+            "timeout",
+            "connection refused",
+            "temporarily unavailable",
+        ]
+        if any(keyword in err_msg for keyword in trigger_keywords):
+            return True
+
+        if isinstance(err, (httpx.TimeoutException, asyncio.TimeoutError, httpx.ConnectError, httpx.NetworkError)):
+            return True
+
+        if isinstance(err, httpx.HTTPStatusError):
+            if err.response.status_code in (429, 500, 502, 503, 504):
+                return True
+
+        return False
+
+    async def chat(
+        self,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]] | None = None,
+        temperature: float = 0.0,
+    ) -> LLMResponse:
+        primary_name = getattr(self.primary, "model", self.primary.__class__.__name__)
+        fallback_name = getattr(self.fallback, "model", self.fallback.__class__.__name__)
+
+        for attempt in range(self.max_retries + 1):
+            try:
+                response = await self.primary.chat(messages, tools, temperature)
+                self.last_used_provider = response.model or primary_name
+                self.fallback_triggered = False
+                return response
+            except Exception as e:
+                if self._is_fallback_trigger(e):
+                    if attempt < self.max_retries:
+                        delay = self.backoff_base_seconds * (2 ** attempt)
+                        logger.warning(
+                            "Primary LLM '%s' failed on attempt %d/%d (%s). Retrying in %.2fs...",
+                            primary_name,
+                            attempt + 1,
+                            self.max_retries,
+                            e,
+                            delay,
+                        )
+                        await asyncio.sleep(delay)
+                        continue
+
+                    logger.warning(
+                        "Primary LLM '%s' exhausted %d retries (%s). Automatically routing to fallback '%s'.",
+                        primary_name,
+                        self.max_retries,
+                        e,
+                        fallback_name,
+                    )
+                    self.fallback_triggered = True
+                    response = await self.fallback.chat(messages, tools, temperature)
+                    self.last_used_provider = response.model or fallback_name
+                    return response
+                # Non-retryable error: raise immediately
+                raise
+
+        # Fallback safeguard
+        self.fallback_triggered = True
+        response = await self.fallback.chat(messages, tools, temperature)
+        self.last_used_provider = response.model or fallback_name
+        return response
+
+    async def stream_chat(
+        self,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]] | None = None,
+        temperature: float = 0.0,
+    ) -> AsyncIterator[str]:
+        primary_name = getattr(self.primary, "model", self.primary.__class__.__name__)
+        fallback_name = getattr(self.fallback, "model", self.fallback.__class__.__name__)
+
+        for attempt in range(self.max_retries + 1):
+            try:
+                async for chunk in self.primary.stream_chat(messages, tools, temperature):
+                    self.last_used_provider = primary_name
+                    self.fallback_triggered = False
+                    yield chunk
+                return
+            except Exception as e:
+                if self._is_fallback_trigger(e):
+                    if attempt < self.max_retries:
+                        delay = self.backoff_base_seconds * (2 ** attempt)
+                        logger.warning(
+                            "Primary LLM stream '%s' failed on attempt %d/%d (%s). Retrying in %.2fs...",
+                            primary_name,
+                            attempt + 1,
+                            self.max_retries,
+                            e,
+                            delay,
+                        )
+                        await asyncio.sleep(delay)
+                        continue
+
+                    logger.warning(
+                        "Primary LLM stream '%s' exhausted retries (%s). Routing stream to fallback '%s'.",
+                        primary_name,
+                        e,
+                        fallback_name,
+                    )
+                    self.fallback_triggered = True
+                    async for chunk in self.fallback.stream_chat(messages, tools, temperature):
+                        self.last_used_provider = fallback_name
+                        yield chunk
+                    return
+                raise
+
+
+class RoutedLLMProvider(BaseLLMProvider):
+    """Dynamic router that directs queries to specific models based on intent or complexity."""
+
+    def __init__(
+        self,
+        providers: dict[str, BaseLLMProvider],
+        default_route: str = "primary",
+        router_fn: Callable[[list[dict[str, Any]], list[dict[str, Any]] | None], str] | None = None,
+    ):
+        self.providers = providers
+        self.default_route = default_route
+        self.router_fn = router_fn
+        self.last_used_provider: str = default_route
+
+    def _select_provider(
+        self,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]] | None,
+    ) -> tuple[str, BaseLLMProvider]:
+        route = self.default_route
+        if self.router_fn:
+            try:
+                route = self.router_fn(messages, tools)
+            except Exception as e:
+                logger.warning("Router function failed (%s), using default '%s'", e, self.default_route)
+
+        provider = self.providers.get(route) or self.providers[self.default_route]
+        return route, provider
+
+    async def chat(
+        self,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]] | None = None,
+        temperature: float = 0.0,
+    ) -> LLMResponse:
+        route, provider = self._select_provider(messages, tools)
+        self.last_used_provider = route
+        return await provider.chat(messages, tools, temperature)
+
+    async def stream_chat(
+        self,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]] | None = None,
+        temperature: float = 0.0,
+    ) -> AsyncIterator[str]:
+        route, provider = self._select_provider(messages, tools)
+        self.last_used_provider = route
+        async for chunk in provider.stream_chat(messages, tools, temperature):
+            yield chunk
+
+
+# ==============================================================================
 # Provider Factory
 # ==============================================================================
 
-def get_llm_provider() -> BaseLLMProvider:
-    """Factory to instantiate the configured zero-cost LLM provider."""
-    provider_name = settings.llm_provider.lower()
+def create_single_provider(provider_name: str) -> BaseLLMProvider:
+    """Instantiate a single raw provider by name."""
+    name = provider_name.lower().strip()
 
-    if provider_name == "mock":
+    if name == "mock":
         return MockLLMProvider()
 
-    if provider_name == "ollama":
+    if name == "ollama":
         return OpenAICompatibleProvider(
             base_url=settings.ollama_base_url,
             api_key=None,
             model=settings.ollama_model,
         )
 
-    if provider_name == "gemini":
-        # Google AI Studio OpenAI-compatible endpoint
+    if name == "gemini":
         base_url = "https://generativelanguage.googleapis.com/v1beta/openai"
         return OpenAICompatibleProvider(
             base_url=base_url,
@@ -293,7 +496,7 @@ def get_llm_provider() -> BaseLLMProvider:
             model=settings.gemini_model,
         )
 
-    if provider_name == "groq":
+    if name == "groq":
         base_url = "https://api.groq.com/openai/v1"
         return OpenAICompatibleProvider(
             base_url=base_url,
@@ -302,3 +505,25 @@ def get_llm_provider() -> BaseLLMProvider:
         )
 
     raise ValueError(f"Unsupported LLM provider: '{provider_name}'")
+
+
+def get_llm_provider() -> BaseLLMProvider:
+    """Factory to instantiate the configured zero-cost LLM provider with automatic fallback (FR-28)."""
+    primary = create_single_provider(settings.llm_provider)
+
+    if (
+        settings.llm_enable_fallback
+        and settings.llm_fallback_provider
+        and settings.llm_fallback_provider.lower() != "none"
+        and settings.llm_fallback_provider.lower() != settings.llm_provider.lower()
+    ):
+        fallback = create_single_provider(settings.llm_fallback_provider)
+        return FallbackLLMProvider(
+            primary=primary,
+            fallback=fallback,
+            max_retries=settings.llm_max_retries,
+            backoff_base_seconds=settings.llm_retry_backoff_base_seconds,
+        )
+
+    return primary
+

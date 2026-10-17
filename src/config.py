@@ -50,6 +50,24 @@ class Settings(BaseSettings):
     groq_api_key: str | None = Field(default=None)
     groq_model: str = Field(default="llama-3.3-70b-versatile")
 
+    # LLM Fallback & Routing settings (FR-28)
+    llm_fallback_provider: Literal["ollama", "gemini", "groq", "mock", "none"] = Field(
+        default="none",
+        description="Fallback LLM provider if primary fails or hits rate limits",
+    )
+    llm_enable_fallback: bool = Field(
+        default=True,
+        description="Whether to automatically route to fallback provider on error/rate-limit",
+    )
+    llm_max_retries: int = Field(
+        default=2,
+        description="Number of retries with exponential backoff on primary provider before falling back",
+    )
+    llm_retry_backoff_base_seconds: float = Field(
+        default=0.5,
+        description="Base delay in seconds for exponential backoff retry",
+    )
+
     # Agent Harness Constraints
     agent_max_steps: int = Field(default=10, description="Maximum iterations in agent loop")
     agent_step_timeout_seconds: int = Field(default=30, description="Timeout for a single agent step")

@@ -63,21 +63,37 @@ class PIIMasker:
         return masked
 
     @classmethod
-    def mask_record(cls, record: dict[str, Any]) -> dict[str, Any]:
-        """Mask dictionary fields matching sensitive column names or values."""
-        masked_dict = {}
-        for k, v in record.items():
-            k_lower = str(k).lower()
-            if k_lower in SENSITIVE_FIELD_NAMES:
-                if isinstance(v, str):
-                    if "@" in v:
-                        masked_dict[k] = cls.mask_email(v)
+    def mask_record(cls, record: Any) -> Any:
+        """Mask dictionary fields matching sensitive column names or values, or lists."""
+        if isinstance(record, dict):
+            masked_dict = {}
+            for k, v in record.items():
+                k_lower = str(k).lower()
+                if any(sens in k_lower for sens in SENSITIVE_FIELD_NAMES):
+                    if isinstance(v, str):
+                        if "@" in v:
+                            masked_dict[k] = cls.mask_email(v)
+                        else:
+                            masked_dict[k] = "***MASKED_PII***"
                     else:
                         masked_dict[k] = "***MASKED_PII***"
+                elif isinstance(v, str):
+                    masked_dict[k] = cls.mask_text(v)
                 else:
-                    masked_dict[k] = "***MASKED_PII***"
-            elif isinstance(v, str):
-                masked_dict[k] = cls.mask_text(v)
-            else:
-                masked_dict[k] = v
-        return masked_dict
+                    masked_dict[k] = v
+            return masked_dict
+        elif isinstance(record, (list, tuple)):
+            return [
+                cls.mask_record(item)
+                if isinstance(item, (dict, list, tuple))
+                else (cls.mask_text(item) if isinstance(item, str) else item)
+                for item in record
+            ]
+        return record
+
+    @classmethod
+    def mask_records(cls, records: list[Any]) -> list[Any]:
+        """Batch mask a list of records (dicts or rows)."""
+        if not records:
+            return []
+        return [cls.mask_record(r) for r in records]

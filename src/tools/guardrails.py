@@ -159,7 +159,7 @@ class SQLGuardrail:
         # Check for sensitive columns accessed
         for column_node in parsed.find_all(exp.Column):
             col_name = column_node.name.lower()
-            if col_name in self.SENSITIVE_COLUMNS:
+            if any(sens in col_name for sens in self.SENSITIVE_COLUMNS):
                 assessment.sensitive_columns_accessed.append(col_name)
 
         if assessment.sensitive_columns_accessed:
