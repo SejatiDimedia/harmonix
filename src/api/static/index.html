@@ -430,8 +430,9 @@
                                 `;
 
                                 // Final markdown render
-                                if (accumulatedMarkdown && window.marked && window.DOMPurify) {
-                                    contentEl.innerHTML = DOMPurify.sanitize(marked.parse(accumulatedMarkdown));
+                                const finalMarkdown = parsed.answer_text || accumulatedMarkdown;
+                                if (finalMarkdown && window.marked && window.DOMPurify) {
+                                    contentEl.innerHTML = DOMPurify.sanitize(marked.parse(finalMarkdown));
                                 }
                                 
                                 if (parsed.metrics) {

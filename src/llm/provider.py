@@ -3,6 +3,8 @@
 import asyncio
 import json
 import logging
+import re
+import uuid
 from abc import ABC, abstractmethod
 from typing import Any, AsyncIterator, Callable
 from pydantic import BaseModel, Field
@@ -313,6 +315,29 @@ class OpenAICompatibleProvider(BaseLLMProvider):
                     tool_calls.append(
                         ToolCall(id=tc.get("id", ""), name=fn_name, arguments=fn_args)
                     )
+
+            if not tool_calls and content:
+                # Fallback for models (such as Ollama Llama 3.2) that output tool calls as JSON in text
+                match = re.search(
+                    r'\{\s*["\']name["\']\s*:\s*["\']([a-zA-Z0-9_]+)["\']\s*,\s*["\'](?:parameters|arguments)["\']\s*:\s*(\{.*?\})\s*\}',
+                    content,
+                    re.DOTALL,
+                )
+                if match:
+                    fn_name = match.group(1)
+                    raw_args = match.group(2)
+                    try:
+                        fn_args = json.loads(raw_args)
+                        tool_calls.append(
+                            ToolCall(
+                                id=f"call_extracted_{uuid.uuid4().hex[:6]}",
+                                name=fn_name,
+                                arguments=fn_args,
+                            )
+                        )
+                        content = content.replace(match.group(0), "").strip()
+                    except Exception as e:
+                        logger.debug("Failed parsing extracted tool call args: %s", e)
 
             usage_data = data.get("usage", {})
             usage = LLMUsage(

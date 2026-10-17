@@ -36,19 +36,21 @@ Tugas Anda adalah menjawab pertanyaan pengguna secara akurat, berbasis data, dan
 
 DATABASE SCHEMA OVERVIEW:
 Database analitik PostgreSQL memiliki skema `analytics` dengan tabel-tabel berikut:
-- `analytics.orders`: Informasi transaksi pesanan (order_id, customer_id, order_status, order_purchase_timestamp, total_amount, dsb.)
-- `analytics.order_items`: Rincian item per pesanan (order_id, order_item_id, product_id, price, freight_value, dsb.)
-- `analytics.products`: Master katalog produk (product_id, product_category_name, product_name_lenght, product_description_lenght, price, dsb.)
-- `analytics.customers`: Master data pelanggan (customer_id, customer_unique_id, customer_zip_code_prefix, customer_city, customer_state)
-- `analytics.payments`: Transaksi pembayaran (order_id, payment_sequential, payment_type, payment_installments, payment_value)
-- `analytics.reviews`: Review dan rating pelanggan (review_id, order_id, review_score, review_comment_message, dsb.)
+- `analytics.orders`: Informasi transaksi pesanan (order_id, customer_id, order_status, order_purchase_timestamp, order_delivered_timestamp)
+- `analytics.order_items`: Rincian item per pesanan (order_id, order_item_id, product_id, price, freight_value). Hubungkan ke `analytics.products` via `product_id`.
+- `analytics.products`: Master katalog produk (product_id, product_category_name, price, weight_g)
+- `analytics.customers`: Master data pelanggan (customer_id, customer_unique_id, customer_name, email, phone_number, city, state)
+- `analytics.order_payments`: Transaksi pembayaran (order_id, payment_sequential, payment_type, payment_installments, payment_value)
+- `analytics.reviews`: Review dan rating pelanggan (review_id, order_id, review_score, review_comment_message)
 
 ATURAN KERJA & HARNESS:
-1. Metric Grounding & Business Glossary:
-   - Jika pertanyaan pengguna menyinggung istilah bisnis atau metrik (seperti GMV, Delivered Rate, AOV, Pelanggan Aktif, Rasio Pembatalan), panggil tool `search_glossary` terlebih dahulu untuk melihat definisi resmi dan rumus SQL yang disetujui perusahaan.
-2. Grounding & Schema Discovery:
-   - JANGAN menebak nama tabel atau nama kolom.
-   - Panggil tool `get_schema` untuk memeriksa tabel dan kolom yang relevan beserta tipe data dan sampelnya jika belum yakin dengan struktur kolom.
+1. EKSEKUSI DATA WAJIB (JANGAN HANYA MEMBERIKAN QUERY):
+   - Pengguna adalah pimpinan/analis bisnis yang MEMBUTUHKAN HASIL DAN ANGKA NYATA dari database, BUKAN teks kode query SQL.
+   - DILARANG KERAS hanya menuliskan kode SQL atau menyarankan query dalam jawaban Anda tanpa menjalankannya!
+   - Anda WAJIB memanggil tool `run_sql` untuk mengeksekusi query di PostgreSQL dan membaca hasil baris datanya sebelum menulis kesimpulan akhir.
+   - Tool `search_glossary` dan `get_schema` HANYA untuk mencari definisi/skema, mereka TIDAK mengeksekusi query. Anda HARUS melanjutkan dengan memanggil tool `run_sql`.
+2. Metric Grounding:
+   - Jika pertanyaan pengguna menyinggung istilah bisnis atau metrik (seperti GMV, Delivered Rate, AOV, Pelanggan Aktif, Rasio Pembatalan), panggil tool `search_glossary` terlebih dahulu untuk melihat rumus resmi, kemudian jalankan query dengan `run_sql`.
 3. Safe SQL Generation:
    - Tulis HANYA query SELECT yang valid untuk dialek PostgreSQL.
    - Dilarang keras melakukan operasi penulisan (INSERT, UPDATE, DELETE, DROP, ALTER, dsb).
@@ -56,12 +58,9 @@ ATURAN KERJA & HARNESS:
    - Gunakan alias kolom yang jelas dan format numerik yang rapi.
 4. Perhitungan Tambahan & Statistik:
    - Jika memerlukan perhitungan persentase rumit, rasio, pertumbuhan, atau statistik yang sulit di SQL, gunakan tool `calculate` untuk menjalankan Python secara aman.
-5. Eksekusi & Observasi:
-   - Gunakan tool `run_sql` untuk mengeksekusi query.
-   - Jika query menghasilkan error, perbaiki sintaks SQL berdasarkan pesan error pada langkah berikutnya.
-6. Jawaban Akhir:
-   - Sajikan jawaban yang menjawab pertanyaan pengguna secara langsung.
-   - Sertakan ringkasan temuan kunci dalam poin-poin yang mudah dipahami bisnis.
+5. Jawaban Akhir:
+   - Sajikan temuan kunci berdasarkan baris data nyata yang dikembalikan oleh tool `run_sql`.
+   - Sebutkan angka-angka konkret hasil perhitungan dari tabel.
    - Jelaskan metrik dan rumus yang digunakan secara transparan (sitasi).
 """
 
@@ -455,7 +454,28 @@ class ManualAgentLoop:
                 # Proceed to next iteration to let LLM interpret observations
                 continue
 
-            # 5. No tool calls -> Agent has concluded reasoning!
+            # 5. Check if agent is attempting to finalize prematurely without running SQL on an analytical question
+            if not executed_sqls and step < 3:
+                q_lower = user_query.lower()
+                is_analytical = any(w in q_lower for w in [
+                    "berapa", "kategori", "siapa", "mana", "total", "rata", "pesanan",
+                    "produk", "customer", "pelanggan", "penjualan", "transaksi", "status",
+                    "data", "terbanyak", "terlaris", "termahal", "paling"
+                ])
+                is_greeting = any(g in q_lower for g in ["halo", "hai", "hello", "hi", "siapa kamu"]) and not is_analytical
+                if is_analytical and not is_greeting:
+                    logger.info("Agent attempted to conclude without running SQL on an analytical query. Nudging tool execution.")
+                    messages.append({
+                        "role": "assistant",
+                        "content": llm_response.content or "",
+                    })
+                    messages.append({
+                        "role": "user",
+                        "content": "PENTING: Anda belum mengeksekusi query SQL dengan tool `run_sql`! Jangan hanya menuliskan query dalam teks. Panggil tool `run_sql` sekarang untuk menjalankan query tersebut di database PostgreSQL dan dapatkan baris data nyatanya!",
+                    })
+                    continue
+
+            # No tool calls -> Agent has concluded reasoning!
             break
 
         # Graceful degradation if max steps reached
