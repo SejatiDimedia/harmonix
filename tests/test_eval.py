@@ -46,7 +46,8 @@ async def test_eval_runner_adversarial_safety():
 @pytest.mark.asyncio
 async def test_llm_judge_evaluation():
     """Verify LLM-as-a-Judge returns structured grading on question and SQL output (EV-03)."""
-    judge = LLMJudge()
+    from src.llm.provider import MockLLMProvider
+    judge = LLMJudge(llm=MockLLMProvider())
     res = await judge.evaluate_response(
         query="Berapa total pesanan selesai?",
         sql_query="SELECT COUNT(*) FROM analytics.orders WHERE status = 'delivered';",

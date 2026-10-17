@@ -5,6 +5,7 @@ from typing import Any, AsyncIterator
 import httpx
 import pytest
 
+from src.config import settings
 from src.llm.provider import (
     BaseLLMProvider,
     FallbackLLMProvider,
@@ -144,7 +145,7 @@ def test_create_single_provider():
     assert isinstance(mock_p, MockLLMProvider)
 
     ollama_p = create_single_provider("ollama")
-    assert ollama_p.model == "qwen2.5-coder:7b"
+    assert ollama_p.model == settings.ollama_model
 
     with pytest.raises(ValueError, match="Unsupported LLM provider"):
         create_single_provider("nonexistent_provider")

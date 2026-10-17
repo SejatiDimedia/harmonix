@@ -89,56 +89,155 @@ class MockLLMProvider(BaseLLMProvider):
             self._call_count += 1
             return resp
 
-        # Default smart heuristic mock
-        last_message = messages[-1]["content"] if messages else ""
+        # Extract primary user query
+        user_queries = [
+            m.get("content", "")
+            for m in messages
+            if m.get("role") == "user" and not str(m.get("content", "")).startswith("Operator Feedback:")
+        ]
+        user_query = user_queries[0] if user_queries else (messages[-1].get("content", "") if messages else "")
+        uq_lower = str(user_query).lower()
 
-        # Step 1: If tools provided and schema not yet fetched, call get_schema
+        # Step 0: Conversational greeting detection
+        is_greeting = any(g in uq_lower for g in ["halo", "hai", "hello", "hi", "selamat pagi", "selamat siang", "siapa kamu"]) and not any(
+            k in uq_lower for k in ["berapa", "total", "tabel", "data", "order", "produk", "customer", "pelanggan", "penjualan", "transaksi", "status", "kota", "paling"]
+        )
+        if is_greeting and not any(m.get("role") == "tool" for m in messages):
+            return LLMResponse(
+                content=(
+                    "Halo! Saya **Harnessly**, asisten AI Data Analyst Anda untuk database PostgreSQL analitik.\n\n"
+                    "Saya dapat membantu Anda mengeksplorasi data, misalnya:\n"
+                    "- *Berapa total pesanan dan pendapatan berdasarkan status transaksi?*\n"
+                    "- *Kategori produk apa yang memiliki variasi terbanyak?*\n"
+                    "- *Kota mana yang memiliki jumlah pelanggan tertinggi?*\n"
+                    "- *Metode pembayaran apa yang paling sering digunakan?*\n\n"
+                    "Silakan ketik pertanyaan analisis data yang ingin Anda ketahui!"
+                ),
+                tool_calls=[],
+                usage=LLMUsage(prompt_tokens=50, completion_tokens=70, total_tokens=120),
+                model="mock-agent-model",
+            )
+
+        # Check existing tool observations
         has_schema_observation = any(
             m.get("role") == "tool" and m.get("name") == "get_schema" for m in messages
         )
         has_sql_observation = any(
             m.get("role") == "tool" and m.get("name") == "run_sql" for m in messages
         )
+        has_glossary_observation = any(
+            m.get("role") == "tool" and m.get("name") == "search_glossary" for m in messages
+        )
 
-        if tools and not has_schema_observation:
+        # Step 1: Metric glossary grounding if query mentions business metrics
+        if tools and any(m in uq_lower for m in ["gmv", "aov", "delivered rate", "definisi", "rumus", "metrik", "glossary"]) and not has_glossary_observation:
             return LLMResponse(
-                content="Saya perlu memeriksa skema tabel yang tersedia terlebih dahulu.",
+                content="Mencari definisi resmi metrik bisnis di kamus metrik perusahaan...",
+                tool_calls=[
+                    ToolCall(
+                        id="call_mock_glossary_1",
+                        name="search_glossary",
+                        arguments={"query": user_query},
+                    )
+                ],
+                usage=LLMUsage(prompt_tokens=120, completion_tokens=30, total_tokens=150),
+                model="mock-agent-model",
+            )
+
+        # Step 2: Schema discovery
+        if tools and not has_schema_observation:
+            relevant_tables = []
+            if any(w in uq_lower for w in ["pelanggan", "customer", "kota", "city", "wilayah", "state"]):
+                relevant_tables.append("customers")
+            if any(w in uq_lower for w in ["order", "pesanan", "transaksi", "penjualan", "sales", "revenue", "gmv", "status", "delivered"]):
+                relevant_tables.append("orders")
+            if any(w in uq_lower for w in ["produk", "product", "kategori", "category", "harga", "price", "barang"]):
+                relevant_tables.append("products")
+            if any(w in uq_lower for w in ["bayar", "payment", "kartu", "metode", "credit"]):
+                relevant_tables.append("order_payments")
+            if not relevant_tables:
+                relevant_tables = ["orders", "products", "customers"]
+
+            return LLMResponse(
+                content=f"Memeriksa skema tabel {', '.join(relevant_tables)} untuk memvalidasi kolom dan tipe data.",
                 tool_calls=[
                     ToolCall(
                         id="call_mock_schema_1",
                         name="get_schema",
-                        arguments={"table_names": ["orders", "products", "customers"]},
+                        arguments={"table_names": relevant_tables},
                     )
                 ],
                 usage=LLMUsage(prompt_tokens=150, completion_tokens=30, total_tokens=180),
                 model="mock-agent-model",
             )
 
-        if tools and has_schema_observation and not has_sql_observation:
+        # Step 3: Dynamic SQL Generation based on user query
+        if tools and not has_sql_observation:
+            if any(w in uq_lower for w in ["pelanggan", "customer", "kota", "city"]):
+                query = "SELECT city, state, COUNT(*) as total_customers FROM analytics.customers GROUP BY city, state ORDER BY total_customers DESC LIMIT 10"
+                thought = "Menjalankan query SQL untuk menganalisis sebaran pelanggan per kota dan provinsi."
+            elif any(w in uq_lower for w in ["produk", "product", "kategori", "category", "harga", "price", "termahal", "terlaris"]):
+                query = "SELECT product_category_name, COUNT(*) as total_products, ROUND(AVG(price)::numeric, 2) as avg_price FROM analytics.products GROUP BY product_category_name ORDER BY total_products DESC LIMIT 10"
+                thought = "Menjalankan query SQL untuk memeriksa sebaran kategori produk dan harga rata-rata."
+            elif any(w in uq_lower for w in ["bayar", "payment", "metode", "kartu"]):
+                query = "SELECT payment_type, COUNT(*) as total_transactions, ROUND(SUM(payment_value)::numeric, 2) as total_amount FROM analytics.order_payments GROUP BY payment_type ORDER BY total_transactions DESC"
+                thought = "Menjalankan query SQL untuk menghitung transaksi berdasarkan metode pembayaran."
+            else:
+                query = "SELECT order_status, COUNT(*) as total_orders FROM analytics.orders GROUP BY order_status ORDER BY total_orders DESC"
+                thought = "Menjalankan query SQL untuk menghitung rekapitulasi status pesanan di database."
+
             return LLMResponse(
-                content="Menjalankan query SQL untuk mendapatkan data pesanan dan produk.",
+                content=thought,
                 tool_calls=[
                     ToolCall(
                         id="call_mock_sql_1",
                         name="run_sql",
-                        arguments={
-                            "query": "SELECT product_category_name, COUNT(*) as total_orders FROM analytics.products GROUP BY product_category_name"
-                        },
+                        arguments={"query": query},
                     )
                 ],
                 usage=LLMUsage(prompt_tokens=250, completion_tokens=40, total_tokens=290),
                 model="mock-agent-model",
             )
 
-        # Final answer
+        # Step 4: Final Answer synthesis from real tool execution results
+        sql_obs = None
+        for m in reversed(messages):
+            if m.get("role") == "tool" and m.get("name") == "run_sql":
+                try:
+                    content_val = m.get("content", "")
+                    sql_obs = json.loads(content_val) if isinstance(content_val, str) else content_val
+                    break
+                except Exception:
+                    pass
+
+        if sql_obs and isinstance(sql_obs, dict) and sql_obs.get("status") == "success":
+            cols = sql_obs.get("columns", [])
+            rows = sql_obs.get("rows", [])
+
+            lines = ["Berdasarkan data terkini dari database analitik PostgreSQL:\n"]
+            if rows:
+                lines.append(f"Ditemukan **{len(rows)} data ringkasan** dari hasil query:")
+                lines.append("")
+                for row in rows[:5]:
+                    parts = [f"**{cols[i]}**: `{row[i]}`" for i in range(min(len(cols), len(row)))]
+                    lines.append(f"- " + ", ".join(parts))
+                if len(rows) > 5:
+                    lines.append(f"- *... dan {len(rows) - 5} baris data lainnya (terlampir pada tabel data di bawah).*")
+            else:
+                lines.append("Query berhasil dijalankan, namun tidak ada baris data yang cocok dengan kriteria pencarian.")
+
+            lines.append("\nSeluruh data divalidasi dengan aman melalui AST SQL guardrail.")
+            final_content = "\n".join(lines)
+        else:
+            final_content = (
+                f"Analisis untuk pertanyaan: *'{user_query}'* telah selesai diproses. "
+                "Data dari database telah diverifikasi."
+            )
+
         return LLMResponse(
-            content=(
-                "Berdasarkan analisis data dari database PostgreSQL:\n\n"
-                "Total pesanan didominasi oleh kategori Electronics dan Fashion. "
-                "Semua transaksi telah berhasil direkapitulasi."
-            ),
+            content=final_content,
             tool_calls=[],
-            usage=LLMUsage(prompt_tokens=350, completion_tokens=50, total_tokens=400),
+            usage=LLMUsage(prompt_tokens=350, completion_tokens=60, total_tokens=410),
             model="mock-agent-model",
         )
 
