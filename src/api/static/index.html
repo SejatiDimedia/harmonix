@@ -64,13 +64,15 @@
             color: #ecebe6;
             line-height: 1.68;
             font-size: 0.925rem;
+            word-break: break-word;
+            overflow-wrap: break-word;
         }
-        .markdown-body p { margin-bottom: 0.85em; }
+        .markdown-body p { margin-bottom: 0.85em; word-break: break-word; }
         .markdown-body p:last-child { margin-bottom: 0; }
         .markdown-body strong { color: #f5f4ef; font-weight: 600; }
         .markdown-body ul { list-style-type: disc; padding-left: 1.3em; margin-bottom: 0.85em; }
         .markdown-body ol { list-style-type: decimal; padding-left: 1.3em; margin-bottom: 0.85em; }
-        .markdown-body li { margin-bottom: 0.3em; }
+        .markdown-body li { margin-bottom: 0.3em; word-break: break-word; }
         .markdown-body code {
             font-family: 'JetBrains Mono', monospace;
             font-size: 0.84em;
@@ -79,6 +81,44 @@
             padding: 0.15em 0.4em;
             border-radius: 0.35rem;
             color: #e59f89;
+            word-break: break-word;
+        }
+        .markdown-body pre {
+            background: #141413;
+            border: 1px solid #2d2b27;
+            border-radius: 0.75rem;
+            padding: 0.85rem;
+            margin: 0.85rem 0;
+            white-space: pre-wrap !important;
+            word-break: break-word !important;
+            overflow-wrap: anywhere !important;
+        }
+        .markdown-body pre code {
+            background: transparent;
+            border: none;
+            padding: 0;
+            color: #daa18b;
+            white-space: pre-wrap !important;
+            word-break: break-word !important;
+        }
+        .markdown-body table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 0.85rem 0;
+            font-size: 0.85rem;
+        }
+        .markdown-body th, .markdown-body td {
+            border: 1px solid #2e2c28;
+            padding: 0.5rem 0.75rem;
+            word-break: break-word;
+            white-space: normal;
+        }
+        .markdown-body th {
+            background: #242320;
+            color: #a3a097;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            text-transform: uppercase;
         }
     </style>
 </head>
@@ -245,8 +285,8 @@
                 <span>Persetujuan Diperlukan: Query Mengakses Data Sensitif</span>
             </div>
             <p id="approvalReason" class="text-xs text-[#cfc7b4] leading-relaxed"></p>
-            <div class="p-2.5 rounded-lg bg-[#151310] border border-[#383124] text-[11px] font-mono text-amber-300 overflow-x-auto">
-                <code id="approvalSQL"></code>
+            <div class="p-3 rounded-lg bg-[#151310] border border-[#383124] text-[11px] font-mono text-amber-300 whitespace-pre-wrap break-words leading-relaxed overflow-hidden">
+                <code id="approvalSQL" class="block whitespace-pre-wrap break-words font-mono"></code>
             </div>
             <div class="flex items-center gap-2 pt-1">
                 <button id="btnApprove" class="px-4 py-1.5 rounded-lg text-xs font-semibold bg-clay-500 hover:bg-clay-600 text-white transition shadow-sm">
@@ -325,6 +365,15 @@
                 chatForm.dispatchEvent(new Event('submit'));
             });
         });
+
+        function formatSQL(sql) {
+            if (!sql) return '';
+            let s = sql.trim().replace(/\s+/g, ' ');
+            s = s.replace(/\b(SELECT|FROM|WHERE|GROUP BY|HAVING|ORDER BY|LIMIT|OFFSET)\b/gi, '\n$1');
+            s = s.replace(/\b(LEFT JOIN|RIGHT JOIN|INNER JOIN|FULL JOIN|CROSS JOIN|JOIN)\b/gi, '\n  $1');
+            s = s.replace(/\b(AND|OR)\b/gi, '\n    $1');
+            return s.trim();
+        }
 
         async function checkHealth() {
             try {
@@ -416,7 +465,7 @@
                                     </span>
                                 `;
                                 approvalReason.textContent = (parsed.risk_reasons || []).join(", ");
-                                approvalSQL.textContent = parsed.sanitized_query || '';
+                                approvalSQL.textContent = formatSQL(parsed.sanitized_query || '');
                                 approvalBanner.classList.remove('hidden');
                                 approvalBanner.scrollIntoView({ behavior: 'smooth' });
                             } else if (currentEvent === 'final_result') {
@@ -459,13 +508,14 @@
                                             <span>Salin SQL</span>
                                         </button>
                                     `;
+                                    const formattedQueries = parsed.sql_queries.map(q => formatSQL(q)).join('\n\n');
                                     const sqlContent = document.createElement('pre');
-                                    sqlContent.className = 'p-3 text-[11px] font-mono text-clay-300 overflow-x-auto';
-                                    sqlContent.textContent = parsed.sql_queries.join('\n\n');
+                                    sqlContent.className = 'p-3 text-[11px] font-mono text-clay-300 whitespace-pre-wrap break-words leading-relaxed overflow-hidden select-text';
+                                    sqlContent.textContent = formattedQueries;
 
                                     const copyBtn = sqlHeader.querySelector('.copy-sql-btn');
                                     copyBtn.addEventListener('click', () => {
-                                        navigator.clipboard.writeText(parsed.sql_queries.join('\n\n'));
+                                        navigator.clipboard.writeText(formattedQueries);
                                         copyBtn.innerHTML = `
                                             <svg class="w-3 h-3 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
@@ -492,11 +542,11 @@
                                         const tblWrap = document.createElement('div');
                                         tblWrap.className = 'mt-3 rounded-xl border border-[#2e2c28] overflow-hidden overflow-x-auto bg-[#1b1a18]';
                                         const tbl = document.createElement('table');
-                                        tbl.className = 'w-full text-xs text-left border-collapse';
-                                        let ths = t.columns.map(c => `<th class="p-2.5 text-[11px] font-mono uppercase bg-[#242320] text-[#a3a097] border-b border-[#2e2c28]">${c}</th>`).join('');
+                                        tbl.className = 'w-full text-xs text-left border-collapse table-auto';
+                                        let ths = t.columns.map(c => `<th class="p-2.5 text-[11px] font-mono uppercase bg-[#242320] text-[#a3a097] border-b border-[#2e2c28] whitespace-normal break-words">${c}</th>`).join('');
                                         let trs = t.rows.map((r, i) => `
                                             <tr class="${i % 2 === 0 ? 'bg-[#1b1a18]' : 'bg-[#1e1d1b]'} hover:bg-[#262522] transition">
-                                                ${r.map(val => `<td class="p-2.5 border-b border-[#262421] text-[#dedcd5] font-mono text-[11px]">${val ?? '<span class="text-stone-600">NULL</span>'}</td>`).join('')}
+                                                ${r.map(val => `<td class="p-2.5 border-b border-[#262421] text-[#dedcd5] font-mono text-[11px] whitespace-normal break-words max-w-xs leading-relaxed">${val ?? '<span class="text-stone-600">NULL</span>'}</td>`).join('')}
                                             </tr>
                                         `).join('');
                                         tbl.innerHTML = `<thead><tr>${ths}</tr></thead><tbody>${trs}</tbody>`;
