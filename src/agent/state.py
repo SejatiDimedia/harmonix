@@ -213,3 +213,39 @@ async def get_session_history(session_id: str, limit: int = 5) -> list[dict[str,
             history_messages.append({"role": "assistant", "content": f_result.get("answer_text", "")})
 
         return history_messages
+
+
+async def get_task_by_approval_id(approval_id: str) -> TaskRecord | None:
+    """Retrieve task waiting for approval by approval_id from PostgreSQL (FR-19/FR-25 resilience)."""
+    if not approval_id:
+        return None
+
+    await init_task_state_table()
+
+    async with get_db_session() as session:
+        query = text("""
+            SELECT task_id, session_id, status, current_step, max_steps, user_query, 
+                   messages, pending_approval, final_result, error_message, created_at, updated_at
+            FROM analytics.agent_tasks
+            WHERE pending_approval->>'approval_id' = :approval_id;
+        """)
+        res = await session.execute(query, {"approval_id": approval_id})
+        row = res.fetchone()
+        if not row:
+            return None
+
+        return TaskRecord(
+            task_id=row[0],
+            session_id=row[1],
+            status=AgentTaskStatus(row[2]),
+            current_step=row[3],
+            max_steps=row[4],
+            user_query=row[5],
+            messages=row[6] if isinstance(row[6], list) else json.loads(row[6] or "[]"),
+            pending_approval=row[7] if isinstance(row[7], dict) else (json.loads(row[7]) if row[7] else None),
+            final_result=row[8] if isinstance(row[8], dict) else (json.loads(row[8]) if row[8] else None),
+            error_message=row[9],
+            created_at=row[10],
+            updated_at=row[11],
+        )
+

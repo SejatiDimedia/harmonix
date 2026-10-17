@@ -2,7 +2,7 @@
 
 import time
 from typing import Any
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -23,6 +23,23 @@ class GetSchemaInput(BaseModel):
         description="Optional list of specific table names to inspect. If omitted, returns an overview of all available tables in the analytics schema.",
     )
 
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_tables(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            if not data.get("table_names"):
+                for alias in ("table_name", "tables", "table"):
+                    if data.get(alias):
+                        val = data[alias]
+                        if isinstance(val, str):
+                            data["table_names"] = [t.strip() for t in val.split(",") if t.strip()]
+                        elif isinstance(val, (list, tuple, set)):
+                            data["table_names"] = list(val)
+                        break
+            elif isinstance(data.get("table_names"), str):
+                data["table_names"] = [t.strip() for t in data["table_names"].split(",") if t.strip()]
+        return data
+
 
 class GetSchemaTool(BaseTool):
     """Tool to retrieve schema definitions, column data types, and sample values."""
@@ -35,13 +52,33 @@ class GetSchemaTool(BaseTool):
     )
     args_schema: type[BaseModel] = GetSchemaInput
 
-    async def execute(self, table_names: list[str] | None = None) -> dict[str, Any]:
-        """Execute schema inspection."""
+    async def execute(
+        self,
+        table_names: list[str] | str | None = None,
+        table_name: str | None = None,
+        tables: list[str] | str | None = None,
+        **kwargs: Any,
+    ) -> dict[str, Any]:
+        """Execute schema inspection with resilient parameter handling."""
         schema_name = settings.db_schema
 
+        # Normalize tables list across parameter aliases
+        raw_tables = []
+        if table_name:
+            raw_tables.append(table_name)
+        for cand in (table_names, tables):
+            if isinstance(cand, str):
+                raw_tables.extend([t.strip() for t in cand.split(",") if t.strip()])
+            elif isinstance(cand, (list, tuple, set)):
+                raw_tables.extend([str(t).strip() for t in cand if str(t).strip()])
+
+        # Deduplicate while preserving order
+        seen = set()
+        resolved_tables = [t for t in raw_tables if not (t.lower() in seen or seen.add(t.lower()))]
+
         async with get_db_session() as session:
-            # 1. If table_names is empty or None, return overview of all tables
-            if not table_names:
+            # 1. If no specific tables requested, return overview of all tables
+            if not resolved_tables:
                 query = text("""
                     SELECT table_name
                     FROM information_schema.tables
@@ -49,16 +86,16 @@ class GetSchemaTool(BaseTool):
                     ORDER BY table_name;
                 """)
                 result = await session.execute(query, {"schema_name": schema_name})
-                tables = [row[0] for row in result.fetchall()]
+                available_tables = [row[0] for row in result.fetchall()]
                 return {
                     "schema": schema_name,
-                    "available_tables": tables,
+                    "available_tables": available_tables,
                     "message": "Specify table_names to inspect column details and sample data.",
                 }
 
             # 2. Inspect requested tables
             tables_detail = {}
-            for table in table_names:
+            for table in resolved_tables:
                 # Clean table name
                 clean_table = table.strip().lower()
                 # Get column information
@@ -121,6 +158,14 @@ class RunSQLInput(BaseModel):
         description="The SQL SELECT query to execute against the analytics database. Only SELECT queries are permitted.",
     )
 
+    @model_validator(mode="before")
+    @classmethod
+    def populate_query_from_aliases(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            if not data.get("query") and data.get("sql"):
+                data["query"] = data["sql"]
+        return data
+
 
 class RunSQLTool(BaseTool):
     """Tool to execute safe, read-only SQL queries with AST guardrails and timeouts."""
@@ -136,11 +181,25 @@ class RunSQLTool(BaseTool):
     def __init__(self, guardrail: SQLGuardrail | None = None):
         self.guardrail = guardrail or SQLGuardrail()
 
-    async def execute(self, query: str, is_approved: bool = False) -> dict[str, Any]:
+    async def execute(
+        self,
+        query: str | None = None,
+        sql: str | None = None,
+        is_approved: bool = False,
+        **kwargs: Any,
+    ) -> dict[str, Any]:
         """Validate, assess risk, and execute SQL query."""
+        actual_query = (query or sql or "").strip()
+        if not actual_query:
+            return {
+                "status": "error",
+                "error_type": "InvalidInputError",
+                "message": "Missing SQL query parameter. Please provide 'query' or 'sql'.",
+            }
+
         # 1. AST Validation & limit enforcement
         try:
-            sanitized_query = self.guardrail.validate_and_sanitize(query)
+            sanitized_query = self.guardrail.validate_and_sanitize(actual_query)
         except SQLValidationError as e:
             return {
                 "status": "error",

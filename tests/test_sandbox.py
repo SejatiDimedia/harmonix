@@ -95,3 +95,19 @@ result = 1
     output = await tool.execute(code=code)
     assert output["status"] == "error"
     assert output["error_type"] == "TimeoutError"
+
+
+@pytest.mark.asyncio
+async def test_calculate_tool_bare_expression_and_aliases():
+    """Verify CalculateTool automatically evaluates bare expressions and supports aliases."""
+    tool = CalculateTool()
+    # 1. Bare expression without 'result ='
+    res1 = await tool.execute(code="1500000 / 3")
+    assert res1["status"] == "success"
+    assert res1["result"] == 500000.0
+
+    # 2. Expression alias
+    res2 = await tool.execute(expression="round(42.567, 1)")
+    assert res2["status"] == "success"
+    assert res2["result"] == 42.6
+

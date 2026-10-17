@@ -8,6 +8,7 @@ from src.agent.state import (
     save_task_checkpoint,
     get_task_record,
     get_session_history,
+    get_task_by_approval_id,
 )
 
 
@@ -111,3 +112,37 @@ async def test_session_history_memory():
     assert "Pertanyaan turn 0" in history[0]["content"]
     assert history[1]["role"] == "assistant"
     assert "Jawaban turn 0" in history[1]["content"]
+
+
+@pytest.mark.asyncio
+async def test_get_task_by_approval_id():
+    """Verify get_task_by_approval_id can look up tasks across server restarts."""
+    await init_task_state_table()
+
+    t_id = f"task_appr_{uuid.uuid4().hex[:8]}"
+    appr_id = f"appr_test_{uuid.uuid4().hex[:8]}"
+
+    approval_payload = {
+        "approval_id": appr_id,
+        "task_id": t_id,
+        "step": 2,
+        "tool_call_id": "call_123",
+        "tool_name": "run_sql",
+        "sanitized_query": "SELECT email FROM analytics.customers LIMIT 10",
+    }
+
+    await save_task_checkpoint(
+        task_id=t_id,
+        status=AgentTaskStatus.WAITING_APPROVAL,
+        current_step=2,
+        messages=[],
+        user_query="Query with PII",
+        pending_approval=approval_payload,
+    )
+
+    record = await get_task_by_approval_id(appr_id)
+    assert record is not None
+    assert record.task_id == t_id
+    assert record.status == AgentTaskStatus.WAITING_APPROVAL
+    assert record.pending_approval["approval_id"] == appr_id
+

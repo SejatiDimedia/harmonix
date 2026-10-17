@@ -15,7 +15,7 @@ STATIC_INDEX_PATH = Path(__file__).parent / "static" / "index.html"
 
 from src.agent.manual_loop import ManualAgentLoop
 from src.agent.models import AgentTaskStatus
-from src.agent.state import get_task_record, save_task_checkpoint, init_task_state_table
+from src.agent.state import get_task_record, get_task_by_approval_id, save_task_checkpoint, init_task_state_table
 from src.config import settings
 from src.db.connection import check_db_health
 from src.rag.glossary import seed_glossary_if_empty
@@ -156,10 +156,16 @@ async def get_task(task_id: str):
 @app.post("/v1/approvals/{approval_id}", tags=["Agent"])
 async def submit_approval(approval_id: str, request: ApprovalRequest):
     """Approve or reject a risky query that triggered the human-in-the-loop approval gate."""
-    if approval_id not in pending_approvals:
-        raise HTTPException(status_code=404, detail="Approval request not found or expired.")
+    item = pending_approvals.get(approval_id)
+    if not item:
+        # Fallback: check PostgreSQL state table in case server was restarted during pending approval
+        record = await get_task_by_approval_id(approval_id)
+        if record and record.pending_approval:
+            item = record.pending_approval
+            pending_approvals[approval_id] = item
+        else:
+            raise HTTPException(status_code=404, detail="Approval request not found or expired.")
 
-    item = pending_approvals[approval_id]
     item["decision"] = request.decision
     item["reason"] = request.reason
 

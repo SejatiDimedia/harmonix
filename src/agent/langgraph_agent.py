@@ -16,6 +16,7 @@ from src.agent.models import (
     Citation,
     TableData,
 )
+from src.agent.prompts import BASE_ANALYST_SYSTEM_PROMPT
 from src.agent.state import save_task_checkpoint
 from src.config import settings
 from src.llm.provider import BaseLLMProvider, ToolCall, get_llm_provider
@@ -28,70 +29,8 @@ from src.tools.sandbox import CalculateTool
 
 logger = logging.getLogger(__name__)
 
-SYSTEM_PROMPT = """Anda adalah Senior Data Analyst AI Agent profesional (versi LangGraph).
-Tugas Anda adalah menjawab pertanyaan analitik database secara akurat, berbasis data, dan terstruktur.
+SYSTEM_PROMPT = BASE_ANALYST_SYSTEM_PROMPT
 
-DATABASE SCHEMA OVERVIEW:
-Database analitik PostgreSQL memiliki skema `analytics` dengan tabel-tabel berikut:
-- `analytics.orders`: Informasi transaksi pesanan (order_id, customer_id, order_status, order_purchase_timestamp, order_delivered_timestamp)
-- `analytics.order_items`: Rincian item per pesanan (order_id, order_item_id, product_id, price, freight_value)
-- `analytics.products`: Master katalog produk (product_id, product_category_name, price, weight_g)
-- `analytics.customers`: Master data pelanggan (customer_id, customer_unique_id, customer_name, email, phone_number, city, state)
-- `analytics.order_payments`: Transaksi pembayaran (order_id, payment_sequential, payment_type, payment_installments, payment_value)
-- `analytics.reviews`: Review dan rating pelanggan (review_id, order_id, review_score, review_comment_message)
-
-RELASI ANTAR TABEL (RELATIONAL JOIN PATHS):
-- `customers` ke `orders`: `customers.customer_id = orders.customer_id`
-- `orders` ke `order_items`: `orders.order_id = order_items.order_id`
-- `order_items` ke `products`: `order_items.product_id = products.product_id`
-- `orders` ke `order_payments`: `orders.order_id = order_payments.order_id`
-- `orders` ke `reviews`: `orders.order_id = reviews.order_id`
-
-LOKASI KOLOM KEUANGAN & TOTAL BELANJA:
-- Tabel `analytics.orders` HANYA berisi status dan tanggal pesanan, TIDAK MEMILIKI kolom harga/order_value/order_total/total_order_value!
-- Nilai pembayaran transaksi pelanggan disimpan di tabel `analytics.order_payments` pada kolom `payment_value`.
-- Harga per item barang disimpan di tabel `analytics.order_items` pada kolom `price`.
-- Untuk mencari pelanggan yang belanja lebih dari X (misal > 500.000):
-  Hubungkan `customers` -> `orders` -> `order_payments` dan gunakan `GROUP BY` dengan klausa `HAVING`, BUKAN `WHERE`:
-  SELECT c.customer_name, c.city, c.email, SUM(op.payment_value) AS total_belanja
-  FROM analytics.customers c
-  JOIN analytics.orders o ON c.customer_id = o.customer_id
-  JOIN analytics.order_payments op ON o.order_id = op.order_id
-  GROUP BY c.customer_id, c.customer_name, c.city, c.email
-  HAVING SUM(op.payment_value) > 500000
-
-ATURAN AGREGASI SQL POSTGRESQL:
-- DILARANG menggunakan fungsi agregasi seperti SUM(), COUNT(), AVG() di dalam klausa WHERE! (Contoh salah: WHERE SUM(...) > 500000).
-- Fungsi agregasi WAJIB diletakkan di klausa HAVING setelah GROUP BY! (Contoh benar: GROUP BY c.customer_id, c.customer_name, c.city, c.email HAVING SUM(op.payment_value) > 500000).
-
-PERINGATAN RELASI:
-- Tabel `order_items` TIDAK MEMILIKI kolom `customer_id`!
-- Untuk mencari customer yang membeli produk tertentu, WAJIB melakukan JOIN melalui tabel `orders`:
-  FROM analytics.customers c
-  JOIN analytics.orders o ON c.customer_id = o.customer_id
-  JOIN analytics.order_items oi ON o.order_id = oi.order_id
-  JOIN analytics.products p ON oi.product_id = p.product_id
-
-ATURAN NILAI STRING POSTGRESQL:
-- Nilai teks/string di PostgreSQL WAJIB menggunakan petik tunggal (`'...'`), BUKAN petik ganda (`"..."`). Petik ganda dianggap nama kolom!
-- Kategori produk dalam database tersimpan dalam bahasa Inggris: `'Electronics'`, `'Home & Living'`, `'Fashion'`, `'Books'`. Gunakan `p.product_category_name ILIKE '%electr%'` untuk kategori elektronik.
-
-ATURAN KERJA & HARNESS:
-1. Metric Grounding & Business Glossary:
-   - Jika pertanyaan pengguna mengandung istilah bisnis (GMV, Delivered Rate, AOV, Pelanggan Aktif, dsb), panggil tool `search_glossary`.
-2. Grounding & Schema Discovery:
-   - Jangan menebak skema tabel. Gunakan `get_schema` untuk memeriksa tabel dan kolom yang relevan jika belum yakin dengan struktur kolom.
-3. Safe SQL Generation:
-   - Tulis HANYA query SELECT yang valid untuk dialek PostgreSQL.
-   - Dilarang keras melakukan operasi penulisan (INSERT, UPDATE, DELETE, DROP, ALTER, dsb).
-   - Hindari query berisiko tanpa batas limit.
-4. Perhitungan Tambahan & Sandbox:
-   - Gunakan tool `calculate` untuk perhitungan statistik atau Python rumit.
-5. Eksekusi & Observasi:
-   - Gunakan `run_sql` untuk mengeksekusi query. Jika error, perbaiki di iterasi berikutnya.
-6. Jawaban Akhir:
-   - Sajikan temuan kunci secara jelas dan sertakan sitasi metrik/SQL.
-"""
 
 
 class LangGraphAgentState(TypedDict, total=False):
@@ -309,12 +248,17 @@ class LangGraphAgent:
             elif tool_name == "search_glossary":
                 result = await tool.execute(**tool_args)
                 obs = str(result)
-                if isinstance(result, list):
-                    for item in result:
-                        state["citations"].append({
-                            "sql_query": item.get("approved_sql_formula", ""),
-                            "metric_definition": f"{item.get('metric_name')}: {item.get('business_definition')}",
-                        })
+                metrics_list = []
+                if isinstance(result, dict):
+                    metrics_list = result.get("metrics", [])
+                elif isinstance(result, list):
+                    metrics_list = result
+                for item in metrics_list:
+                    state["citations"].append({
+                        "sql_query": item.get("recommended_sql") or item.get("approved_sql_formula", ""),
+                        "metric_definition": f"{item.get('metric_name')}: {item.get('business_definition', '')} (Formula: {item.get('calculation_formula', '')})",
+                        "source_tables": item.get("relevant_tables", []),
+                    })
 
             elif tool_name == "calculate":
                 result = await tool.execute(**tool_args)

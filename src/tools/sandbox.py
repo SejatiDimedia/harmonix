@@ -8,7 +8,7 @@ import math
 import statistics
 import sys
 from typing import Any
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from src.tools.base import BaseTool
 
@@ -30,6 +30,17 @@ class CalculateInput(BaseModel):
             "Allowed modules: math, statistics, json, datetime. Network access and file system operations are blocked."
         ),
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def populate_code_from_aliases(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            if not data.get("code"):
+                for alias in ("expression", "expr", "q"):
+                    if data.get(alias):
+                        data["code"] = data[alias]
+                        break
+        return data
 
 
 class PythonASTSecurityValidator:
@@ -95,16 +106,38 @@ class CalculateTool(BaseTool):
     def __init__(self, timeout_seconds: float = 5.0):
         self.timeout_seconds = timeout_seconds
 
-    async def execute(self, code: str) -> dict[str, Any]:
+    async def execute(
+        self,
+        code: str | None = None,
+        expression: str | None = None,
+        q: str | None = None,
+        **kwargs: Any,
+    ) -> dict[str, Any]:
         """Validate and execute Python code in a safe sandbox environment."""
+        raw_code = (code or expression or q or "").strip()
+        if not raw_code:
+            return {
+                "status": "error",
+                "message": "Missing Python code or expression parameter.",
+            }
+
+        # Auto-wrap bare expressions into 'result = <expr>'
+        clean_code = raw_code
+        try:
+            tree = ast.parse(clean_code)
+            if len(tree.body) == 1 and isinstance(tree.body[0], ast.Expr):
+                clean_code = f"result = {clean_code}"
+        except Exception:
+            pass
+
         # 1. AST Static Security Validation
         try:
-            PythonASTSecurityValidator.validate(code)
+            PythonASTSecurityValidator.validate(clean_code)
         except SandboxSecurityError as e:
             return {
                 "status": "security_violation",
                 "message": str(e),
-                "code": code,
+                "code": clean_code,
             }
 
         # 2. Build isolated runner script
@@ -126,7 +159,7 @@ safe_globals = {{
 }}
 local_scope = {{}}
 
-code_to_run = {json.dumps(code)}
+code_to_run = {json.dumps(clean_code)}
 
 try:
     exec(code_to_run, safe_globals, local_scope)
