@@ -4,6 +4,7 @@ Provides framework-based comparison with the manual agent loop, sharing the exac
 same tools, guardrails, PII masking, metrics glossary, and structured output.
 """
 
+import json
 import logging
 import time
 import uuid
@@ -174,7 +175,10 @@ class LangGraphAgent:
                     {
                         "id": tc["id"],
                         "type": "function",
-                        "function": {"name": tc["name"], "arguments": str(tc["arguments"])},
+                        "function": {
+                            "name": tc["name"],
+                            "arguments": json.dumps(tc["arguments"]) if isinstance(tc["arguments"], dict) else str(tc["arguments"]),
+                        },
                     }
                     for tc in state["tool_calls"]
                 ],
@@ -302,11 +306,12 @@ class LangGraphAgent:
                 self.term_logger.log_tool_result(tool_name=tool_name, observation=result, duration_ms=dur_ms)
                 obs = str(result)
 
+            tool_content = json.dumps(result, ensure_ascii=False) if isinstance(result, (dict, list)) else str(obs)
             state["messages"].append({
                 "role": "tool",
                 "tool_call_id": tool_call_id,
                 "name": tool_name,
-                "content": obs,
+                "content": tool_content,
             })
 
         state["tool_calls"] = []
