@@ -1,6 +1,7 @@
 """Manual Agent Loop implementation without external orchestration frameworks (FR-01).
 
-Includes Checkpointing, State Machine (FR-19), Short-term Memory (FR-16), and PII Masking (FR-24).
+Includes Checkpointing, State Machine (FR-19), Short-term Memory (FR-16), PII Masking (FR-24),
+and Granular Observability Tracing with TTFT & Latency metrics (OB-01, OB-02).
 """
 
 import asyncio
@@ -20,6 +21,8 @@ from src.agent.models import (
 from src.agent.state import get_session_history, save_task_checkpoint
 from src.config import settings
 from src.llm.provider import BaseLLMProvider, get_llm_provider
+from src.observability.models import SpanStatus, SpanType
+from src.observability.tracer import AgentTracer
 from src.tools.base import BaseTool
 from src.tools.database import GetSchemaTool, RunSQLTool
 from src.tools.glossary import SearchGlossaryTool
@@ -55,7 +58,7 @@ ATURAN KERJA & HARNESS:
 
 
 class ManualAgentLoop:
-    """Production-grade agent loop with step bounds, token budgeting, and state persistence."""
+    """Production-grade agent loop with step bounds, token budgeting, state persistence, and observability."""
 
     def __init__(
         self,
@@ -94,6 +97,14 @@ class ManualAgentLoop:
         task_id = task_id or f"task_{uuid.uuid4().hex[:8]}"
         start_time = time.perf_counter()
 
+        # Initialize Observability Tracer (OB-01, OB-02)
+        tracer = AgentTracer(task_id=task_id)
+        root_span = tracer.start_span(
+            name="agent_task",
+            span_type=SpanType.AGENT,
+            input_data={"user_query": user_query, "session_id": session_id},
+        )
+
         # Build initial messages (or restore from resumed state)
         if resume_messages:
             messages = resume_messages
@@ -114,6 +125,8 @@ class ManualAgentLoop:
             messages.append({"role": "user", "content": user_query})
 
         total_tokens = 0
+        prompt_tokens = 0
+        completion_tokens = 0
         executed_sqls: list[str] = []
         captured_tables: list[TableData] = []
         citations: list[Citation] = []
@@ -141,6 +154,19 @@ class ManualAgentLoop:
                 except Exception as e:
                     logger.warning("Checkpoint save failed on timeout: %s", e)
 
+                tracer.end_span(
+                    root_span.span_id,
+                    status=SpanStatus.ERROR,
+                    error_message=err_msg,
+                )
+                await tracer.flush(
+                    status="FAILED",
+                    total_tokens=total_tokens,
+                    prompt_tokens=prompt_tokens,
+                    completion_tokens=completion_tokens,
+                    step_count=step,
+                )
+
                 yield {
                     "event": "error",
                     "data": {
@@ -166,6 +192,19 @@ class ManualAgentLoop:
                     )
                 except Exception as e:
                     logger.warning("Checkpoint save failed on token budget: %s", e)
+
+                tracer.end_span(
+                    root_span.span_id,
+                    status=SpanStatus.ERROR,
+                    error_message=err_msg,
+                )
+                await tracer.flush(
+                    status="FAILED",
+                    total_tokens=total_tokens,
+                    prompt_tokens=prompt_tokens,
+                    completion_tokens=completion_tokens,
+                    step_count=step,
+                )
 
                 yield {
                     "event": "error",
@@ -201,14 +240,34 @@ class ManualAgentLoop:
                 },
             }
 
-            # 3. Call LLM with timeout
+            # 3. Call LLM with timeout and tracing
+            llm_span = tracer.start_span(
+                name=f"llm_step_{step}",
+                span_type=SpanType.LLM,
+                parent_span_id=root_span.span_id,
+                input_data={"step": step, "messages_count": len(messages)},
+            )
+
             try:
                 llm_response = await asyncio.wait_for(
                     self.llm.chat(messages=messages, tools=self.openai_tools),
                     timeout=self.step_timeout,
                 )
+                tracer.end_span(
+                    span_id=llm_span.span_id,
+                    output_data={
+                        "has_content": bool(llm_response.content),
+                        "tool_calls_count": len(llm_response.tool_calls),
+                    },
+                    metadata={"tokens": llm_response.usage.total_tokens},
+                )
             except asyncio.TimeoutError:
                 logger.warning("Step %d timed out after %ds", step, self.step_timeout)
+                tracer.end_span(
+                    span_id=llm_span.span_id,
+                    status=SpanStatus.ERROR,
+                    error_message=f"LLM call timed out after {self.step_timeout}s",
+                )
                 messages.append({
                     "role": "user",
                     "content": f"Step timeout ({self.step_timeout}s). Selesaikan tugas atau coba pendekatan lebih ringkas.",
@@ -216,6 +275,13 @@ class ManualAgentLoop:
                 continue
             except Exception as e:
                 logger.error("LLM call failed at step %d: %s", step, e)
+                tracer.end_span(
+                    span_id=llm_span.span_id,
+                    status=SpanStatus.ERROR,
+                    error_message=str(e),
+                )
+                tracer.end_span(root_span.span_id, status=SpanStatus.ERROR, error_message=str(e))
+                await tracer.flush(status="FAILED", total_tokens=total_tokens, step_count=step)
                 yield {
                     "event": "error",
                     "data": {"message": f"LLM inference error: {e}", "task_id": task_id},
@@ -224,9 +290,12 @@ class ManualAgentLoop:
 
             # Track tokens
             total_tokens += llm_response.usage.total_tokens
+            prompt_tokens += llm_response.usage.prompt_tokens
+            completion_tokens += llm_response.usage.completion_tokens
 
-            # If LLM returned text content, stream tokens to user
+            # If LLM returned text content, stream tokens and record TTFT (OB-02)
             if llm_response.content:
+                tracer.record_first_token()
                 final_answer_text = llm_response.content
                 yield {
                     "event": "token",
@@ -253,6 +322,13 @@ class ManualAgentLoop:
                     tool_name = tool_call.name
                     tool_args = tool_call.arguments
 
+                    tool_span = tracer.start_span(
+                        name=f"tool:{tool_name}",
+                        span_type=SpanType.TOOL,
+                        parent_span_id=root_span.span_id,
+                        input_data=tool_args,
+                    )
+
                     if tool_name not in self.tools:
                         observation = {"error": f"Tool '{tool_name}' is not allowed or unrecognized."}
                     else:
@@ -264,6 +340,23 @@ class ManualAgentLoop:
                             )
                         except Exception as e:
                             observation = {"error": f"Tool execution failed: {e}"}
+
+                    # Determine tool span status
+                    tool_status = SpanStatus.SUCCESS
+                    tool_err_msg = None
+                    if isinstance(observation, dict):
+                        if "error" in observation:
+                            tool_status = SpanStatus.ERROR
+                            tool_err_msg = str(observation["error"])
+                        elif observation.get("status") == "approval_required":
+                            tool_status = SpanStatus.APPROVAL_REQUIRED
+
+                    tracer.end_span(
+                        span_id=tool_span.span_id,
+                        output_data=observation if isinstance(observation, dict) else {"result": str(observation)},
+                        status=tool_status,
+                        error_message=tool_err_msg,
+                    )
 
                     # Check if tool triggered an Approval Gate (FR-25, FR-19)
                     if isinstance(observation, dict) and observation.get("status") == "approval_required":
@@ -293,11 +386,23 @@ class ManualAgentLoop:
                         except Exception as e:
                             logger.warning("Approval checkpoint save failed: %s", e)
 
+                        tracer.end_span(
+                            root_span.span_id,
+                            status=SpanStatus.APPROVAL_REQUIRED,
+                            metadata={"pending_approval": approval_id},
+                        )
+                        await tracer.flush(
+                            status="WAITING_APPROVAL",
+                            total_tokens=total_tokens,
+                            prompt_tokens=prompt_tokens,
+                            completion_tokens=completion_tokens,
+                            step_count=step,
+                        )
+
                         yield {
                             "event": "approval_required",
                             "data": approval_payload,
                         }
-                        # Safely pause loop waiting for human resolution
                         return
 
                     # Collect metric definitions from glossary search
@@ -355,13 +460,32 @@ class ManualAgentLoop:
         # Apply PII Masking on final output (FR-24)
         masked_answer = PIIMasker.mask_text(final_answer_text)
 
+        # Finalize root trace span and flush metrics
+        tracer.end_span(
+            root_span.span_id,
+            output_data={"answer_length": len(masked_answer)},
+            status=SpanStatus.SUCCESS,
+        )
+        task_metrics = await tracer.flush(
+            status="COMPLETED",
+            total_tokens=total_tokens,
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            step_count=step,
+        )
+
         final_response = AgentFinalResponse(
             answer_text=masked_answer,
             sql_queries=executed_sqls,
             tables=captured_tables,
             citations=citations,
             total_steps=step,
-            token_usage={"total_tokens": total_tokens},
+            token_usage={
+                "total_tokens": total_tokens,
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": completion_tokens,
+            },
+            metrics=task_metrics.model_dump(),
         )
 
         # Persist COMPLETED task state in PostgreSQL

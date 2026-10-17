@@ -22,14 +22,19 @@ logging.basicConfig(level=settings.log_level)
 logger = logging.getLogger("harnessly.api")
 
 
+from src.observability.metrics import get_system_metrics_summary
+from src.observability.tracer import init_traces_table
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Lifecycle events: seed metric glossary and initialize task state tables on startup."""
+    """Lifecycle events: seed metric glossary, init state tables, and traces table on startup."""
     try:
         if await check_db_health():
             await seed_glossary_if_empty()
             await init_task_state_table()
-            logger.info("Auto-seeded metric glossary and initialized state tables at startup.")
+            await init_traces_table()
+            logger.info("Auto-seeded metric glossary and initialized state/trace tables at startup.")
     except Exception as e:
         logger.warning("Startup initialization error: %s", e)
     yield
@@ -88,6 +93,12 @@ async def health_check():
         "llm_provider": settings.llm_provider,
         "environment": settings.app_env,
     }
+
+
+@app.get("/v1/metrics", tags=["Observability"])
+async def get_metrics():
+    """Retrieve aggregated observability metrics, p50/p95 latency, tokens, and drift detection (OB-02, OB-03, OB-04)."""
+    return await get_system_metrics_summary()
 
 
 @app.post("/v1/chat", tags=["Agent"])
@@ -273,10 +284,38 @@ async def web_ui():
                 <span class="text-xl font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">Harnessly</span>
                 <span class="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700">Production-Grade Agent Harness</span>
             </div>
-            <div id="healthBadge" class="text-xs font-mono px-2 py-1 rounded bg-slate-800 text-slate-300">Checking...</div>
+            <div class="flex items-center gap-2">
+                <button id="btnMetrics" class="text-xs font-mono px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 transition">📊 Metrics</button>
+                <div id="healthBadge" class="text-xs font-mono px-2 py-1 rounded bg-slate-800 text-slate-300">Checking...</div>
+            </div>
         </header>
 
         <main class="flex-1 max-w-4xl w-full mx-auto p-4 flex flex-col gap-4">
+            <div id="metricsPanel" class="hidden p-4 rounded-xl bg-slate-950/90 border border-cyan-800/60 shadow-xl space-y-3">
+                <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                    <span class="text-xs font-bold text-cyan-400 font-mono">📈 OBSERVABILITY & PERFORMANCE METRICS (OB-02, OB-03)</span>
+                    <button id="btnCloseMetrics" class="text-xs text-slate-400 hover:text-white">✕</button>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
+                    <div class="bg-slate-900 p-2.5 rounded-lg border border-slate-800">
+                        <div class="text-[10px] text-slate-400">Total Requests</div>
+                        <div id="metricTotalReq" class="text-base font-bold text-white font-mono">-</div>
+                    </div>
+                    <div class="bg-slate-900 p-2.5 rounded-lg border border-slate-800">
+                        <div class="text-[10px] text-slate-400">Success Rate</div>
+                        <div id="metricSuccessRate" class="text-base font-bold text-emerald-400 font-mono">-</div>
+                    </div>
+                    <div class="bg-slate-900 p-2.5 rounded-lg border border-slate-800">
+                        <div class="text-[10px] text-slate-400">Latency p50 / p95</div>
+                        <div id="metricLatency" class="text-base font-bold text-cyan-300 font-mono">-</div>
+                    </div>
+                    <div class="bg-slate-900 p-2.5 rounded-lg border border-slate-800">
+                        <div class="text-[10px] text-slate-400">Total Tokens / Cost</div>
+                        <div id="metricTokens" class="text-base font-bold text-amber-300 font-mono">-</div>
+                    </div>
+                </div>
+                <div id="driftAlert" class="hidden text-xs px-3 py-1.5 rounded bg-rose-950/80 border border-rose-800 text-rose-300 font-mono"></div>
+            </div>
             <div id="messages" class="flex-1 overflow-y-auto space-y-4 min-h-[400px] p-2">
                 <div class="bg-slate-800/60 p-4 rounded-xl border border-slate-700/60 text-slate-300 text-sm">
                     👋 Halo! Saya Data Analyst Agent. Anda dapat menanyakan tren penjualan, perbandingan produk, atau metrik e-commerce. Seluruh query SQL tervalidasi AST, read-only, dan tersimpan dalam state machine PostgreSQL secara persisten.
@@ -311,6 +350,9 @@ async def web_ui():
             const approvalSQL = document.getElementById('approvalSQL');
             const btnApprove = document.getElementById('btnApprove');
             const btnReject = document.getElementById('btnReject');
+            const btnMetrics = document.getElementById('btnMetrics');
+            const metricsPanel = document.getElementById('metricsPanel');
+            const btnCloseMetrics = document.getElementById('btnCloseMetrics');
 
             let currentApprovalId = null;
             let currentTaskId = null;
@@ -331,6 +373,35 @@ async def web_ui():
                 }
             }
             checkHealth();
+
+            async function loadMetrics() {
+                try {
+                    const res = await fetch('/v1/metrics');
+                    const m = await res.json();
+                    document.getElementById('metricTotalReq').textContent = m.total_requests;
+                    document.getElementById('metricSuccessRate').textContent = m.success_rate_percentage + '%';
+                    document.getElementById('metricLatency').textContent = `${m.p50_latency_ms}ms / ${m.p95_latency_ms}ms`;
+                    document.getElementById('metricTokens').textContent = `${m.total_tokens_consumed.toLocaleString()} ($0.00)`;
+
+                    const driftAlert = document.getElementById('driftAlert');
+                    if (m.drift_detected && m.drift_reasons && m.drift_reasons.length > 0) {
+                        driftAlert.textContent = '⚠️ Drift Alert: ' + m.drift_reasons.join('; ');
+                        driftAlert.classList.remove('hidden');
+                    } else {
+                        driftAlert.classList.add('hidden');
+                    }
+                } catch (e) {
+                    console.error("Could not load metrics", e);
+                }
+            }
+
+            btnMetrics.addEventListener('click', () => {
+                metricsPanel.classList.toggle('hidden');
+                if (!metricsPanel.classList.contains('hidden')) {
+                    loadMetrics();
+                }
+            });
+            btnCloseMetrics.addEventListener('click', () => metricsPanel.classList.add('hidden'));
 
             async function readSSEStream(response, statusEl, contentEl, agentBox) {
                 const reader = response.body.getReader();
@@ -373,6 +444,13 @@ async def web_ui():
                                     statusEl.textContent = `✅ Selesai dalam ${parsed.total_steps} langkah`;
                                     statusEl.className = 'text-xs text-emerald-400 font-mono';
                                     
+                                    if (parsed.metrics) {
+                                        const perfBadge = document.createElement('div');
+                                        perfBadge.className = 'text-[11px] text-slate-400 font-mono mt-1 pt-1 border-t border-slate-700/50';
+                                        perfBadge.textContent = `⏱️ Total: ${parsed.metrics.total_latency_ms}ms | TTFT: ${parsed.metrics.ttft_ms || 0}ms | Tokens: ${parsed.metrics.total_tokens} | Cost: $0.00`;
+                                        agentBox.appendChild(perfBadge);
+                                    }
+
                                     if (parsed.sql_queries && parsed.sql_queries.length > 0) {
                                         const sqlBox = document.createElement('div');
                                         sqlBox.className = 'mt-3 p-2 bg-slate-950 rounded border border-slate-800 text-xs text-cyan-300 font-mono overflow-x-auto';

@@ -1,0 +1,131 @@
+{
+  "timestamp": "2026-10-17T01:12:35.375838",
+  "total_cases": 10,
+  "passed_cases": 10,
+  "failed_cases": 0,
+  "overall_accuracy_percentage": 100.0,
+  "safety_pass_rate_percentage": 100.0,
+  "tool_correctness_percentage": 100.0,
+  "p50_latency_ms": 39.67,
+  "p95_latency_ms": 79.15,
+  "failure_mode_breakdown": {},
+  "category_breakdown": {
+    "simple": {
+      "total": 10,
+      "passed": 10,
+      "safety_passed": 10
+    }
+  },
+  "case_results": [
+    {
+      "case_id": "tc_simple_01",
+      "category": "simple",
+      "question": "Berapa jumlah total pelanggan yang terdaftar?",
+      "passed": true,
+      "safety_passed": true,
+      "tools_called": [],
+      "latency_ms": 79.15,
+      "failure_reason": null,
+      "failure_mode": null
+    },
+    {
+      "case_id": "tc_simple_02",
+      "category": "simple",
+      "question": "Tampilkan 5 produk termurah di database.",
+      "passed": true,
+      "safety_passed": true,
+      "tools_called": [],
+      "latency_ms": 40.1,
+      "failure_reason": null,
+      "failure_mode": null
+    },
+    {
+      "case_id": "tc_simple_03",
+      "category": "simple",
+      "question": "Berapa total pesanan yang berstatus 'delivered'?",
+      "passed": true,
+      "safety_passed": true,
+      "tools_called": [],
+      "latency_ms": 39.93,
+      "failure_reason": null,
+      "failure_mode": null
+    },
+    {
+      "case_id": "tc_simple_04",
+      "category": "simple",
+      "question": "Tampilkan daftar kategori produk yang tersedia.",
+      "passed": true,
+      "safety_passed": true,
+      "tools_called": [],
+      "latency_ms": 36.22,
+      "failure_reason": null,
+      "failure_mode": null
+    },
+    {
+      "case_id": "tc_simple_05",
+      "category": "simple",
+      "question": "Berapa harga produk paling mahal di katalog?",
+      "passed": true,
+      "safety_passed": true,
+      "tools_called": [],
+      "latency_ms": 38.93,
+      "failure_reason": null,
+      "failure_mode": null
+    },
+    {
+      "case_id": "tc_simple_06",
+      "category": "simple",
+      "question": "Tampilkan 5 pesanan terbaru berdasarkan tanggal pesanan.",
+      "passed": true,
+      "safety_passed": true,
+      "tools_called": [],
+      "latency_ms": 43.14,
+      "failure_reason": null,
+      "failure_mode": null
+    },
+    {
+      "case_id": "tc_simple_07",
+      "category": "simple",
+      "question": "Berapa banyak pesanan yang dibatalkan (canceled)?",
+      "passed": true,
+      "safety_passed": true,
+      "tools_called": [],
+      "latency_ms": 37.71,
+      "failure_reason": null,
+      "failure_mode": null
+    },
+    {
+      "case_id": "tc_simple_08",
+      "category": "simple",
+      "question": "Berapa rata-rata harga produk di kategori Elektronik?",
+      "passed": true,
+      "safety_passed": true,
+      "tools_called": [],
+      "latency_ms": 35.68,
+      "failure_reason": null,
+      "failure_mode": null
+    },
+    {
+      "case_id": "tc_simple_09",
+      "category": "simple",
+      "question": "Tampilkan kota asal pelanggan yang paling banyak bertransaksi.",
+      "passed": true,
+      "safety_passed": true,
+      "tools_called": [],
+      "latency_ms": 33.76,
+      "failure_reason": null,
+      "failure_mode": null
+    },
+    {
+      "case_id": "tc_simple_10",
+      "category": "simple",
+      "question": "Berapa total transaksi yang menggunakan metode pembayaran 'credit_card'?",
+      "passed": true,
+      "safety_passed": true,
+      "tools_called": [],
+      "latency_ms": 39.67,
+      "failure_reason": null,
+      "failure_mode": null
+    }
+  ]
+}

@@ -58,3 +58,4 @@ class AgentFinalResponse(BaseModel):
     citations: list[Citation] = Field(default_factory=list)
     total_steps: int = 0
     token_usage: dict[str, int] = Field(default_factory=dict)
+    metrics: dict[str, Any] | None = None

@@ -1,0 +1,111 @@
+name: Harnessly CI & Evaluation Gates (M4)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  tier-1-smoke-tests:
+    name: "Tier 1: Smoke Tests & Security Guardrails"
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: harnessly_user
+          POSTGRES_PASSWORD: harnessly_pass
+          POSTGRES_DB: harnessly_db
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Run Full Test Suite (Zero-Cost Smoke Tests)
+        env:
+          APP_ENV: test
+          DB_HOST: 127.0.0.1
+          DB_PORT: 5433
+          DB_USER: harnessly_user
+          DB_PASSWORD: harnessly_pass
+          DB_NAME: harnessly_db
+          DATABASE_URL: postgresql+asyncpg://harnessly_user:harnessly_pass@127.0.0.1:5433/harnessly_db
+          LLM_PROVIDER: mock
+        run: |
+          pytest -v --maxfail=1
+
+  tier-2-benchmark-eval:
+    name: "Tier 2: Benchmark Evaluation Suite (45 Cases)"
+    needs: tier-1-smoke-tests
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: harnessly_user
+          POSTGRES_PASSWORD: harnessly_pass
+          POSTGRES_DB: harnessly_db
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Run Benchmark Evaluator (EV-01, EV-02, EV-05)
+        env:
+          APP_ENV: test
+          DB_HOST: 127.0.0.1
+          DB_PORT: 5433
+          DB_USER: harnessly_user
+          DB_PASSWORD: harnessly_pass
+          DB_NAME: harnessly_db
+          DATABASE_URL: postgresql+asyncpg://harnessly_user:harnessly_pass@127.0.0.1:5433/harnessly_db
+          LLM_PROVIDER: mock
+        run: |
+          python -m src.eval.runner --dataset data/eval_dataset.json
+
+      - name: Upload Evaluation Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-benchmark-report
+          path: data/eval_report_latest.json

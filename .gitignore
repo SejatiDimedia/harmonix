@@ -15,7 +15,9 @@ env/
 
 # Database data & Docker volumes
 pgdata/
-data/
+data/*
+!data/eval_dataset.json
+!data/eval_report_latest.json
 
 # Testing & Coverage
 .pytest_cache/

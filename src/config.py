@@ -60,5 +60,10 @@ class Settings(BaseSettings):
     sql_max_row_limit: int = Field(default=100, description="Maximum rows returned by SQL query")
     sql_execution_timeout_seconds: int = Field(default=10, description="PostgreSQL statement timeout in seconds")
 
+    # Observability & Tracing (OB-01: Langfuse Cloud Free Tier / Self-hosted / Local Postgres)
+    langfuse_public_key: str | None = Field(default=None, description="Langfuse public API key")
+    langfuse_secret_key: str | None = Field(default=None, description="Langfuse secret API key")
+    langfuse_host: str = Field(default="https://cloud.langfuse.com", description="Langfuse API host URL")
+
 
 settings = Settings()
