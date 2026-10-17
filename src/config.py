@@ -73,6 +73,7 @@ class Settings(BaseSettings):
     agent_step_timeout_seconds: int = Field(default=30, description="Timeout for a single agent step")
     agent_total_timeout_seconds: int = Field(default=120, description="Maximum duration for entire task")
     agent_max_token_budget: int = Field(default=15000, description="Token budget per task")
+    agent_terminal_logs: bool = Field(default=True, description="Enable real-time visual execution logs in the terminal")
 
     # SQL Guardrail Parameters
     sql_max_row_limit: int = Field(default=100, description="Maximum rows returned by SQL query")

@@ -5,11 +5,13 @@ same tools, guardrails, PII masking, metrics glossary, and structured output.
 """
 
 import logging
+import time
 import uuid
 from typing import Any, TypedDict
 
 from langgraph.graph import END, START, StateGraph
 
+from src.agent.execution_logger import TerminalExecutionLogger
 from src.agent.models import (
     AgentFinalResponse,
     AgentTaskStatus,
@@ -63,6 +65,7 @@ class LangGraphAgent:
         llm: BaseLLMProvider | None = None,
         tools: list[BaseTool] | None = None,
         max_steps: int | None = None,
+        term_logger: TerminalExecutionLogger | None = None,
     ):
         self.llm = llm or get_llm_provider()
         tool_instances = tools or [
@@ -75,6 +78,7 @@ class LangGraphAgent:
         self.openai_tools = [t.to_openai_schema() for t in tool_instances]
         self.max_steps = max_steps or settings.agent_max_steps
         self.guardrail = SQLGuardrail()
+        self.term_logger = term_logger or TerminalExecutionLogger()
         self.graph = self._build_graph()
 
     def _build_graph(self):
@@ -145,12 +149,16 @@ class LangGraphAgent:
     async def _reason_node(self, state: LangGraphAgentState) -> LangGraphAgentState:
         """Reasoning node: invokes LLM to formulate plan, choose tools, or formulate final answer."""
         state["current_step"] = state.get("current_step", 0) + 1
+        self.term_logger.log_step_start(step=state["current_step"], max_steps=self.max_steps, elapsed_seconds=0.0)
 
         response = await self.llm.chat(
             messages=state["messages"],
             tools=self.openai_tools,
             temperature=0.0,
         )
+
+        if response.content:
+            self.term_logger.log_thought(response.content)
 
         # Check if LLM requested tool calls
         if response.tool_calls:
@@ -188,9 +196,13 @@ class LangGraphAgent:
             tool_args = tc.get("arguments", {})
             tool_call_id = tc["id"]
 
+            self.term_logger.log_tool_trigger(tool_name=tool_name, tool_args=tool_args)
+            t0 = time.perf_counter()
+
             tool = self.tools.get(tool_name)
             if not tool:
                 obs = f"Error: Tool '{tool_name}' tidak dikenal."
+                self.term_logger.log_tool_result(tool_name=tool_name, observation={"error": obs}, duration_ms=round((time.perf_counter() - t0) * 1000, 1))
                 state["messages"].append({"role": "tool", "tool_call_id": tool_call_id, "name": tool_name, "content": obs})
                 continue
 
@@ -201,6 +213,7 @@ class LangGraphAgent:
                     sanitized_sql = self.guardrail.validate_and_sanitize(query_str)
                 except SQLValidationError as e:
                     obs = f"AST Guardrail Error: Query ditolak: {e}"
+                    self.term_logger.log_tool_result(tool_name=tool_name, observation={"error": str(e)}, duration_ms=round((time.perf_counter() - t0) * 1000, 1))
                     state["messages"].append({"role": "tool", "tool_call_id": tool_call_id, "name": tool_name, "content": obs})
                     continue
 
@@ -211,6 +224,11 @@ class LangGraphAgent:
                     reasons = "; ".join(risk.risk_reasons) if risk.risk_reasons else "Query berisiko tinggi memerlukan persetujuan analis."
                     state["approval_reason"] = reasons
                     state["status"] = AgentTaskStatus.WAITING_APPROVAL.value
+                    self.term_logger.log_approval_required(
+                        approval_id="approval_gate",
+                        query=query_str,
+                        reasons=risk.risk_reasons or [reasons],
+                    )
                     logger.warning(
                         "LangGraph Agent Task %s paused for approval: %s",
                         state["task_id"],
@@ -220,12 +238,19 @@ class LangGraphAgent:
 
                 # Query is safe or approved -> Execute
                 result = await tool.execute(query=sanitized_sql, is_approved=state.get("is_approved", False))
+                dur_ms = round((time.perf_counter() - t0) * 1000, 1)
+                self.term_logger.log_tool_result(tool_name=tool_name, observation=result, duration_ms=dur_ms)
                 if isinstance(result, dict) and result.get("status") == "error":
                     obs = f"SQL Execution Error: {result.get('message')}"
                 elif isinstance(result, dict) and result.get("status") == "approval_required":
                     state["requires_approval"] = True
                     state["approval_reason"] = "; ".join(result.get("risk_reasons", [])) or result.get("message", "Approval required")
                     state["status"] = AgentTaskStatus.WAITING_APPROVAL.value
+                    self.term_logger.log_approval_required(
+                        approval_id="approval_gate",
+                        query=query_str,
+                        reasons=result.get("risk_reasons", [state["approval_reason"]]),
+                    )
                     return state
                 elif isinstance(result, dict) and result.get("status") == "success":
                     cols = result.get("columns", [])
@@ -247,6 +272,8 @@ class LangGraphAgent:
 
             elif tool_name == "search_glossary":
                 result = await tool.execute(**tool_args)
+                dur_ms = round((time.perf_counter() - t0) * 1000, 1)
+                self.term_logger.log_tool_result(tool_name=tool_name, observation=result, duration_ms=dur_ms)
                 obs = str(result)
                 metrics_list = []
                 if isinstance(result, dict):
@@ -262,6 +289,8 @@ class LangGraphAgent:
 
             elif tool_name == "calculate":
                 result = await tool.execute(**tool_args)
+                dur_ms = round((time.perf_counter() - t0) * 1000, 1)
+                self.term_logger.log_tool_result(tool_name=tool_name, observation=result, duration_ms=dur_ms)
                 if isinstance(result, dict) and result.get("status") == "success":
                     obs = f"Calculation result: {result.get('result')}"
                 else:
@@ -269,6 +298,8 @@ class LangGraphAgent:
 
             else:
                 result = await tool.execute(**tool_args)
+                dur_ms = round((time.perf_counter() - t0) * 1000, 1)
+                self.term_logger.log_tool_result(tool_name=tool_name, observation=result, duration_ms=dur_ms)
                 obs = str(result)
 
             state["messages"].append({
@@ -283,6 +314,7 @@ class LangGraphAgent:
 
     async def _synthesize_node(self, state: LangGraphAgentState) -> LangGraphAgentState:
         """Synthesis node: finalizes structured output and citations."""
+        self.term_logger.log_synthesizing()
         state["status"] = AgentTaskStatus.COMPLETED.value
         state["is_completed"] = True
         return state
@@ -322,6 +354,9 @@ class LangGraphAgent:
         """Runs the LangGraph agent and returns a structured AgentFinalResponse (FR-09)."""
         tid = task_id or f"langgraph_{uuid.uuid4().hex[:8]}"
         sid = session_id or "default_session"
+        start_time = time.perf_counter()
+
+        self.term_logger.log_task_start(task_id=tid, query=user_query, session_id=sid)
 
         initial_state: LangGraphAgentState = {
             "task_id": tid,
@@ -369,6 +404,14 @@ class LangGraphAgent:
         answer_text = final_state.get("final_answer") or ""
         if final_state.get("requires_approval"):
             answer_text = f"PERHATIAN: Query membutuhkan persetujuan human-in-the-loop: {final_state.get('approval_reason')}"
+
+        self.term_logger.log_task_completed(
+            task_id=tid,
+            steps=final_state.get("current_step", 0),
+            total_tokens=final_state.get("current_step", 0) * 80,
+            elapsed_seconds=round(time.perf_counter() - start_time, 2),
+            sql_count=len(final_state.get("sql_queries", [])),
+        )
 
         return AgentFinalResponse(
             answer_text=answer_text,

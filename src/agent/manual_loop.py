@@ -19,6 +19,7 @@ from src.agent.models import (
     Citation,
     TableData,
 )
+from src.agent.execution_logger import TerminalExecutionLogger
 from src.agent.prompts import BASE_ANALYST_SYSTEM_PROMPT
 from src.agent.state import get_session_history, save_task_checkpoint
 from src.config import settings
@@ -48,6 +49,7 @@ class ManualAgentLoop:
         max_token_budget: int | None = None,
         step_timeout_seconds: int | None = None,
         total_timeout_seconds: int | None = None,
+        term_logger: TerminalExecutionLogger | None = None,
     ):
         self.llm = llm or get_llm_provider()
         tool_instances = tools or [
@@ -63,6 +65,7 @@ class ManualAgentLoop:
         self.max_token_budget = max_token_budget or settings.agent_max_token_budget
         self.step_timeout = step_timeout_seconds or settings.agent_step_timeout_seconds
         self.total_timeout = total_timeout_seconds or settings.agent_total_timeout_seconds
+        self.term_logger = term_logger or TerminalExecutionLogger()
 
     async def run(
         self,
@@ -84,6 +87,7 @@ class ManualAgentLoop:
             span_type=SpanType.AGENT,
             input_data={"user_query": user_query, "session_id": session_id},
         )
+        self.term_logger.log_task_start(task_id=task_id, query=user_query, session_id=session_id)
 
         # Build initial messages (or restore from resumed state)
         if resume_messages:
@@ -122,6 +126,7 @@ class ManualAgentLoop:
             # 1. Total Timeout Check (FR-02, FR-27)
             if elapsed_time > self.total_timeout:
                 err_msg = f"Task exceeded maximum total timeout of {self.total_timeout}s."
+                self.term_logger.log_task_failed(task_id=task_id, error=err_msg, step=step, elapsed_seconds=elapsed_time)
                 try:
                     await save_task_checkpoint(
                         task_id=task_id,
@@ -161,6 +166,7 @@ class ManualAgentLoop:
             # 2. Token Budget Check (FR-29)
             if total_tokens > self.max_token_budget:
                 err_msg = f"Task exceeded token budget limit of {self.max_token_budget} tokens."
+                self.term_logger.log_task_failed(task_id=task_id, error=err_msg, step=step, elapsed_seconds=elapsed_time)
                 try:
                     await save_task_checkpoint(
                         task_id=task_id,
@@ -210,6 +216,9 @@ class ManualAgentLoop:
             except Exception as e:
                 logger.debug("Running checkpoint save: %s", e)
 
+            # Terminal visual logging for step start
+            self.term_logger.log_step_start(step=step, max_steps=self.max_steps, elapsed_seconds=elapsed_time)
+
             # Yield step start notification
             yield {
                 "event": "step_start",
@@ -256,6 +265,7 @@ class ManualAgentLoop:
                 continue
             except Exception as e:
                 logger.error("LLM call failed at step %d: %s", step, e)
+                self.term_logger.log_task_failed(task_id=task_id, error=str(e), step=step, elapsed_seconds=elapsed_time)
                 tracer.end_span(
                     span_id=llm_span.span_id,
                     status=SpanStatus.ERROR,
@@ -278,6 +288,7 @@ class ManualAgentLoop:
             if llm_response.content:
                 tracer.record_first_token()
                 final_answer_text = llm_response.content
+                self.term_logger.log_thought(llm_response.content)
                 yield {
                     "event": "token",
                     "data": {"delta": llm_response.content},
@@ -302,6 +313,10 @@ class ManualAgentLoop:
                 for tool_call in llm_response.tool_calls:
                     tool_name = tool_call.name
                     tool_args = tool_call.arguments
+
+                    # Terminal visual logging for tool trigger
+                    self.term_logger.log_tool_trigger(tool_name=tool_name, tool_args=tool_args)
+                    tool_start_time = time.perf_counter()
 
                     tool_span = tracer.start_span(
                         name=f"tool:{tool_name}",
@@ -337,6 +352,13 @@ class ManualAgentLoop:
                             if observation.get("status") == "error" and norm_sql:
                                 failed_sqls.add(norm_sql)
 
+                    tool_duration_ms = round((time.perf_counter() - tool_start_time) * 1000, 1)
+                    self.term_logger.log_tool_result(
+                        tool_name=tool_name,
+                        observation=observation,
+                        duration_ms=tool_duration_ms,
+                    )
+
                     # Determine tool span status
                     tool_status = SpanStatus.SUCCESS
                     tool_err_msg = None
@@ -367,6 +389,11 @@ class ManualAgentLoop:
                             "risk_reasons": observation.get("risk_reasons", []),
                             "sensitive_columns": observation.get("sensitive_columns", []),
                         }
+                        self.term_logger.log_approval_required(
+                            approval_id=approval_id,
+                            query=observation.get("sanitized_query") or str(tool_args.get("query", "")),
+                            reasons=observation.get("risk_reasons", []),
+                        )
 
                         # Persist WAITING_APPROVAL state to DB (non-blocking thread suspension)
                         try:
@@ -479,6 +506,7 @@ class ManualAgentLoop:
                 final_answer_text = f"{warning} Berikut adalah data parsial yang berhasil diperoleh."
 
         # Apply PII Masking on final output (FR-24)
+        self.term_logger.log_synthesizing()
         masked_answer = PIIMasker.mask_text(final_answer_text)
 
         # Finalize root trace span and flush metrics
@@ -522,6 +550,15 @@ class ManualAgentLoop:
             )
         except Exception as e:
             logger.warning("Completion checkpoint save failed: %s", e)
+
+        # Terminal visual logging for task completion
+        self.term_logger.log_task_completed(
+            task_id=task_id,
+            steps=step,
+            total_tokens=total_tokens,
+            elapsed_seconds=round(time.perf_counter() - start_time, 2),
+            sql_count=len(executed_sqls),
+        )
 
         yield {
             "event": "final_result",
