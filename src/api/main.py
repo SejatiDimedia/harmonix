@@ -13,6 +13,7 @@ from sse_starlette.sse import EventSourceResponse
 
 STATIC_INDEX_PATH = Path(__file__).parent / "static" / "index.html"
 
+from src.agent.langgraph_agent import LangGraphAgent
 from src.agent.manual_loop import ManualAgentLoop
 from src.agent.models import AgentTaskStatus
 from src.agent.state import get_task_record, get_task_by_approval_id, save_task_checkpoint, init_task_state_table
@@ -71,6 +72,10 @@ class ChatRequest(BaseModel):
     query: str = Field(..., description="User analytics question in natural language (Indonesian or English)")
     task_id: str | None = Field(default=None, description="Optional custom task tracking ID")
     session_id: str | None = Field(default=None, description="Optional conversation session ID")
+    engine: Literal["manual", "langgraph"] = Field(
+        default="manual",
+        description="Orchestrator engine: 'manual' (ManualAgentLoop) or 'langgraph' (LangGraphAgent)",
+    )
 
 
 class ApprovalRequest(BaseModel):
@@ -108,21 +113,28 @@ async def get_metrics():
 async def chat_stream(request: ChatRequest):
     """Send question to the agent and receive real-time SSE stream events:
 
-    - `step_start`: agent starts a reasoning step
-    - `token`: streaming text tokens
-    - `approval_required`: query flagged by risk assessment waiting for approval
-    - `final_result`: complete structured answer with SQL citations and tables
-    - `error`: error or timeout details
+    Supports dynamic orchestrator selection via `request.engine`:
+    - `manual`: Procedural ManualAgentLoop
+    - `langgraph`: LangGraph StateGraph Agent
     """
-    agent = ManualAgentLoop()
+    if request.engine == "langgraph":
+        agent_runner = LangGraphAgent()
+        stream_iter = agent_runner.run_stream(
+            user_query=request.query,
+            task_id=request.task_id,
+            session_id=request.session_id,
+        )
+    else:
+        agent_runner = ManualAgentLoop()
+        stream_iter = agent_runner.run(
+            user_query=request.query,
+            task_id=request.task_id,
+            session_id=request.session_id,
+        )
 
     async def event_generator():
         try:
-            async for event in agent.run(
-                user_query=request.query,
-                task_id=request.task_id,
-                session_id=request.session_id,
-            ):
+            async for event in stream_iter:
                 # If approval required, store in pending store
                 if event["event"] == "approval_required":
                     appr_data = event["data"]

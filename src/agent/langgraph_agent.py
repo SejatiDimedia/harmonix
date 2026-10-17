@@ -7,7 +7,7 @@ same tools, guardrails, PII masking, metrics glossary, and structured output.
 import logging
 import time
 import uuid
-from typing import Any, TypedDict
+from typing import Any, AsyncIterator, TypedDict
 
 from langgraph.graph import END, START, StateGraph
 
@@ -421,3 +421,160 @@ class LangGraphAgent:
             total_steps=final_state.get("current_step", 0),
             token_usage={"total_tokens": final_state.get("current_step", 0) * 80},
         )
+
+    async def run_stream(
+        self,
+        user_query: str,
+        task_id: str | None = None,
+        session_id: str | None = None,
+        chat_history: list[dict[str, str]] | None = None,
+        is_approved: bool = False,
+    ) -> AsyncIterator[dict[str, Any]]:
+        """Runs the LangGraph agent and yields streaming SSE events."""
+        tid = task_id or f"langgraph_{uuid.uuid4().hex[:8]}"
+        sid = session_id or "default_session"
+        start_time = time.perf_counter()
+
+        self.term_logger.log_task_start(task_id=tid, query=user_query, session_id=sid)
+
+        initial_state: LangGraphAgentState = {
+            "task_id": tid,
+            "session_id": sid,
+            "user_query": user_query,
+            "chat_history": chat_history or [],
+            "messages": [],
+            "current_step": 0,
+            "max_steps": self.max_steps,
+            "citations": [],
+            "sql_queries": [],
+            "tables": [],
+            "tool_calls": [],
+            "requires_approval": False,
+            "approval_reason": None,
+            "is_approved": is_approved,
+            "is_completed": False,
+            "final_answer": None,
+            "error": None,
+            "status": AgentTaskStatus.PENDING.value,
+        }
+
+        # Save initial checkpoint
+        try:
+            await save_task_checkpoint(
+                task_id=tid,
+                status=AgentTaskStatus.RUNNING,
+                current_step=1,
+                messages=[],
+                user_query=user_query,
+                session_id=sid,
+            )
+        except Exception as e:
+            logger.debug("LangGraph checkpoint error: %s", e)
+
+        yield {
+            "event": "step_start",
+            "data": {
+                "task_id": tid,
+                "step": 1,
+                "max_steps": self.max_steps,
+                "elapsed_seconds": 0.01,
+            },
+        }
+
+        final_state = await self.graph.ainvoke(initial_state)
+
+        # Check if task paused on approval gate
+        if final_state.get("requires_approval"):
+            approval_id = f"appr_{uuid.uuid4().hex[:8]}"
+            approval_payload = {
+                "approval_id": approval_id,
+                "task_id": tid,
+                "step": final_state.get("current_step", 1),
+                "sanitized_query": (final_state.get("sql_queries") or [""])[-1],
+                "risk_reasons": [final_state.get("approval_reason", "Persetujuan diperlukan")],
+            }
+            try:
+                await save_task_checkpoint(
+                    task_id=tid,
+                    status=AgentTaskStatus.WAITING_APPROVAL,
+                    current_step=final_state.get("current_step", 1),
+                    messages=final_state.get("messages", []),
+                    user_query=user_query,
+                    session_id=sid,
+                    pending_approval=approval_payload,
+                )
+            except Exception as e:
+                logger.warning("LangGraph approval save failed: %s", e)
+
+            yield {
+                "event": "approval_required",
+                "data": approval_payload,
+            }
+            return
+
+        # If answer is available, stream text token
+        answer_text = final_state.get("final_answer") or ""
+        masked_answer = PIIMasker.mask_text(answer_text)
+        if masked_answer:
+            yield {
+                "event": "token",
+                "data": {"delta": masked_answer},
+            }
+
+        tables = [
+            TableData(
+                columns=t.get("columns", []),
+                rows=t.get("rows", []),
+                row_count=t.get("row_count", 0),
+            )
+            for t in final_state.get("tables", [])
+        ]
+
+        citations = [
+            Citation(
+                sql_query=c.get("sql_query", ""),
+                metric_definition=c.get("metric_definition"),
+                source_tables=c.get("source_tables", []),
+            )
+            for c in final_state.get("citations", [])
+            if c.get("sql_query") or c.get("metric_definition")
+        ]
+
+        elapsed_sec = round(time.perf_counter() - start_time, 2)
+        total_toks = final_state.get("current_step", 1) * 80
+
+        final_response = AgentFinalResponse(
+            answer_text=masked_answer,
+            sql_queries=final_state.get("sql_queries", []),
+            tables=tables,
+            citations=citations,
+            total_steps=final_state.get("current_step", 1),
+            token_usage={"total_tokens": total_toks},
+            metrics={"total_latency_ms": int(elapsed_sec * 1000), "total_tokens": total_toks},
+        )
+
+        try:
+            await save_task_checkpoint(
+                task_id=tid,
+                status=AgentTaskStatus.COMPLETED,
+                current_step=final_state.get("current_step", 1),
+                messages=final_state.get("messages", []),
+                user_query=user_query,
+                session_id=sid,
+                final_result=final_response.model_dump(),
+            )
+        except Exception as e:
+            logger.warning("LangGraph completion save failed: %s", e)
+
+        self.term_logger.log_task_completed(
+            task_id=tid,
+            steps=final_state.get("current_step", 1),
+            total_tokens=total_toks,
+            elapsed_seconds=elapsed_sec,
+            sql_count=len(final_state.get("sql_queries", [])),
+        )
+
+        yield {
+            "event": "final_result",
+            "data": final_response.model_dump(),
+        }

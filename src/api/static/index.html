@@ -140,6 +140,16 @@
         </div>
 
         <div class="flex items-center gap-3">
+            <!-- Orchestrator Engine Toggle -->
+            <div class="flex items-center p-0.5 rounded-lg bg-[#22211e] border border-[#312f2b] text-[11px] font-mono">
+                <button id="btnEngineManual" type="button" class="px-2.5 py-1 rounded font-medium text-white bg-clay-600 transition shadow-sm" title="Procedural Zero-Latency Manual Loop">
+                    Manual Loop
+                </button>
+                <button id="btnEngineLangGraph" type="button" class="px-2.5 py-1 rounded font-medium text-[#a3a097] hover:text-white transition" title="LangGraph StateGraph Workflow">
+                    LangGraph
+                </button>
+            </div>
+
             <!-- Connection Status -->
             <div id="healthBadge" class="flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-mono bg-[#22211e] text-[#a3a097] border border-[#312f2b]">
                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
@@ -336,6 +346,22 @@
         const btnMetrics = document.getElementById('btnMetrics');
         const metricsPanel = document.getElementById('metricsPanel');
         const btnCloseMetrics = document.getElementById('btnCloseMetrics');
+        const btnEngineManual = document.getElementById('btnEngineManual');
+        const btnEngineLangGraph = document.getElementById('btnEngineLangGraph');
+
+        let currentEngine = 'manual';
+
+        btnEngineManual.addEventListener('click', () => {
+            currentEngine = 'manual';
+            btnEngineManual.className = 'px-2.5 py-1 rounded font-medium text-white bg-clay-600 transition shadow-sm';
+            btnEngineLangGraph.className = 'px-2.5 py-1 rounded font-medium text-[#a3a097] hover:text-white transition';
+        });
+
+        btnEngineLangGraph.addEventListener('click', () => {
+            currentEngine = 'langgraph';
+            btnEngineLangGraph.className = 'px-2.5 py-1 rounded font-medium text-white bg-clay-600 transition shadow-sm';
+            btnEngineManual.className = 'px-2.5 py-1 rounded font-medium text-[#a3a097] hover:text-white transition';
+        });
 
         let currentApprovalId = null;
         let currentTaskId = null;
@@ -596,7 +622,7 @@
                 <div class="agent-box flex-1 space-y-2 leading-relaxed">
                     <div class="status text-xs text-[#9c9990] font-mono flex items-center gap-1.5">
                         <span class="inline-block w-2 h-2 rounded-full bg-clay-500 animate-pulse"></span>
-                        <span>Merancang rencana analitik...</span>
+                        <span>[${currentEngine === 'langgraph' ? 'LangGraph' : 'Manual Loop'}] Merancang rencana analitik...</span>
                     </div>
                     <div class="content markdown-body"></div>
                 </div>
@@ -612,7 +638,7 @@
                 const response = await fetch('/v1/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ query: q })
+                    body: JSON.stringify({ query: q, engine: currentEngine })
                 });
                 await readSSEStream(response, statusEl, contentEl, agentBox);
             } catch (err) {

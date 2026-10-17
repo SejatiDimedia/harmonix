@@ -39,6 +39,24 @@ async def test_chat_sse_stream():
 
 
 @pytest.mark.asyncio
+async def test_chat_sse_stream_langgraph_engine():
+    """Verify /v1/chat endpoint supports engine='langgraph' SSE streaming."""
+    payload = {"query": "Berapa total transaksi?", "engine": "langgraph"}
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        async with client.stream("POST", "/v1/chat", json=payload) as response:
+            assert response.status_code == 200
+            assert "text/event-stream" in response.headers.get("content-type", "")
+
+            lines = []
+            async for line in response.aiter_lines():
+                if line:
+                    lines.append(line)
+
+            events = [line for line in lines if line.startswith("event: ")]
+            assert len(events) > 0
+
+
+@pytest.mark.asyncio
 async def test_approval_endpoint_404():
     """Verify submitting approval for non-existent ID returns 404."""
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
