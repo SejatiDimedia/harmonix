@@ -51,6 +51,7 @@ class LangGraphAgentState(TypedDict, total=False):
     tool_calls: list[dict[str, Any]]
     requires_approval: bool
     approval_reason: str | None
+    pending_tool_call: dict[str, Any] | None
     is_approved: bool
     is_completed: bool
     final_answer: str | None
@@ -129,6 +130,37 @@ class LangGraphAgent:
         state["current_step"] = state.get("current_step", 0) + 1
         state["status"] = AgentTaskStatus.RUNNING.value
 
+        state["citations"] = state.get("citations") or []
+        state["sql_queries"] = state.get("sql_queries") or []
+        state["tables"] = state.get("tables") or []
+        state["tool_calls"] = []
+        state["requires_approval"] = False
+        state["is_completed"] = False
+
+        if state.get("messages"):
+            # Resuming from existing messages: restore queries and tables from prior tool messages
+            for msg in state["messages"]:
+                if msg.get("role") == "tool" and msg.get("name") == "run_sql":
+                    try:
+                        content_obj = json.loads(msg.get("content", "{}"))
+                        if isinstance(content_obj, dict) and content_obj.get("status") == "success":
+                            sq = content_obj.get("sanitized_query")
+                            if sq and sq not in state["sql_queries"]:
+                                state["sql_queries"].append(sq)
+                                state["citations"].append({"sql_query": sq, "source_tables": []})
+                            cols = content_obj.get("columns", [])
+                            rows = content_obj.get("rows", [])
+                            if cols and rows:
+                                table_rows = [list(r) for r in rows]
+                                state["tables"].append({
+                                    "columns": cols,
+                                    "rows": table_rows,
+                                    "row_count": len(table_rows),
+                                })
+                    except Exception:
+                        pass
+            return state
+
         messages: list[dict[str, Any]] = [{"role": "system", "content": SYSTEM_PROMPT}]
 
         # Inject multi-turn short-term memory
@@ -138,13 +170,6 @@ class LangGraphAgent:
 
         messages.append({"role": "user", "content": state["user_query"]})
         state["messages"] = messages
-        state["citations"] = state.get("citations") or []
-        state["sql_queries"] = state.get("sql_queries") or []
-        state["tables"] = state.get("tables") or []
-        state["tool_calls"] = []
-        state["requires_approval"] = False
-        state["is_completed"] = False
-
         return state
 
     async def _reason_node(self, state: LangGraphAgentState) -> LangGraphAgentState:
@@ -228,9 +253,15 @@ class LangGraphAgent:
                     reasons = "; ".join(risk.risk_reasons) if risk.risk_reasons else "Query berisiko tinggi memerlukan persetujuan analis."
                     state["approval_reason"] = reasons
                     state["status"] = AgentTaskStatus.WAITING_APPROVAL.value
+                    state["pending_tool_call"] = {
+                        "tool_call_id": tool_call_id,
+                        "tool_name": tool_name,
+                        "sanitized_query": sanitized_sql,
+                        "risk_reasons": risk.risk_reasons or [reasons],
+                    }
                     self.term_logger.log_approval_required(
                         approval_id="approval_gate",
-                        query=query_str,
+                        query=sanitized_sql,
                         reasons=risk.risk_reasons or [reasons],
                     )
                     logger.warning(
@@ -250,9 +281,15 @@ class LangGraphAgent:
                     state["requires_approval"] = True
                     state["approval_reason"] = "; ".join(result.get("risk_reasons", [])) or result.get("message", "Approval required")
                     state["status"] = AgentTaskStatus.WAITING_APPROVAL.value
+                    state["pending_tool_call"] = {
+                        "tool_call_id": tool_call_id,
+                        "tool_name": tool_name,
+                        "sanitized_query": sanitized_sql,
+                        "risk_reasons": result.get("risk_reasons", [state["approval_reason"]]),
+                    }
                     self.term_logger.log_approval_required(
                         approval_id="approval_gate",
-                        query=query_str,
+                        query=sanitized_sql,
                         reasons=result.get("risk_reasons", [state["approval_reason"]]),
                     )
                     return state
@@ -433,6 +470,8 @@ class LangGraphAgent:
         task_id: str | None = None,
         session_id: str | None = None,
         chat_history: list[dict[str, str]] | None = None,
+        resume_messages: list[dict[str, Any]] | None = None,
+        initial_step: int = 0,
         is_approved: bool = False,
     ) -> AsyncIterator[dict[str, Any]]:
         """Runs the LangGraph agent and yields streaming SSE events."""
@@ -447,8 +486,8 @@ class LangGraphAgent:
             "session_id": sid,
             "user_query": user_query,
             "chat_history": chat_history or [],
-            "messages": [],
-            "current_step": 0,
+            "messages": resume_messages or [],
+            "current_step": initial_step,
             "max_steps": self.max_steps,
             "citations": [],
             "sql_queries": [],
@@ -456,6 +495,7 @@ class LangGraphAgent:
             "tool_calls": [],
             "requires_approval": False,
             "approval_reason": None,
+            "pending_tool_call": None,
             "is_approved": is_approved,
             "is_completed": False,
             "final_answer": None,
@@ -468,8 +508,8 @@ class LangGraphAgent:
             await save_task_checkpoint(
                 task_id=tid,
                 status=AgentTaskStatus.RUNNING,
-                current_step=1,
-                messages=[],
+                current_step=initial_step + 1 if initial_step else 1,
+                messages=resume_messages or [],
                 user_query=user_query,
                 session_id=sid,
             )
@@ -480,7 +520,7 @@ class LangGraphAgent:
             "event": "step_start",
             "data": {
                 "task_id": tid,
-                "step": 1,
+                "step": initial_step + 1 if initial_step else 1,
                 "max_steps": self.max_steps,
                 "elapsed_seconds": 0.01,
             },
@@ -491,12 +531,15 @@ class LangGraphAgent:
         # Check if task paused on approval gate
         if final_state.get("requires_approval"):
             approval_id = f"appr_{uuid.uuid4().hex[:8]}"
+            pending_tc = final_state.get("pending_tool_call") or {}
             approval_payload = {
                 "approval_id": approval_id,
                 "task_id": tid,
                 "step": final_state.get("current_step", 1),
-                "sanitized_query": (final_state.get("sql_queries") or [""])[-1],
-                "risk_reasons": [final_state.get("approval_reason", "Persetujuan diperlukan")],
+                "tool_call_id": pending_tc.get("tool_call_id", ""),
+                "tool_name": pending_tc.get("tool_name", "run_sql"),
+                "sanitized_query": pending_tc.get("sanitized_query", ""),
+                "risk_reasons": pending_tc.get("risk_reasons", [final_state.get("approval_reason", "Persetujuan diperlukan")]),
             }
             try:
                 await save_task_checkpoint(

@@ -252,22 +252,39 @@ async def resume_task_stream(task_id: str, request: ResumeTaskRequest | None = N
             })
 
     if request and request.feedback:
-        resume_messages.append({
-            "role": "user",
-            "content": f"Operator Feedback: {request.feedback}",
-        })
+        default_approval_texts = ["Query disetujui oleh analis.", "Query disetujui oleh analis"]
+        if decision != "approved" or request.feedback.strip() not in default_approval_texts:
+            resume_messages.append({
+                "role": "user",
+                "content": f"Operator Feedback: {request.feedback}",
+            })
 
-    agent = ManualAgentLoop()
+    is_langgraph = task_id.startswith("langgraph_")
+    if is_langgraph:
+        from src.agent.langgraph_agent import LangGraphAgent
+        agent = LangGraphAgent()
+        agent_iter = agent.run_stream(
+            user_query=record.user_query,
+            task_id=task_id,
+            session_id=record.session_id,
+            resume_messages=resume_messages,
+            initial_step=record.current_step,
+            is_approved=(decision == "approved"),
+        )
+    else:
+        agent = ManualAgentLoop()
+        agent_iter = agent.run(
+            user_query=record.user_query,
+            task_id=task_id,
+            session_id=record.session_id,
+            resume_messages=resume_messages,
+            initial_step=record.current_step,
+            is_approved=(decision == "approved"),
+        )
 
     async def event_generator():
         try:
-            async for event in agent.run(
-                user_query=record.user_query,
-                task_id=task_id,
-                session_id=record.session_id,
-                resume_messages=resume_messages,
-                initial_step=record.current_step,
-            ):
+            async for event in agent_iter:
                 if event["event"] == "approval_required":
                     appr_data = event["data"]
                     appr_id = appr_data.get("approval_id")

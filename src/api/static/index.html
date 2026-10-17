@@ -510,15 +510,6 @@
                                     contentEl.innerHTML = DOMPurify.sanitize(marked.parse(finalMarkdown));
                                 }
                                 
-                                if (parsed.metrics) {
-                                    const perfBadge = document.createElement('div');
-                                    perfBadge.className = 'text-[11px] text-[#8e8b82] font-mono mt-3 pt-2.5 border-t border-[#2e2c28] flex items-center justify-between';
-                                    perfBadge.innerHTML = `
-                                        <span>Latensi: ${parsed.metrics.total_latency_ms}ms (TTFT: ${parsed.metrics.ttft_ms || 0}ms)</span>
-                                        <span>Token: ${parsed.metrics.total_tokens} (USD 0.00)</span>
-                                    `;
-                                    agentBox.appendChild(perfBadge);
-                                }
 
                                 if (parsed.sql_queries && parsed.sql_queries.length > 0) {
                                     const sqlBox = document.createElement('div');
@@ -579,6 +570,16 @@
                                         tblWrap.appendChild(tbl);
                                         agentBox.appendChild(tblWrap);
                                     });
+                                }
+
+                                if (parsed.metrics) {
+                                    const perfBadge = document.createElement('div');
+                                    perfBadge.className = 'text-[11px] text-[#8e8b82] font-mono mt-3 pt-2.5 border-t border-[#2e2c28] flex items-center justify-between';
+                                    perfBadge.innerHTML = `
+                                        <span>Latensi: ${parsed.metrics.total_latency_ms}ms (TTFT: ${parsed.metrics.ttft_ms || 0}ms)</span>
+                                        <span>Token: ${parsed.metrics.total_tokens} (USD 0.00)</span>
+                                    `;
+                                    agentBox.appendChild(perfBadge);
                                 }
                             } else if (currentEvent === 'error') {
                                 statusEl.innerHTML = `<span class="text-rose-400 font-mono text-xs flex items-center gap-1.5"><svg class="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg><span>${parsed.message}</span></span>`;

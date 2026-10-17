@@ -125,6 +125,34 @@ async def test_task_resume_stream():
 
 
 @pytest.mark.asyncio
+async def test_task_resume_stream_langgraph():
+    """Verify /v1/tasks/{task_id}/resume resumes execution with LangGraph engine when task_id starts with langgraph_."""
+    from src.agent.models import AgentTaskStatus
+    from src.agent.state import save_task_checkpoint
+
+    test_task_id = "langgraph_test_resume_789"
+    await save_task_checkpoint(
+        task_id=test_task_id,
+        status=AgentTaskStatus.WAITING_APPROVAL,
+        current_step=1,
+        messages=[{"role": "user", "content": "Analisis data"}],
+        user_query="Analisis data",
+        pending_approval={"decision": "approved", "tool_call_id": "call_123", "tool_name": "run_sql", "sanitized_query": "SELECT 1;"},
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        async with client.stream("POST", f"/v1/tasks/{test_task_id}/resume", json={"feedback": "Query disetujui oleh analis."}) as resp:
+            assert resp.status_code == 200
+            assert "text/event-stream" in resp.headers.get("content-type", "")
+            lines = []
+            async for line in resp.aiter_lines():
+                if line:
+                    lines.append(line)
+            events = [line for line in lines if line.startswith("event: ")]
+            assert len(events) > 0
+
+
+@pytest.mark.asyncio
 async def test_web_ui_endpoint():
     """Verify GET / returns the Claude-inspired anti-slop HTML interface."""
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:

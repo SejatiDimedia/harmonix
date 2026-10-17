@@ -75,6 +75,7 @@ class ManualAgentLoop:
         chat_history: list[dict[str, str]] | None = None,
         resume_messages: list[dict[str, Any]] | None = None,
         initial_step: int = 0,
+        is_approved: bool = False,
     ) -> AsyncIterator[dict[str, Any]]:
         """Run the manual agent loop and yield streaming SSE events."""
         task_id = task_id or f"task_{uuid.uuid4().hex[:8]}"
@@ -115,6 +116,23 @@ class ManualAgentLoop:
         captured_tables: list[TableData] = []
         citations: list[Citation] = []
         failed_sqls: set[str] = set()
+
+        if resume_messages:
+            for msg in resume_messages:
+                if msg.get("role") == "tool" and msg.get("name") == "run_sql":
+                    try:
+                        content_obj = json.loads(msg.get("content", "{}"))
+                        if isinstance(content_obj, dict) and content_obj.get("status") == "success":
+                            sq = content_obj.get("sanitized_query")
+                            if sq and sq not in executed_sqls:
+                                executed_sqls.append(sq)
+                                citations.append(Citation(sql_query=sq, source_tables=[]))
+                            cols = content_obj.get("columns", [])
+                            rows = content_obj.get("rows", [])
+                            if cols and rows:
+                                captured_tables.append(TableData(columns=cols, rows=rows, row_count=len(rows)))
+                    except Exception:
+                        pass
 
         step = initial_step
         final_answer_text = ""
@@ -340,9 +358,12 @@ class ManualAgentLoop:
                         }
                     else:
                         tool_instance = self.tools[tool_name]
+                        exec_args = dict(tool_args)
+                        if tool_name == "run_sql":
+                            exec_args["is_approved"] = is_approved
                         try:
                             observation = await asyncio.wait_for(
-                                tool_instance.execute(**tool_args),
+                                tool_instance.execute(**exec_args),
                                 timeout=self.step_timeout,
                             )
                         except Exception as e:
