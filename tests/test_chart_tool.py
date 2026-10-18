@@ -148,3 +148,73 @@ async def test_langgraph_captures_chart():
     assert response.charts[0].chart_type == "pie"
     assert response.charts[0].title == "Proporsi Status Pesanan"
     assert len(response.charts[0].data) == 2
+
+
+@pytest.mark.asyncio
+async def test_make_chart_json_string_input():
+    """Verify MakeChartTool can parse data passed as a JSON string."""
+    tool = MakeChartTool()
+    result = await tool.execute(
+        chart_type="bar",
+        title="Distribusi Status",
+        x_axis="status",
+        y_axis="total",
+        data='[{"status": "delivered", "total": 90}, {"status": "canceled", "total": 10}]',
+    )
+    assert result["status"] == "success"
+    assert len(result["chart"]["data"]) == 2
+    assert result["chart"]["data"][0]["status"] == "delivered"
+
+
+@pytest.mark.asyncio
+async def test_manual_loop_chart_auto_fallback_from_table():
+    """Verify ManualAgentLoop auto-fills chart data when make_chart receives empty data but run_sql provided rows."""
+    run_sql_call = ToolCall(
+        id="call_sql_1",
+        name="run_sql",
+        arguments={"query": "SELECT product_category_name, COUNT(*) as total FROM analytics.products GROUP BY product_category_name"},
+    )
+    # LLM called make_chart with empty data (or SQL string)
+    chart_tool_call = ToolCall(
+        id="call_chart_empty",
+        name="make_chart",
+        arguments={
+            "chart_type": "bar",
+            "title": "Perbandingan Total Pesanan per Kategori",
+            "x_axis": "product_category_name",
+            "y_axis": "total_orders",
+            "data": [],
+        },
+    )
+
+    canned_responses = [
+        LLMResponse(
+            content="Menjalankan query SQL untuk data produk.",
+            tool_calls=[run_sql_call],
+        ),
+        LLMResponse(
+            content="Membuat grafik dari data produk.",
+            tool_calls=[chart_tool_call],
+        ),
+        LLMResponse(
+            content="Berikut ringkasan grafiknya.",
+            tool_calls=[],
+        ),
+    ]
+
+    mock_llm = MockLLMProvider(canned_responses=canned_responses)
+    agent = ManualAgentLoop(llm=mock_llm, max_steps=5)
+
+    events = []
+    async for event in agent.run(user_query="Buatkan grafik perbandingan pesanan per kategori"):
+        events.append(event)
+
+    final_event = next(e for e in events if e["event"] == "final_result")
+    final_data = final_event["data"]
+
+    assert len(final_data["charts"]) >= 1
+    ch = final_data["charts"][0]
+    # Chart data was populated from the captured table!
+    assert len(ch["data"]) > 0
+    assert ch["data"][0]["product_category_name"] is not None or "(NULL)" in str(ch["data"][0])
+

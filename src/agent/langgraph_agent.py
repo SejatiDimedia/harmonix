@@ -357,6 +357,21 @@ class LangGraphAgent:
                 self.term_logger.log_tool_result(tool_name=tool_name, observation=result, duration_ms=dur_ms)
                 if isinstance(result, dict) and result.get("status") == "success":
                     c_spec = result.get("chart", {})
+                    c_data = c_spec.get("data", [])
+                    if not c_data and state.get("query_results"):
+                        last_res = state["query_results"][-1]
+                        cols = last_res.get("columns", [])
+                        rows = last_res.get("rows", [])
+                        if len(cols) >= 2 and rows:
+                            t_x = c_spec.get("x_axis") if c_spec.get("x_axis") in cols else cols[0]
+                            t_y = c_spec.get("y_axis") if c_spec.get("y_axis") in cols else cols[1]
+                            c_data = [
+                                {t_x: r[0] if r[0] is not None else "(NULL)", t_y: r[1]}
+                                for r in rows
+                            ]
+                            c_spec["x_axis"] = t_x
+                            c_spec["y_axis"] = t_y
+                            c_spec["data"] = c_data
                     if "charts" not in state:
                         state["charts"] = []
                     state["charts"].append(c_spec)
@@ -492,6 +507,41 @@ class LangGraphAgent:
             )
             for c in final_state.get("charts", [])
         ]
+
+        # Ensure charts have data if tables exists
+        for ch in charts:
+            if not ch.data and tables:
+                last_tbl = tables[-1]
+                if len(last_tbl.columns) >= 2 and last_tbl.rows:
+                    t_x = ch.x_axis if ch.x_axis in last_tbl.columns else last_tbl.columns[0]
+                    t_y = ch.y_axis if ch.y_axis in last_tbl.columns else last_tbl.columns[1]
+                    ch.x_axis = t_x
+                    ch.y_axis = t_y
+                    ch.data = [
+                        {t_x: r[0] if r[0] is not None else "(NULL)", t_y: r[1]}
+                        for r in last_tbl.rows
+                    ]
+
+        chart_keywords = ("grafik", "chart", "visualisasi", "diagram", "plot", "tren", "trend")
+        if not charts and tables and any(kw in user_query.lower() for kw in chart_keywords):
+            last_tbl = tables[-1]
+            if len(last_tbl.columns) >= 2 and last_tbl.rows:
+                col_x = last_tbl.columns[0]
+                col_y = last_tbl.columns[1]
+                c_type = "line" if any(w in user_query.lower() for w in ("tren", "trend", "bulanan", "waktu", "harian")) else "bar"
+                title_text = f"Visualisasi {col_x.replace('_', ' ').title()} vs {col_y.replace('_', ' ').title()}"
+                charts.append(
+                    ChartSpec(
+                        chart_type=c_type,
+                        title=title_text,
+                        x_axis=col_x,
+                        y_axis=col_y,
+                        data=[
+                            {col_x: r[0] if r[0] is not None else "(NULL)", col_y: r[1]}
+                            for r in last_tbl.rows
+                        ],
+                    )
+                )
 
         return AgentFinalResponse(
             answer_text=answer_text,
@@ -640,6 +690,41 @@ class LangGraphAgent:
             )
             for c in final_state.get("charts", [])
         ]
+
+        # Ensure charts have data if tables exists
+        for ch in charts:
+            if not ch.data and tables:
+                last_tbl = tables[-1]
+                if len(last_tbl.columns) >= 2 and last_tbl.rows:
+                    t_x = ch.x_axis if ch.x_axis in last_tbl.columns else last_tbl.columns[0]
+                    t_y = ch.y_axis if ch.y_axis in last_tbl.columns else last_tbl.columns[1]
+                    ch.x_axis = t_x
+                    ch.y_axis = t_y
+                    ch.data = [
+                        {t_x: r[0] if r[0] is not None else "(NULL)", t_y: r[1]}
+                        for r in last_tbl.rows
+                    ]
+
+        chart_keywords = ("grafik", "chart", "visualisasi", "diagram", "plot", "tren", "trend")
+        if not charts and tables and any(kw in user_query.lower() for kw in chart_keywords):
+            last_tbl = tables[-1]
+            if len(last_tbl.columns) >= 2 and last_tbl.rows:
+                col_x = last_tbl.columns[0]
+                col_y = last_tbl.columns[1]
+                c_type = "line" if any(w in user_query.lower() for w in ("tren", "trend", "bulanan", "waktu", "harian")) else "bar"
+                title_text = f"Visualisasi {col_x.replace('_', ' ').title()} vs {col_y.replace('_', ' ').title()}"
+                charts.append(
+                    ChartSpec(
+                        chart_type=c_type,
+                        title=title_text,
+                        x_axis=col_x,
+                        y_axis=col_y,
+                        data=[
+                            {col_x: r[0] if r[0] is not None else "(NULL)", col_y: r[1]}
+                            for r in last_tbl.rows
+                        ],
+                    )
+                )
 
         final_response = AgentFinalResponse(
             answer_text=masked_answer,

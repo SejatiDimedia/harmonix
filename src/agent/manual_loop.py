@@ -503,13 +503,26 @@ class ManualAgentLoop:
                     if tool_name == "make_chart" and isinstance(observation, dict):
                         if observation.get("status") == "success":
                             c_spec = observation.get("chart", {})
+                            c_data = c_spec.get("data", [])
+                            # Auto-fill from captured_tables if c_data is empty
+                            if not c_data and captured_tables:
+                                last_tbl = captured_tables[-1]
+                                if len(last_tbl.columns) >= 2 and last_tbl.rows:
+                                    t_x = c_spec.get("x_axis") if c_spec.get("x_axis") in last_tbl.columns else last_tbl.columns[0]
+                                    t_y = c_spec.get("y_axis") if c_spec.get("y_axis") in last_tbl.columns else last_tbl.columns[1]
+                                    c_data = [
+                                        {t_x: r[0] if r[0] is not None else "(NULL)", t_y: r[1]}
+                                        for r in last_tbl.rows
+                                    ]
+                                    c_spec["x_axis"] = t_x
+                                    c_spec["y_axis"] = t_y
                             captured_charts.append(
                                 ChartSpec(
                                     chart_type=c_spec.get("chart_type", "bar"),
                                     title=c_spec.get("title", ""),
                                     x_axis=c_spec.get("x_axis", "x"),
                                     y_axis=c_spec.get("y_axis", "y"),
-                                    data=c_spec.get("data", []),
+                                    data=c_data,
                                 )
                             )
 
@@ -577,6 +590,42 @@ class ManualAgentLoop:
             completion_tokens=completion_tokens,
             step_count=step,
         )
+
+        # Ensure charts have data if captured_tables exists
+        for ch in captured_charts:
+            if not ch.data and captured_tables:
+                last_tbl = captured_tables[-1]
+                if len(last_tbl.columns) >= 2 and last_tbl.rows:
+                    t_x = ch.x_axis if ch.x_axis in last_tbl.columns else last_tbl.columns[0]
+                    t_y = ch.y_axis if ch.y_axis in last_tbl.columns else last_tbl.columns[1]
+                    ch.x_axis = t_x
+                    ch.y_axis = t_y
+                    ch.data = [
+                        {t_x: r[0] if r[0] is not None else "(NULL)", t_y: r[1]}
+                        for r in last_tbl.rows
+                    ]
+
+        # Auto-synthesize chart if user requested visual/chart but LLM didn't call make_chart
+        chart_keywords = ("grafik", "chart", "visualisasi", "diagram", "plot", "tren", "trend")
+        if not captured_charts and captured_tables and any(kw in user_query.lower() for kw in chart_keywords):
+            last_tbl = captured_tables[-1]
+            if len(last_tbl.columns) >= 2 and last_tbl.rows:
+                col_x = last_tbl.columns[0]
+                col_y = last_tbl.columns[1]
+                c_type = "line" if any(w in user_query.lower() for w in ("tren", "trend", "bulanan", "waktu", "harian")) else "bar"
+                title_text = f"Visualisasi {col_x.replace('_', ' ').title()} vs {col_y.replace('_', ' ').title()}"
+                captured_charts.append(
+                    ChartSpec(
+                        chart_type=c_type,
+                        title=title_text,
+                        x_axis=col_x,
+                        y_axis=col_y,
+                        data=[
+                            {col_x: r[0] if r[0] is not None else "(NULL)", col_y: r[1]}
+                            for r in last_tbl.rows
+                        ],
+                    )
+                )
 
         final_response = AgentFinalResponse(
             answer_text=masked_answer,

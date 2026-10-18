@@ -589,6 +589,26 @@
 
                                 if (parsed.charts && parsed.charts.length > 0) {
                                     parsed.charts.forEach((ch, chIdx) => {
+                                        let chartData = ch.data || [];
+                                        let xCol = ch.x_axis;
+                                        let yCol = ch.y_axis;
+
+                                        // Auto-fallback from tables if chart.data is empty
+                                        if (chartData.length === 0 && parsed.tables && parsed.tables.length > 0) {
+                                            const tbl = parsed.tables[0];
+                                            if (tbl.columns && tbl.columns.length >= 2 && tbl.rows && tbl.rows.length > 0) {
+                                                xCol = tbl.columns[0];
+                                                yCol = tbl.columns[1];
+                                                chartData = tbl.rows.map(r => ({
+                                                    [xCol]: r[0] ?? '(NULL)',
+                                                    [yCol]: r[1] ?? 0
+                                                }));
+                                            }
+                                        }
+
+                                        // Skip rendering if data is genuinely empty
+                                        if (chartData.length === 0) return;
+
                                         const chartCard = document.createElement('div');
                                         chartCard.className = 'mt-4 rounded-xl border border-[#2e2c28] bg-[#161513] p-4 overflow-hidden shadow-sm';
                                         
@@ -614,8 +634,22 @@
 
                                         agentBox.appendChild(chartCard);
 
-                                        const labels = (ch.data || []).map(d => d[ch.x_axis] ?? Object.values(d)[0] ?? '');
-                                        const values = (ch.data || []).map(d => Number(d[ch.y_axis] ?? Object.values(d)[1] ?? 0));
+                                        const labels = chartData.map(d => {
+                                            let val = d[xCol];
+                                            if (val === undefined) {
+                                                const keys = Object.keys(d);
+                                                val = keys.length > 0 ? d[keys[0]] : '';
+                                            }
+                                            return (val === null || val === undefined) ? '(NULL)' : String(val);
+                                        });
+                                        const values = chartData.map(d => {
+                                            let val = d[yCol];
+                                            if (val === undefined) {
+                                                const keys = Object.keys(d);
+                                                val = keys.length > 1 ? d[keys[1]] : 0;
+                                            }
+                                            return Number(val) || 0;
+                                        });
 
                                         const palette = [
                                             'rgba(217, 119, 87, 0.85)',

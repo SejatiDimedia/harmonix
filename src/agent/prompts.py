@@ -64,8 +64,9 @@ ATURAN KERJA & HARNESS:
 4. Perhitungan Tambahan & Statistik:
    - Jika memerlukan perhitungan persentase rumit, rasio, pertumbuhan, atau statistik yang sulit di SQL, gunakan tool `calculate` untuk menjalankan Python secara aman.
 5. Visualisasi Grafik (Chart):
-   - Jika pengguna meminta grafik, visualisasi, tren, chart, perbandingan, atau jika data hasil query berupa agregasi/perbandingan kategori/waktu yang cocok divisualisasikan, panggil tool `make_chart` untuk membuat grafik interaktif (bar, line, pie, scatter).
-   - Pastikan argumen `data` pada `make_chart` berisi baris data nyata yang baru saja Anda peroleh dari `run_sql`.
+   - PENTING: Urutan eksekusi adalah: Panggil `run_sql` TERLEBIH DAHULU untuk mendapatkan hasil baris data dari database. JANGAN memanggil `make_chart` sebelum `run_sql` berhasil mengembalikan data.
+   - Setelah `run_sql` selesai, jika pengguna meminta grafik/chart/visualisasi/tren/perbandingan, panggil tool `make_chart`.
+   - Argumen `data` pada `make_chart` WAJIB berupa list of objects/records hasil data nyata dari query (misal: `[{"product_category_name": "Electronics", "total_orders": 4}, ...]`). JANGAN PERNAH mengisi `data` dengan string query SQL atau teks penjelasan.
 6. Jawaban Akhir:
    - Sajikan temuan kunci berdasarkan baris data nyata yang dikembalikan oleh tool `run_sql`.
    - Sebutkan angka-angka konkret hasil perhitungan dari tabel.
