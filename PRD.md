@@ -4,7 +4,7 @@ Proyek portofolio AI Agent Engineer (Python Backend): agent text-to-SQL tahan pr
 
 | **Atribut** | **Keterangan**                                                 |
 |-------------|----------------------------------------------------------------|
-| Versi       | 1.2 (Smart Follow-Up Suggestions & Session Management)         |
+| Versi       | 1.3 (Multi-Agent Architecture: Data Auditor & Quality Gate)    |
 | Tanggal     | 18 Oktober 2026                                                |
 | Status      | Disetujui (Fitur Aktif & Roadmap)                             |
 | Pemilik     | Pengembang proyek (portofolio)                                 |
@@ -163,6 +163,12 @@ Prioritas: **P0** (wajib untuk MVP), **P1** (penting), **P2** (nice to have).
 | FR-33  | Manajemen sesi percakapan & riwayat chat persisten: pengelompokan task multi-turn per session_id di PostgreSQL, API listing/detail/delete sesi, dan UI sidebar collapsible dengan penyimpanan localStorage. | P1            |
 | FR-34  | Smart follow-up suggestions (rekomendasi pertanyaan lanjutan kontekstual): agen menyertakan 3 pertanyaan eksplorasi data relevan via structured output (piggybacking LLM tanpa biaya ekstra) dengan fallback heuristik dari metadata tabel, dirender sebagai chip interaktif satu klik di UI. | P1            |
 
+### 5.8 Multi-Agent Quality Gate (Maker-Checker Pattern)
+
+| **ID** | **Kebutuhan**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | **Prioritas** |
+|--------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------|
+| FR-35  | Data Auditor & Verification Agent: agent kedua independen yang bertindak sebagai quality gate (evaluator skeptis) sebelum respons disajikan ke pengguna. Memverifikasi 3 pilar: (1) keabsahan logika SQL (mencegah Cartesian/fan-out traps, filter status order aktif, penanganan NULL), (2) konsistensi numerik teks terhadap raw dataset hasil SQL (anti-halusinasi), dan (3) kelengkapan data. Menghasilkan structured output JSON (status `PASSED`/`FLAGGED`, confidence score, critique, badge). Dilengkapi one-shot self-correction loop jika terdeteksi high-severity issues, model diversity (Groq Llama-3.3 70B / Gemini 2.0 Flash / DeepSeek R1 lokal), dan badge status verifikasi interaktif di UI. | P1            |
+
 
 ## 6. Observability dan Evaluasi
 
@@ -208,6 +214,7 @@ Lapisan sistem yang harus tergambar pada diagram arsitektur:
 | Tool          | get_schema, run_sql, make_chart, calculate, MCP server                  | Aksi terstruktur dengan schema Pydantic.                 |
 | Memory        | Postgres, pgvector, file/state                                          | Short-term, long-term, dan working memory.               |
 | Guardrail     | Validator SQL, allowlist, deteksi injection, masking PII, approval gate | Mencegah aksi dan kebocoran berisiko.                    |
+| Quality Gate  | Data Auditor Agent (Maker-Checker)                                      | Verifikasi independen logika SQL & konsistensi numerik anti-halusinasi. |
 | Observability | Langfuse/OpenTelemetry, penyimpanan metrik, dashboard                   | Trace, biaya, latensi, dan error rate.                   |
 | Data          | PostgreSQL (dataset analitik) dan vector store                          | Data bisnis sintetis dan indeks pengetahuan.             |
 
@@ -215,7 +222,7 @@ Lapisan sistem yang harus tergambar pada diagram arsitektur:
 - **Language & API:** Python 3.12, FastAPI (async), Pydantic v2.
 - **SQL & Database:** PostgreSQL 16 + pgvector (via Docker Compose lokal), SQLAlchemy / asyncpg, sqlglot (parsing AST SQL).
 - **LLM Engine & Routing:** LiteLLM / OpenAI-compatible abstraction layer:
-  - *Lokal (100% offline & gratis):* Ollama (`qwen2.5-coder:7b`, `llama3.1:8b`).
+  - *Lokal (100% offline & gratis):* Ollama (`qwen2.5-coder:7b`, `llama3.1:8b`, `deepseek-r1:7b`).
   - *Cloud Free Tier:* Google AI Studio API (`gemini-2.0-flash`, `gemini-1.5-flash`) / Groq API (`llama-3.3-70b-versatile`) tanpa biaya kartu kredit.
 - **Embeddings & RAG:** FastEmbed (lokal ONNX runtime, misal `BAAI/bge-small-en-v1.5`) atau Ollama (`nomic-embed-text`) + pgvector hybrid search (BM25 + dense lokal).
 - **Observability:** Langfuse (Self-Hosted via Docker lokal atau Langfuse Cloud Free Tier 50k traces/bulan).
@@ -238,7 +245,8 @@ Lapisan sistem yang harus tergambar pada diagram arsitektur:
 - `event: step_start` -> payload: `{"step": 1, "action": "planning | tool_call", "details": ...}`
 - `event: token` -> payload: `{"delta": "..."}`
 - `event: approval_required` -> payload: `{"approval_id": "...", "sql": "...", "risk_reason": "..."}` (client pause)
-- `event: final_result` -> payload: `{"answer_text": "...", "sql_queries": [...], "tables": [...], "charts": [...], "citations": [...], "follow_up_suggestions": ["...", "...", "..."], "metrics": {...}}`
+- `event: audit_step` -> payload: `{"status": "auditing | passed | flagged", "confidence": 0.98, "badge": "Verified by Auditor", "critique": "..."}`
+- `event: final_result` -> payload: `{"answer_text": "...", "sql_queries": [...], "tables": [...], "charts": [...], "citations": [...], "follow_up_suggestions": ["...", "...", "..."], "audit_result": {"status": "PASSED", "confidence": 0.98, "badge": "Verified by Auditor", "critique": "..."}, "metrics": {...}}`
 - `event: error` -> payload: `{"message": "..."}`
 
 ### 8.2 Dataset Demo
@@ -253,6 +261,8 @@ Skema multi-tabel e-commerce sintetis (pelanggan, produk, pesanan, item pesanan,
 | Safety pass rate (kasus adversarial)       | 100%           | 100%                             |
 | Tool-call correctness                      | ≥ 90%          | ≥ 95%                            |
 | Faithfulness (LLM-as-judge)                | ≥ 85%          | ≥ 92%                            |
+| Audit verification pass rate (clean queries)| ≥ 80%         | ≥ 90%                            |
+| Numerical hallucination rate               | ≤ 5%           | 0% (eliminated by Auditor gate)  |
 | Latensi jawaban p95 (pertanyaan sederhana) | \< 30 detik    | \< 15 detik                      |
 | Biaya rata-rata per task sederhana         | USD 0,00       | USD 0,00 (Zero-Cost Baseline)    |
 | Eval berjalan otomatis di CI               | Ya             | Ya, dengan gate dan laporan tren |
@@ -260,10 +270,10 @@ Skema multi-tabel e-commerce sintetis (pelanggan, produk, pesanan, item pesanan,
 ## 10. Artefak Portofolio (Deliverable)
 
 1.  Repositori GitHub dengan README jelas, docker compose up, dan data demo.
-2.  **Diagram arsitektur** yang menunjukkan lapisan harness (context, tool, memory, orchestration, observability).
+2.  **Diagram arsitektur** yang menunjukkan lapisan harness (context, tool, memory, orchestration, observability, quality gate).
 3.  **Failure case log:** minimal 3 kegagalan nyata, masing-masing berisi gejala, cara terdeteksi lewat trace, akar masalah, dan perbaikan permanen di level harness.
 4.  **Laporan eval:** metrik, kategori kegagalan, tren antar versi, dan keputusan rilis yang dipengaruhinya.
-5.  **Tulisan trade-off:** pemilihan framework (manual vs LangGraph/Claude Agent SDK), single-agent vs multi-agent, cost vs latency vs akurasi, serta kapan fine-tuning/distillation tidak diperlukan.
+5.  **Tulisan trade-off:** pemilihan framework (manual vs LangGraph/Claude Agent SDK), single-agent vs multi-agent (pola Maker-Checker), cost vs latency vs akurasi, serta kapan fine-tuning/distillation tidak diperlukan.
 6.  Video demo 3-5 menit dan dashboard observability.
 
 ## 11. Rencana Rilis dan Milestone
@@ -286,6 +296,7 @@ Skema multi-tabel e-commerce sintetis (pelanggan, produk, pesanan, item pesanan,
 | SQL salah tetapi terlihat meyakinkan  | Jawaban menyesatkan                 | Tampilkan SQL, validasi kewajaran hasil, eval execution accuracy, kalibrasi LLM-judge.           |
 | Prompt injection lewat data/dokumen   | Agent melakukan aksi tak diinginkan | Perlakukan konten retrieval sebagai data, allowlist tool, DB read-only, tes adversarial di eval. |
 | Rate-limit pada Cloud Free Tier       | Eksekusi agent terhenti             | LiteLLM model fallback otomatis ke Ollama lokal (`qwen2.5-coder`), backoff retry eksponensial.    |
+| Auditor salah menandai (false positive)| Jawaban valid tertahan / latensi naik | Konfigurasi severity threshold, self-correction loop dibatasi 1x, dan fail-open graceful degradation (fallback ke disclaimer jika rate-limited). |
 | Eval tidak stabil (non-deterministik) | CI gate gagal palsu                 | Temperature rendah (0.0), cache respons deterministik, ambang toleransi, fokus pada tren.        |
 | Cakupan melebar                       | Proyek tidak selesai                | Patuhi prioritas P0/P1; P2 hanya jika waktu tersisa.                                             |
 | Dataset terlalu sederhana             | Demo kurang meyakinkan              | Gunakan dataset e-commerce realistis (Olist) dengan multi-tabel dan data kotor alami.            |
@@ -293,25 +304,26 @@ Skema multi-tabel e-commerce sintetis (pelanggan, produk, pesanan, item pesanan,
 ## 13. Keputusan Desain (Jawaban Pertanyaan Terbuka)
 
 1. **Dataset:** Menggunakan dataset publik **Olist Brazilian E-commerce** (multi-tabel pesanan, produk, pelanggan, pembayaran, wilayah) yang di-seed ke PostgreSQL lokal. Memiliki data kotor alami tanpa biaya lisensi.
-2. **Penyedia LLM & Anggaran:** **USD 0,00 (100% Gratis)**. Arsitektur hybrid via LiteLLM: Google AI Studio (Gemini 2.0 Flash / 1.5 Flash) dan Groq (Llama 3.3 70B) untuk inferensi cepat via cloud free-tier, dengan fallback offline ke Ollama lokal (`qwen2.5-coder:7b` / `llama3.1:8b`).
-3. **Cakupan UI:** Antarmuka web chat minimalis responsif (FastAPI static web mount dengan HTML + Tailwind CSS + Vanilla JS) yang mampu merender stream SSE, tabel markdown, spesifikasi grafik JSON, dan tombol dialog persetujuan (approval gate). Tracing internal dipantau via dashboard Langfuse lokal/cloud free.
+2. **Penyedia LLM & Anggaran:** **USD 0,00 (100% Gratis)**. Arsitektur hybrid via LiteLLM: Google AI Studio (Gemini 2.0 Flash / 1.5 Flash) dan Groq (Llama 3.3 70B) untuk inferensi cepat via cloud free-tier, dengan fallback offline ke Ollama lokal (`qwen2.5-coder:7b` / `llama3.1:8b` / `deepseek-r1:7b`).
+3. **Cakupan UI:** Antarmuka web chat minimalis responsif (FastAPI static web mount dengan HTML + Tailwind CSS + Vanilla JS) yang mampu merender stream SSE, tabel markdown, spesifikasi grafik JSON, tombol dialog persetujuan (approval gate), dan badge status verifikasi auditor. Tracing internal dipantau via dashboard Langfuse lokal/cloud free.
 4. **Framework Pembanding:** **LangGraph**. Merupakan framework orchestration agen paling banyak diminta pada lowongan kerja AI Agent Engineer saat ini.
 5. **Target Deployment:** **Docker Compose lokal** (`docker compose up`) yang menjalankan FastAPI backend, PostgreSQL 16 + pgvector, dan Langfuse dalam satu perintah tanpa dependensi cloud berbayar.
+6. **Strategi Multi-Agent:** Memilih arsitektur **Maker-Checker (Analyst Agent + Data Auditor Agent)** daripada memecah tool deterministik menjadi agent terpisah. Pendekatan ini memisahkan eksplorasi analitik dari audit kualitas independen, memanfaatkan prinsip *Model Diversity* (memakai model cloud 70B gratis seperti Groq Llama-3.3-70B / Gemini Flash saat Analyst memakai model lokal 7B) untuk mengeliminasi *shared blind spots* dan halusinasi angka.
 
 ## 14. Pemetaan ke Kualifikasi Loker
 
 | **Kualifikasi loker**                                            | **Bukti di proyek**                       |
 |------------------------------------------------------------------|-------------------------------------------|
 | Python async, type hints, Pydantic                               | Seluruh backend (FR-01, FR-09, FR-30)     |
-| FastAPI + streaming SSE/WebSocket                                | FR-30                                     |
+| FastAPI + streaming SSE/WebSocket                                | FR-30, FR-35                              |
 | Agent loop sendiri tanpa framework                               | FR-01, FR-03                              |
-| Tool use dan structured output                                   | FR-05 s.d. FR-09                          |
+| Tool use dan structured output                                   | FR-05 s.d. FR-09, FR-35                   |
 | MCP                                                              | FR-10                                     |
-| Orchestration (single/sub/multi-agent)                           | FR-01, FR-03, FR-04                       |
+| Orchestration (single/sub/multi-agent)                           | FR-01, FR-03, FR-04, FR-35 (Maker-Checker)|
 | State dan durability                                             | FR-19                                     |
 | Memory                                                           | FR-16 s.d. FR-18                          |
 | RAG modern, grounding, citation                                  | FR-11 s.d. FR-13                          |
-| Guardrail, sandbox, human-in-the-loop                            | FR-20 s.d. FR-26                          |
+| Guardrail, sandbox, human-in-the-loop                            | FR-20 s.d. FR-26, FR-35 (Auditor Gate)    |
 | Reliability, latency, cost                                       | FR-27 s.d. FR-29                          |
 | Evals dan regression tracking                                    | EV-01 s.d. EV-06                          |
 | Observability LLM                                                | OB-01 s.d. OB-04                          |
