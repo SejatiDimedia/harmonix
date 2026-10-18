@@ -317,10 +317,15 @@ class OpenAICompatibleProvider(BaseLLMProvider):
                     )
 
             if not tool_calls and content:
-                # Fallback for models (such as Ollama Llama 3.2) that output tool calls as JSON in text
+                # Fallback for models (such as Ollama Llama / Qwen) that output tool calls as JSON in text
+                text_to_search = content.strip()
+                # Auto-repair unclosed outer braces if model emitted e.g. {"name": "run_sql", "arguments": {"query": "..."}
+                if '{"name":' in text_to_search and text_to_search.count('{') > text_to_search.count('}'):
+                    text_to_search += '}' * (text_to_search.count('{') - text_to_search.count('}'))
+
                 match = re.search(
                     r'\{\s*["\']name["\']\s*:\s*["\']([a-zA-Z0-9_]+)["\']\s*,\s*["\'](?:parameters|arguments)["\']\s*:\s*(\{.*?\})\s*\}',
-                    content,
+                    text_to_search,
                     re.DOTALL,
                 )
                 if match:
@@ -346,7 +351,13 @@ class OpenAICompatibleProvider(BaseLLMProvider):
                                 arguments=fn_args,
                             )
                         )
-                        content = content.replace(match.group(0), "").strip()
+                        # Clean the matched JSON string from content
+                        content = re.sub(
+                            r'\{\s*["\']name["\']\s*:\s*["\']' + re.escape(fn_name) + r'["\']\s*,\s*["\'](?:parameters|arguments)["\']\s*:.*$',
+                            '',
+                            content,
+                            flags=re.DOTALL,
+                        ).strip()
 
             if tool_calls and content:
                 # Strip mirrored or leaked tool call JSON from assistant content

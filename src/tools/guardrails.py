@@ -175,12 +175,13 @@ class SQLGuardrail:
             cols_str = ", ".join(set(assessment.sensitive_columns_accessed))
             assessment.risk_reasons.append(f"Query accesses sensitive PII columns: {cols_str}")
 
-        # Check for unbounded queries (SELECT * FROM table without WHERE clause)
+        # Check for unbounded queries (SELECT * FROM table without WHERE clause or aggregation)
         if isinstance(parsed, exp.Select):
             has_where = parsed.args.get("where") is not None
             has_joins = bool(parsed.args.get("joins"))
-            # If large join or unbounded scan
-            if not has_where and (has_joins or len(list(parsed.find_all(exp.Table))) > 1):
+            has_group = parsed.args.get("group") is not None
+            # If multi-table join without WHERE and without GROUP BY (raw unbounded dump)
+            if not has_where and (has_joins or len(list(parsed.find_all(exp.Table))) > 1) and not has_group:
                 assessment.requires_approval = True
                 assessment.risk_reasons.append("Unbounded multi-table query without WHERE filter (potential high cost)")
 

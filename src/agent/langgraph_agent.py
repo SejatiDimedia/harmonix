@@ -201,11 +201,27 @@ class LangGraphAgent:
         if response.content:
             self.term_logger.log_thought(response.content)
 
-        # Check if LLM requested tool calls
-        if response.tool_calls:
+        # Check if LLM requested tool calls or generated SQL in text without formal tool call
+        tool_calls = response.tool_calls or []
+        if not tool_calls and not state.get("sql_queries") and response.content:
+            m_sql = re.search(r'```(?:sql)?\s*(SELECT\b[\s\S]+?)(?:```|;)', response.content, re.IGNORECASE)
+            if not m_sql:
+                m_sql = re.search(r'\b(SELECT\s+[a-zA-Z0-9_.*,\s]+\s+FROM\s+[\s\S]+?)(?:```|;|\n\n|$)', response.content, re.IGNORECASE)
+            if m_sql:
+                ext_query = m_sql.group(1).strip()
+                if "FROM" in ext_query.upper():
+                    tool_calls = [
+                        ToolCall(
+                            id=f"call_auto_sql_{uuid.uuid4().hex[:6]}",
+                            name="run_sql",
+                            arguments={"query": ext_query},
+                        )
+                    ]
+
+        if tool_calls:
             state["tool_calls"] = [
                 {"id": tc.id or f"call_{uuid.uuid4().hex[:6]}", "name": tc.name, "arguments": tc.arguments}
-                for tc in response.tool_calls
+                for tc in tool_calls
             ]
             # Append assistant message with tool calls to history
             state["messages"].append({

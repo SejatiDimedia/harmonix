@@ -25,7 +25,7 @@ from src.agent.prompts import BASE_ANALYST_SYSTEM_PROMPT
 from src.agent.state import get_session_history, save_task_checkpoint
 from src.agent.suggestions import get_smart_suggestions
 from src.config import settings
-from src.llm.provider import BaseLLMProvider, get_llm_provider
+from src.llm.provider import BaseLLMProvider, ToolCall, get_llm_provider
 from src.observability.models import SpanStatus, SpanType
 from src.observability.tracer import AgentTracer
 from src.tools.base import BaseTool
@@ -332,6 +332,23 @@ class ManualAgentLoop:
                     "event": "token",
                     "data": {"delta": llm_response.content},
                 }
+
+            # Auto-detect unexecuted SQL query generated in text without formal function call
+            if not llm_response.tool_calls and not executed_sqls and llm_response.content:
+                m_sql = re.search(r'```(?:sql)?\s*(SELECT\b[\s\S]+?)(?:```|;)', llm_response.content, re.IGNORECASE)
+                if not m_sql:
+                    m_sql = re.search(r'\b(SELECT\s+[a-zA-Z0-9_.*,\s]+\s+FROM\s+[\s\S]+?)(?:```|;|\n\n|$)', llm_response.content, re.IGNORECASE)
+                if m_sql:
+                    ext_query = m_sql.group(1).strip()
+                    if "FROM" in ext_query.upper():
+                        logger.info("Auto-executing unexecuted SQL written in text by model: %s", ext_query[:80])
+                        llm_response.tool_calls = [
+                            ToolCall(
+                                id=f"call_auto_sql_{uuid.uuid4().hex[:6]}",
+                                name="run_sql",
+                                arguments={"query": ext_query},
+                            )
+                        ]
 
             # 4. Handle Tool Calls
             if llm_response.tool_calls:

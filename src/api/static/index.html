@@ -1083,6 +1083,9 @@
                                     <span class="inline-block w-2 h-2 rounded-full bg-clay-500 animate-pulse mr-1.5"></span>
                                     <span>Langkah ${parsed.step}/${parsed.max_steps}: Menginspeksi skema & glosarium...</span>
                                 `;
+                                if (parsed.step > 1) {
+                                    accumulatedMarkdown = '';
+                                }
                             } else if (currentEvent === 'token') {
                                 accumulatedMarkdown += parsed.delta;
                                 if (window.marked && window.DOMPurify) {
