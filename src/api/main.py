@@ -11,7 +11,10 @@ from pydantic import BaseModel, Field
 from contextlib import asynccontextmanager
 from sse_starlette.sse import EventSourceResponse
 
-STATIC_INDEX_PATH = Path(__file__).parent / "static" / "index.html"
+from fastapi.staticfiles import StaticFiles
+
+STATIC_DIR = Path(__file__).parent / "static"
+STATIC_INDEX_PATH = STATIC_DIR / "index.html"
 
 from src.agent.langgraph_agent import LangGraphAgent
 from src.agent.manual_loop import ManualAgentLoop
@@ -66,6 +69,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+if STATIC_DIR.exists():
+    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
 # In-memory approval store for pending HITL requests
