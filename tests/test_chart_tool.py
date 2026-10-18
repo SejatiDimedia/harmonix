@@ -299,3 +299,38 @@ async def test_chart_deduplication():
     assert final_charts[0]["data"][0]["count"] == 8
 
 
+@pytest.mark.asyncio
+async def test_auto_synthesize_pie_chart_from_sql_only():
+    """Verify that if LLM only calls run_sql and never calls make_chart, agent auto-synthesizes a pie chart without col_y error."""
+    run_sql_call = ToolCall(
+        id="call_sql_order_status",
+        name="run_sql",
+        arguments={"query": "SELECT order_status, COUNT(*) AS count FROM analytics.orders GROUP BY order_status"},
+    )
+
+    canned_responses = [
+        LLMResponse(
+            content="Mengeksekusi SQL untuk mendapatkan distribusi pesanan.",
+            tool_calls=[run_sql_call],
+        ),
+        LLMResponse(
+            content="Berikut ringkasan pesanan.",
+            tool_calls=[],
+        ),
+    ]
+
+    mock_llm = MockLLMProvider(canned_responses=canned_responses)
+    agent = ManualAgentLoop(llm=mock_llm, max_steps=5)
+
+    events = []
+    async for event in agent.run(user_query="Buatkan pie chart untuk persentase distribusi status pesanan (delivered, shipped, canceled)"):
+        events.append(event)
+
+    final_event = next(e for e in events if e["event"] == "final_result")
+    final_charts = final_event["data"]["charts"]
+    assert len(final_charts) == 1
+    assert final_charts[0]["chart_type"] == "pie"
+    assert len(final_charts[0]["data"]) > 0
+
+
+
