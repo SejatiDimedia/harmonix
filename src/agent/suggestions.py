@@ -37,10 +37,22 @@ def extract_suggestions_from_text(answer_text: str) -> tuple[str, list[str]]:
 
     match = header_pattern.search(answer_text)
     if not match:
-        return answer_text, []
+        clean_ans = re.sub(
+            r'\{\s*["\']name["\']\s*:\s*["\'](?:run_sql|get_schema|make_chart|search_glossary|calculate)["\']\s*,\s*["\'](?:parameters|arguments)["\']\s*:.*$',
+            '',
+            answer_text,
+            flags=re.DOTALL,
+        ).strip()
+        return clean_ans, []
 
     split_idx = match.start()
     clean_answer = answer_text[:split_idx].rstrip()
+    clean_answer = re.sub(
+        r'\{\s*["\']name["\']\s*:\s*["\'](?:run_sql|get_schema|make_chart|search_glossary|calculate)["\']\s*,\s*["\'](?:parameters|arguments)["\']\s*:.*$',
+        '',
+        clean_answer,
+        flags=re.DOTALL,
+    ).strip()
     suggestions_block = answer_text[match.end():]
 
     # Extract individual bullet lines
@@ -53,7 +65,9 @@ def extract_suggestions_from_text(answer_text: str) -> tuple[str, list[str]]:
         # Stop if another major markdown section starts (e.g. "## ")
         if re.match(r"^#{1,3}\s+", stripped):
             break
-        cleaned = clean_suggestion_text(stripped)
+        # Strip any trailing JSON tool call if model appended it to bullet line
+        line_clean = re.sub(r'\{\s*["\']name["\']\s*:.*$', '', stripped).strip()
+        cleaned = clean_suggestion_text(line_clean)
         # Ensure it has substance and question intent
         if len(cleaned) >= 8 and not cleaned.startswith("#"):
             suggestions.append(cleaned)
@@ -65,14 +79,19 @@ def extract_suggestions_from_text(answer_text: str) -> tuple[str, list[str]]:
 
 def generate_heuristic_suggestions(
     user_query: str,
-    tables: list[TableData] | list[dict[str, Any]],
-    charts: list[ChartSpec] | list[dict[str, Any]],
-    sql_queries: list[str],
+    tables: list[TableData] | list[dict[str, Any]] | None = None,
+    charts: list[ChartSpec] | list[dict[str, Any]] | None = None,
+    sql_queries: list[str] | None = None,
+    executed_sqls: list[str] | None = None,
+    **kwargs: Any,
 ) -> list[str]:
     """
     Generate domain-specific analytical suggestions based on SQL tables,
     columns returned, and user intent when LLM suggestions are absent.
     """
+    sqls = sql_queries if sql_queries is not None else (executed_sqls or [])
+    tables = tables or []
+    charts = charts or []
     uq_lower = user_query.lower()
     pool: list[str] = []
 
@@ -152,9 +171,11 @@ def generate_heuristic_suggestions(
 def get_smart_suggestions(
     answer_text: str,
     user_query: str,
-    tables: list[TableData] | list[dict[str, Any]],
-    charts: list[ChartSpec] | list[dict[str, Any]],
-    sql_queries: list[str],
+    tables: list[TableData] | list[dict[str, Any]] | None = None,
+    charts: list[ChartSpec] | list[dict[str, Any]] | None = None,
+    sql_queries: list[str] | None = None,
+    executed_sqls: list[str] | None = None,
+    **kwargs: Any,
 ) -> tuple[str, list[str]]:
     """
     Main entrypoint: extracts suggestions from LLM answer if present,
@@ -166,12 +187,16 @@ def get_smart_suggestions(
     if len(extracted) >= 3:
         return clean_answer, extracted[:3]
 
+    sqls = sql_queries if sql_queries is not None else (executed_sqls or [])
+    tables = tables or []
+    charts = charts or []
+
     # Otherwise, supplement with heuristic suggestions
     heuristics = generate_heuristic_suggestions(
         user_query=user_query,
         tables=tables,
         charts=charts,
-        sql_queries=sql_queries,
+        sql_queries=sqls,
     )
 
     combined = list(extracted)

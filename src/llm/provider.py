@@ -348,6 +348,15 @@ class OpenAICompatibleProvider(BaseLLMProvider):
                         )
                         content = content.replace(match.group(0), "").strip()
 
+            if tool_calls and content:
+                # Strip mirrored or leaked tool call JSON from assistant content
+                content = re.sub(
+                    r'\{\s*["\']name["\']\s*:\s*["\'](?:run_sql|get_schema|make_chart|search_glossary|calculate)["\']\s*,\s*["\'](?:parameters|arguments)["\']\s*:.*$',
+                    '',
+                    content,
+                    flags=re.DOTALL,
+                ).strip()
+
             usage_data = data.get("usage", {})
             usage = LLMUsage(
                 prompt_tokens=usage_data.get("prompt_tokens", 0),

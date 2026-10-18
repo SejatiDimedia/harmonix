@@ -81,3 +81,34 @@ Total GMV adalah Rp 500.000.000.
     assert len(suggestions) == 3
     assert suggestions[0] == "Kategori apa yang paling banyak menghasilkan GMV?"
     assert "### Pertanyaan Lanjutan:" not in clean_answer
+
+
+def test_get_smart_suggestions_with_executed_sqls_keyword():
+    """Verify get_smart_suggestions accepts executed_sqls as keyword argument without error."""
+    clean_answer, suggestions = get_smart_suggestions(
+        answer_text="Hasil analisis kategori produk.",
+        user_query="Kategori terlaris",
+        tables=[TableData(columns=["category", "total"], rows=[["Elektronik", 100]], row_count=1)],
+        charts=[],
+        executed_sqls=["SELECT category, count(*) FROM analytics.products GROUP BY 1;"],
+    )
+    assert len(suggestions) == 3
+    assert clean_answer == "Hasil analisis kategori produk."
+
+
+def test_extract_suggestions_strips_trailing_tool_call():
+    """Verify leaked raw JSON tool call attached to suggestion is cleanly stripped."""
+    raw_text = """
+Berikut kategori produk teratas:
+1. Elektronik (500 pesanan)
+
+Rekomendasi Analisis Lanjutan:
+- Apakah ada kategori produk yang memiliki pertumbuhan pesanan signifikan?
+- Bagaimana distribusi pesanan berdasarkan kategori produk di seluruh tahun ini?
+- Apa produk spesifik dalam kategori tersebut yang paling populer?{"name": "run_sql", "arguments": {"query": "SELECT * FROM analytics.orders;"}}
+"""
+    clean_answer, suggestions = extract_suggestions_from_text(raw_text)
+    assert len(suggestions) == 3
+    assert suggestions[2] == "Apa produk spesifik dalam kategori tersebut yang paling populer?"
+    assert '{"name": "run_sql"' not in clean_answer
+    assert '{"name": "run_sql"' not in suggestions[2]
