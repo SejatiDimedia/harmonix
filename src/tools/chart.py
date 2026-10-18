@@ -8,9 +8,9 @@ from src.tools.base import BaseTool
 class MakeChartInput(BaseModel):
     """Input parameters for the make_chart tool."""
 
-    chart_type: Literal["bar", "line", "pie", "scatter"] = Field(
+    chart_type: Literal["bar", "line", "pie", "scatter", "doughnut"] = Field(
         default="bar",
-        description="Type of chart to render: 'bar' (categories/comparisons), 'line' (trends over time), 'pie' (proportions/shares), or 'scatter' (distributions).",
+        description="Type of chart to render: 'bar' (categories/comparisons), 'line' (trends over time), 'pie' (proportions/shares), 'doughnut' (donut chart composition), or 'scatter' (distributions).",
     )
     title: str = Field(
         ...,
@@ -35,7 +35,7 @@ class MakeChartTool(BaseTool):
 
     name: str = "make_chart"
     description: str = (
-        "Create an interactive visual chart (bar, line, pie, scatter) from query results or aggregated data. "
+        "Create an interactive visual chart (bar, line, pie, doughnut, scatter) from query results or aggregated data. "
         "Use this tool when the user asks for a chart, graph, trend, visualization, or when presenting comparative metrics."
     )
     args_schema: type[BaseModel] = MakeChartInput
@@ -51,7 +51,9 @@ class MakeChartTool(BaseTool):
     ) -> dict[str, Any]:
         """Validate and return structured chart specification."""
         clean_type = str(chart_type).lower().strip()
-        if clean_type not in ("bar", "line", "pie", "scatter"):
+        if clean_type in ("donut", "doughnut"):
+            clean_type = "doughnut"
+        elif clean_type not in ("bar", "line", "pie", "scatter", "doughnut"):
             clean_type = "bar"
 
         sanitized_data: list[dict[str, Any]] = []

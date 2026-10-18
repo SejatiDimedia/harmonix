@@ -285,15 +285,28 @@
                         </div>
                     </button>
 
-                    <button class="prompt-chip p-3.5 rounded-xl bg-[#201f1d] hover:bg-[#282724] border border-[#2e2c28] hover:border-[#423f3a] text-xs text-[#cfccc4] transition group flex items-start gap-3 sm:col-span-2" data-query="Buatkan grafik perbandingan total pesanan untuk setiap kategori produk">
+                    <button class="prompt-chip p-3.5 rounded-xl bg-[#201f1d] hover:bg-[#282724] border border-[#2e2c28] hover:border-[#423f3a] text-xs text-[#cfccc4] transition group flex items-start gap-3" data-query="Buatkan grafik batang perbandingan total pesanan untuk setiap kategori produk">
                         <div class="w-7 h-7 rounded-lg bg-[#272623] border border-[#36342f] flex items-center justify-center text-clay-400 shrink-0 mt-0.5">
                             <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                             </svg>
                         </div>
                         <div>
-                            <div class="font-medium text-[#e8e6dd] group-hover:text-clay-300">Visualisasi Grafik (Dynamic Chart)</div>
-                            <div class="text-[11px] text-[#8e8b82] mt-0.5">Generate grafik batang interaktif dari perbandingan kategori produk</div>
+                            <div class="font-medium text-[#e8e6dd] group-hover:text-clay-300">Grafik Batang (Bar)</div>
+                            <div class="text-[11px] text-[#8e8b82] mt-0.5">Perbandingan pesanan tiap kategori produk</div>
+                        </div>
+                    </button>
+
+                    <button class="prompt-chip p-3.5 rounded-xl bg-[#201f1d] hover:bg-[#282724] border border-[#2e2c28] hover:border-[#423f3a] text-xs text-[#cfccc4] transition group flex items-start gap-3" data-query="Tampilkan proporsi status pesanan dalam bentuk chart donat (doughnut chart)">
+                        <div class="w-7 h-7 rounded-lg bg-[#272623] border border-[#36342f] flex items-center justify-center text-clay-400 shrink-0 mt-0.5">
+                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <circle cx="12" cy="12" r="8" stroke-width="1.75" stroke-dasharray="28 20" stroke-linecap="round" />
+                                <circle cx="12" cy="12" r="3.5" stroke-width="1.75" />
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="font-medium text-[#e8e6dd] group-hover:text-clay-300">Grafik Donat (Pie/Donut)</div>
+                            <div class="text-[11px] text-[#8e8b82] mt-0.5">Proporsi persentase persebaran status pesanan</div>
                         </div>
                     </button>
                 </div>
@@ -669,9 +682,10 @@
                                         ];
 
                                         let cType = (ch.chart_type || 'bar').toLowerCase();
+                                        if (cType === 'donut') cType = 'doughnut';
                                         if (cType === 'scatter') cType = 'line';
 
-                                        const isPieOrDoughnut = cType === 'pie';
+                                        const isPieOrDoughnut = cType === 'pie' || cType === 'doughnut';
                                         const bgColors = isPieOrDoughnut ? palette : 'rgba(217, 119, 87, 0.75)';
                                         const borderColors = isPieOrDoughnut ? borderPalette : 'rgb(217, 119, 87)';
 

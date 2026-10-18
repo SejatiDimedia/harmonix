@@ -24,7 +24,7 @@ class TableData(BaseModel):
 
 class ChartSpec(BaseModel):
     """Structured declarative specification for front-end charting (FR-07)."""
-    chart_type: Literal["bar", "line", "pie", "scatter"] = "bar"
+    chart_type: Literal["bar", "line", "pie", "scatter", "doughnut"] = "bar"
     title: str
     x_axis: str
     y_axis: str

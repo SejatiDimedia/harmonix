@@ -527,8 +527,14 @@ class LangGraphAgent:
             last_tbl = tables[-1]
             if len(last_tbl.columns) >= 2 and last_tbl.rows:
                 col_x = last_tbl.columns[0]
-                col_y = last_tbl.columns[1]
-                c_type = "line" if any(w in user_query.lower() for w in ("tren", "trend", "bulanan", "waktu", "harian")) else "bar"
+                if any(w in user_query.lower() for w in ("donat", "donut", "doughnut")):
+                    c_type = "doughnut"
+                elif any(w in user_query.lower() for w in ("pie", "lingkaran", "proporsi", "komposisi", "porsi", "share")):
+                    c_type = "pie"
+                elif any(w in user_query.lower() for w in ("tren", "trend", "bulanan", "waktu", "harian")):
+                    c_type = "line"
+                else:
+                    c_type = "bar"
                 title_text = f"Visualisasi {col_x.replace('_', ' ').title()} vs {col_y.replace('_', ' ').title()}"
                 charts.append(
                     ChartSpec(
@@ -710,8 +716,14 @@ class LangGraphAgent:
             last_tbl = tables[-1]
             if len(last_tbl.columns) >= 2 and last_tbl.rows:
                 col_x = last_tbl.columns[0]
-                col_y = last_tbl.columns[1]
-                c_type = "line" if any(w in user_query.lower() for w in ("tren", "trend", "bulanan", "waktu", "harian")) else "bar"
+                if any(w in user_query.lower() for w in ("donat", "donut", "doughnut")):
+                    c_type = "doughnut"
+                elif any(w in user_query.lower() for w in ("pie", "lingkaran", "proporsi", "komposisi", "porsi", "share")):
+                    c_type = "pie"
+                elif any(w in user_query.lower() for w in ("tren", "trend", "bulanan", "waktu", "harian")):
+                    c_type = "line"
+                else:
+                    c_type = "bar"
                 title_text = f"Visualisasi {col_x.replace('_', ' ').title()} vs {col_y.replace('_', ' ').title()}"
                 charts.append(
                     ChartSpec(
