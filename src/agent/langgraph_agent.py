@@ -372,6 +372,14 @@ class LangGraphAgent:
                             c_spec["x_axis"] = t_x
                             c_spec["y_axis"] = t_y
                             c_spec["data"] = c_data
+                    uq_lower = state.get("user_query", "").lower()
+                    if any(w in uq_lower for w in ("donat", "donut", "doughnut")):
+                        c_spec["chart_type"] = "doughnut"
+                    elif any(w in uq_lower for w in ("pie", "lingkaran", "proporsi", "porsi")) and not any(w in uq_lower for w in ("batang", "bar")):
+                        c_spec["chart_type"] = "pie"
+                    elif any(w in uq_lower for w in ("garis", "line", "tren", "trend")) and not any(w in uq_lower for w in ("batang", "bar")):
+                        c_spec["chart_type"] = "line"
+
                     if "charts" not in state:
                         state["charts"] = []
                     state["charts"].append(c_spec)
@@ -508,7 +516,18 @@ class LangGraphAgent:
             for c in final_state.get("charts", [])
         ]
 
-        # Ensure charts have data if tables exists
+        # Deduplicate charts with identical title, keeping the latest one
+        deduped_charts: list[ChartSpec] = []
+        seen_titles: set[str] = set()
+        for ch in reversed(charts):
+            normalized_title = ch.title.strip().lower()
+            if normalized_title not in seen_titles:
+                seen_titles.add(normalized_title)
+                deduped_charts.append(ch)
+        charts = list(reversed(deduped_charts))
+
+        # Ensure charts have data if tables exists and respect user chart type
+        uq_lower = user_query.lower()
         for ch in charts:
             if not ch.data and tables:
                 last_tbl = tables[-1]
@@ -521,6 +540,12 @@ class LangGraphAgent:
                         {t_x: r[0] if r[0] is not None else "(NULL)", t_y: r[1]}
                         for r in last_tbl.rows
                     ]
+            if any(w in uq_lower for w in ("donat", "donut", "doughnut")):
+                ch.chart_type = "doughnut"
+            elif any(w in uq_lower for w in ("pie", "lingkaran", "proporsi", "porsi")) and not any(w in uq_lower for w in ("batang", "bar")):
+                ch.chart_type = "pie"
+            elif any(w in uq_lower for w in ("garis", "line", "tren", "trend")) and not any(w in uq_lower for w in ("batang", "bar")):
+                ch.chart_type = "line"
 
         chart_keywords = ("grafik", "chart", "visualisasi", "diagram", "plot", "tren", "trend")
         if not charts and tables and any(kw in user_query.lower() for kw in chart_keywords):
@@ -697,7 +722,18 @@ class LangGraphAgent:
             for c in final_state.get("charts", [])
         ]
 
-        # Ensure charts have data if tables exists
+        # Deduplicate charts with identical title, keeping the latest one
+        deduped_charts: list[ChartSpec] = []
+        seen_titles: set[str] = set()
+        for ch in reversed(charts):
+            normalized_title = ch.title.strip().lower()
+            if normalized_title not in seen_titles:
+                seen_titles.add(normalized_title)
+                deduped_charts.append(ch)
+        charts = list(reversed(deduped_charts))
+
+        # Ensure charts have data if tables exists and respect user chart type
+        uq_lower = user_query.lower()
         for ch in charts:
             if not ch.data and tables:
                 last_tbl = tables[-1]
@@ -710,6 +746,12 @@ class LangGraphAgent:
                         {t_x: r[0] if r[0] is not None else "(NULL)", t_y: r[1]}
                         for r in last_tbl.rows
                     ]
+            if any(w in uq_lower for w in ("donat", "donut", "doughnut")):
+                ch.chart_type = "doughnut"
+            elif any(w in uq_lower for w in ("pie", "lingkaran", "proporsi", "porsi")) and not any(w in uq_lower for w in ("batang", "bar")):
+                ch.chart_type = "pie"
+            elif any(w in uq_lower for w in ("garis", "line", "tren", "trend")) and not any(w in uq_lower for w in ("batang", "bar")):
+                ch.chart_type = "line"
 
         chart_keywords = ("grafik", "chart", "visualisasi", "diagram", "plot", "tren", "trend")
         if not charts and tables and any(kw in user_query.lower() for kw in chart_keywords):

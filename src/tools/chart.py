@@ -53,6 +53,14 @@ class MakeChartTool(BaseTool):
         clean_type = str(chart_type).lower().strip()
         if clean_type in ("donut", "doughnut"):
             clean_type = "doughnut"
+        elif clean_type == "bar":
+            title_lower = str(title).lower()
+            if any(w in title_lower for w in ("donat", "donut", "doughnut")):
+                clean_type = "doughnut"
+            elif any(w in title_lower for w in ("pie", "lingkaran", "proporsi", "porsi")):
+                clean_type = "pie"
+            elif any(w in title_lower for w in ("tren", "trend", "garis", "line")):
+                clean_type = "line"
         elif clean_type not in ("bar", "line", "pie", "scatter", "doughnut"):
             clean_type = "bar"
 

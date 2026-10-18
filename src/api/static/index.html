@@ -687,7 +687,7 @@
 
                                         const isPieOrDoughnut = cType === 'pie' || cType === 'doughnut';
                                         const bgColors = isPieOrDoughnut ? palette : 'rgba(217, 119, 87, 0.75)';
-                                        const borderColors = isPieOrDoughnut ? borderPalette : 'rgb(217, 119, 87)';
+                                        const borderColors = isPieOrDoughnut ? '#161513' : 'rgb(217, 119, 87)';
 
                                         if (window.Chart) {
                                             new Chart(canvas.getContext('2d'), {
@@ -699,7 +699,7 @@
                                                         data: values,
                                                         backgroundColor: bgColors,
                                                         borderColor: borderColors,
-                                                        borderWidth: 1.5,
+                                                        borderWidth: isPieOrDoughnut ? 2 : 1.5,
                                                         borderRadius: cType === 'bar' ? 4 : 0,
                                                         tension: cType === 'line' ? 0.35 : 0,
                                                         fill: cType === 'line' ? { target: 'origin', above: 'rgba(217, 119, 87, 0.15)' } : false,
@@ -711,6 +711,7 @@
                                                 options: {
                                                     responsive: true,
                                                     maintainAspectRatio: false,
+                                                    cutout: cType === 'doughnut' ? '60%' : undefined,
                                                     plugins: {
                                                         legend: {
                                                             display: isPieOrDoughnut,
@@ -733,7 +734,7 @@
                                                             titleFont: { family: 'Plus Jakarta Sans', size: 12, weight: 'bold' },
                                                         }
                                                     },
-                                                    scales: isPieOrDoughnut ? {} : {
+                                                    scales: isPieOrDoughnut ? undefined : {
                                                         x: {
                                                             grid: { color: 'rgba(46, 44, 40, 0.6)' },
                                                             ticks: { color: '#8e8b82', font: { family: 'JetBrains Mono', size: 10 } }

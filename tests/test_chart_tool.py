@@ -218,3 +218,84 @@ async def test_manual_loop_chart_auto_fallback_from_table():
     assert len(ch["data"]) > 0
     assert ch["data"][0]["product_category_name"] is not None or "(NULL)" in str(ch["data"][0])
 
+
+@pytest.mark.asyncio
+async def test_manual_loop_reconciles_pie_and_doughnut_when_omitted():
+    """Verify that when make_chart omits chart_type (defaulting to bar), but user asked for pie, it is reconciled to pie."""
+    chart_tool_call = ToolCall(
+        id="call_chart_no_type",
+        name="make_chart",
+        arguments={
+            "title": "Distribusi Status Pesanan",
+            "x_axis": "order_status",
+            "y_axis": "count",
+            "data": [
+                {"order_status": "Delivered", "count": 8},
+                {"order_status": "Shipped", "count": 1},
+            ],
+        },
+    )
+
+    canned_responses = [
+        LLMResponse(content="Membuat grafik status pesanan.", tool_calls=[chart_tool_call]),
+        LLMResponse(content="Berikut hasilnya.", tool_calls=[]),
+    ]
+
+    mock_llm = MockLLMProvider(canned_responses=canned_responses)
+    agent = ManualAgentLoop(llm=mock_llm, max_steps=5)
+
+    events = []
+    async for event in agent.run(user_query="Buatkan pie chart untuk persentase distribusi status pesanan"):
+        events.append(event)
+
+    final_event = next(e for e in events if e["event"] == "final_result")
+    final_charts = final_event["data"]["charts"]
+    assert len(final_charts) == 1
+    assert final_charts[0]["chart_type"] == "pie"
+
+
+@pytest.mark.asyncio
+async def test_chart_deduplication():
+    """Verify that if make_chart is called multiple times with the same title, only the latest chart is kept."""
+    chart_call_1 = ToolCall(
+        id="call_c1",
+        name="make_chart",
+        arguments={
+            "title": "Distribusi Status Pesanan",
+            "x_axis": "order_status",
+            "y_axis": "count",
+            "data": [{"order_status": "Delivered", "count": 100}],
+        },
+    )
+    chart_call_2 = ToolCall(
+        id="call_c2",
+        name="make_chart",
+        arguments={
+            "title": "Distribusi Status Pesanan",
+            "x_axis": "order_status",
+            "y_axis": "count",
+            "data": [{"order_status": "Delivered", "count": 8}],
+        },
+    )
+
+    canned_responses = [
+        LLMResponse(content="Langkah 1", tool_calls=[chart_call_1]),
+        LLMResponse(content="Langkah 2", tool_calls=[chart_call_2]),
+        LLMResponse(content="Selesai", tool_calls=[]),
+    ]
+
+    mock_llm = MockLLMProvider(canned_responses=canned_responses)
+    agent = ManualAgentLoop(llm=mock_llm, max_steps=5)
+
+    events = []
+    async for event in agent.run(user_query="Buatkan chart donat status pesanan"):
+        events.append(event)
+
+    final_event = next(e for e in events if e["event"] == "final_result")
+    final_charts = final_event["data"]["charts"]
+    # Only 1 deduplicated chart with the latest data and doughnut type
+    assert len(final_charts) == 1
+    assert final_charts[0]["chart_type"] == "doughnut"
+    assert final_charts[0]["data"][0]["count"] == 8
+
+

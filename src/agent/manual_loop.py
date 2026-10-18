@@ -516,9 +516,20 @@ class ManualAgentLoop:
                                     ]
                                     c_spec["x_axis"] = t_x
                                     c_spec["y_axis"] = t_y
+                            raw_c_type = c_spec.get("chart_type", "bar")
+                            uq_lower = user_query.lower()
+                            if any(w in uq_lower for w in ("donat", "donut", "doughnut")):
+                                final_c_type = "doughnut"
+                            elif any(w in uq_lower for w in ("pie", "lingkaran", "proporsi", "porsi")) and not any(w in uq_lower for w in ("batang", "bar")):
+                                final_c_type = "pie"
+                            elif any(w in uq_lower for w in ("garis", "line", "tren", "trend")) and not any(w in uq_lower for w in ("batang", "bar")):
+                                final_c_type = "line"
+                            else:
+                                final_c_type = raw_c_type
+
                             captured_charts.append(
                                 ChartSpec(
-                                    chart_type=c_spec.get("chart_type", "bar"),
+                                    chart_type=final_c_type,
                                     title=c_spec.get("title", ""),
                                     x_axis=c_spec.get("x_axis", "x"),
                                     y_axis=c_spec.get("y_axis", "y"),
@@ -591,7 +602,18 @@ class ManualAgentLoop:
             step_count=step,
         )
 
-        # Ensure charts have data if captured_tables exists
+        # Deduplicate charts with identical title, keeping the latest one
+        deduped_charts: list[ChartSpec] = []
+        seen_titles: set[str] = set()
+        for ch in reversed(captured_charts):
+            normalized_title = ch.title.strip().lower()
+            if normalized_title not in seen_titles:
+                seen_titles.add(normalized_title)
+                deduped_charts.append(ch)
+        captured_charts = list(reversed(deduped_charts))
+
+        # Ensure charts have data if captured_tables exists and respect user chart type
+        uq_lower = user_query.lower()
         for ch in captured_charts:
             if not ch.data and captured_tables:
                 last_tbl = captured_tables[-1]
@@ -604,6 +626,12 @@ class ManualAgentLoop:
                         {t_x: r[0] if r[0] is not None else "(NULL)", t_y: r[1]}
                         for r in last_tbl.rows
                     ]
+            if any(w in uq_lower for w in ("donat", "donut", "doughnut")):
+                ch.chart_type = "doughnut"
+            elif any(w in uq_lower for w in ("pie", "lingkaran", "proporsi", "porsi")) and not any(w in uq_lower for w in ("batang", "bar")):
+                ch.chart_type = "pie"
+            elif any(w in uq_lower for w in ("garis", "line", "tren", "trend")) and not any(w in uq_lower for w in ("batang", "bar")):
+                ch.chart_type = "line"
 
         # Auto-synthesize chart if user requested visual/chart but LLM didn't call make_chart
         chart_keywords = ("grafik", "chart", "visualisasi", "diagram", "plot", "tren", "trend")
