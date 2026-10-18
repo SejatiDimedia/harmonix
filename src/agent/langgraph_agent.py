@@ -16,6 +16,7 @@ from src.agent.execution_logger import TerminalExecutionLogger
 from src.agent.models import (
     AgentFinalResponse,
     AgentTaskStatus,
+    ChartSpec,
     Citation,
     TableData,
 )
@@ -24,6 +25,7 @@ from src.agent.state import save_task_checkpoint
 from src.config import settings
 from src.llm.provider import BaseLLMProvider, ToolCall, get_llm_provider
 from src.tools.base import BaseTool
+from src.tools.chart import MakeChartTool
 from src.tools.database import GetSchemaTool, RunSQLTool
 from src.tools.glossary import SearchGlossaryTool
 from src.tools.guardrails import SQLGuardrail, SQLValidationError
@@ -48,6 +50,7 @@ class LangGraphAgentState(TypedDict, total=False):
     citations: list[dict[str, Any]]
     sql_queries: list[str]
     tables: list[dict[str, Any]]
+    charts: list[dict[str, Any]]
     tool_calls: list[dict[str, Any]]
     requires_approval: bool
     approval_reason: str | None
@@ -75,6 +78,7 @@ class LangGraphAgent:
             GetSchemaTool(),
             RunSQLTool(),
             CalculateTool(),
+            MakeChartTool(),
         ]
         self.tools: dict[str, BaseTool] = {t.name: t for t in tool_instances}
         self.openai_tools = [t.to_openai_schema() for t in tool_instances]
@@ -133,12 +137,13 @@ class LangGraphAgent:
         state["citations"] = state.get("citations") or []
         state["sql_queries"] = state.get("sql_queries") or []
         state["tables"] = state.get("tables") or []
+        state["charts"] = state.get("charts") or []
         state["tool_calls"] = []
         state["requires_approval"] = False
         state["is_completed"] = False
 
         if state.get("messages"):
-            # Resuming from existing messages: restore queries and tables from prior tool messages
+            # Resuming from existing messages: restore queries, tables, and charts from prior tool messages
             for msg in state["messages"]:
                 if msg.get("role") == "tool" and msg.get("name") == "run_sql":
                     try:
@@ -157,6 +162,15 @@ class LangGraphAgent:
                                     "rows": table_rows,
                                     "row_count": len(table_rows),
                                 })
+                    except Exception:
+                        pass
+                elif msg.get("role") == "tool" and msg.get("name") == "make_chart":
+                    try:
+                        content_obj = json.loads(msg.get("content", "{}"))
+                        if isinstance(content_obj, dict) and content_obj.get("status") == "success":
+                            c_spec = content_obj.get("chart", {})
+                            if c_spec:
+                                state["charts"].append(c_spec)
                     except Exception:
                         pass
             return state
@@ -337,6 +351,19 @@ class LangGraphAgent:
                 else:
                     obs = str(result.get("message") if isinstance(result, dict) else result)
 
+            elif tool_name == "make_chart":
+                result = await tool.execute(**tool_args)
+                dur_ms = round((time.perf_counter() - t0) * 1000, 1)
+                self.term_logger.log_tool_result(tool_name=tool_name, observation=result, duration_ms=dur_ms)
+                if isinstance(result, dict) and result.get("status") == "success":
+                    c_spec = result.get("chart", {})
+                    if "charts" not in state:
+                        state["charts"] = []
+                    state["charts"].append(c_spec)
+                    obs = result.get("message", "Grafik berhasil dibuat.")
+                else:
+                    obs = str(result)
+
             else:
                 result = await tool.execute(**tool_args)
                 dur_ms = round((time.perf_counter() - t0) * 1000, 1)
@@ -455,10 +482,22 @@ class LangGraphAgent:
             sql_count=len(final_state.get("sql_queries", [])),
         )
 
+        charts = [
+            ChartSpec(
+                chart_type=c.get("chart_type", "bar"),
+                title=c.get("title", ""),
+                x_axis=c.get("x_axis", "x"),
+                y_axis=c.get("y_axis", "y"),
+                data=c.get("data", []),
+            )
+            for c in final_state.get("charts", [])
+        ]
+
         return AgentFinalResponse(
             answer_text=answer_text,
             sql_queries=final_state.get("sql_queries", []),
             tables=tables,
+            charts=charts,
             citations=citations,
             total_steps=final_state.get("current_step", 0),
             token_usage={"total_tokens": final_state.get("current_step", 0) * 80},
@@ -591,10 +630,22 @@ class LangGraphAgent:
         elapsed_sec = round(time.perf_counter() - start_time, 2)
         total_toks = final_state.get("current_step", 1) * 80
 
+        charts = [
+            ChartSpec(
+                chart_type=c.get("chart_type", "bar"),
+                title=c.get("title", ""),
+                x_axis=c.get("x_axis", "x"),
+                y_axis=c.get("y_axis", "y"),
+                data=c.get("data", []),
+            )
+            for c in final_state.get("charts", [])
+        ]
+
         final_response = AgentFinalResponse(
             answer_text=masked_answer,
             sql_queries=final_state.get("sql_queries", []),
             tables=tables,
+            charts=charts,
             citations=citations,
             total_steps=final_state.get("current_step", 1),
             token_usage={"total_tokens": total_toks},

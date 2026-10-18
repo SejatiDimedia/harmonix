@@ -16,6 +16,7 @@ from src.agent.models import (
     AgentFinalResponse,
     AgentStepEvent,
     AgentTaskStatus,
+    ChartSpec,
     Citation,
     TableData,
 )
@@ -27,6 +28,7 @@ from src.llm.provider import BaseLLMProvider, get_llm_provider
 from src.observability.models import SpanStatus, SpanType
 from src.observability.tracer import AgentTracer
 from src.tools.base import BaseTool
+from src.tools.chart import MakeChartTool
 from src.tools.database import GetSchemaTool, RunSQLTool
 from src.tools.glossary import SearchGlossaryTool
 from src.tools.pii import PIIMasker
@@ -57,6 +59,7 @@ class ManualAgentLoop:
             GetSchemaTool(),
             RunSQLTool(),
             CalculateTool(),
+            MakeChartTool(),
         ]
         self.tools: dict[str, BaseTool] = {t.name: t for t in tool_instances}
         self.openai_tools = [t.to_openai_schema() for t in tool_instances]
@@ -114,6 +117,7 @@ class ManualAgentLoop:
         completion_tokens = 0
         executed_sqls: list[str] = []
         captured_tables: list[TableData] = []
+        captured_charts: list[ChartSpec] = []
         citations: list[Citation] = []
         failed_sqls: set[str] = set()
 
@@ -131,6 +135,22 @@ class ManualAgentLoop:
                             rows = content_obj.get("rows", [])
                             if cols and rows:
                                 captured_tables.append(TableData(columns=cols, rows=rows, row_count=len(rows)))
+                    except Exception:
+                        pass
+                elif msg.get("role") == "tool" and msg.get("name") == "make_chart":
+                    try:
+                        content_obj = json.loads(msg.get("content", "{}"))
+                        if isinstance(content_obj, dict) and content_obj.get("status") == "success":
+                            c_spec = content_obj.get("chart", {})
+                            captured_charts.append(
+                                ChartSpec(
+                                    chart_type=c_spec.get("chart_type", "bar"),
+                                    title=c_spec.get("title", ""),
+                                    x_axis=c_spec.get("x_axis", "x"),
+                                    y_axis=c_spec.get("y_axis", "y"),
+                                    data=c_spec.get("data", []),
+                                )
+                            )
                     except Exception:
                         pass
 
@@ -479,6 +499,20 @@ class ManualAgentLoop:
                                     TableData(columns=cols, rows=rows, row_count=len(rows))
                                 )
 
+                    # Collect chart specifications (FR-07)
+                    if tool_name == "make_chart" and isinstance(observation, dict):
+                        if observation.get("status") == "success":
+                            c_spec = observation.get("chart", {})
+                            captured_charts.append(
+                                ChartSpec(
+                                    chart_type=c_spec.get("chart_type", "bar"),
+                                    title=c_spec.get("title", ""),
+                                    x_axis=c_spec.get("x_axis", "x"),
+                                    y_axis=c_spec.get("y_axis", "y"),
+                                    data=c_spec.get("data", []),
+                                )
+                            )
+
                     # Append observation to message history
                     messages.append({
                         "role": "tool",
@@ -548,6 +582,7 @@ class ManualAgentLoop:
             answer_text=masked_answer,
             sql_queries=executed_sqls,
             tables=captured_tables,
+            charts=captured_charts,
             citations=citations,
             total_steps=step,
             token_usage={

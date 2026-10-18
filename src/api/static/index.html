@@ -12,6 +12,9 @@
     <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
     
+    <!-- Chart.js for Dynamic Interactive Visualizations (FR-07) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    
     <!-- Typography: Newsreader (Editorial Serif) + Plus Jakarta Sans + JetBrains Mono -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -279,6 +282,18 @@
                         <div>
                             <div class="font-medium text-[#e8e6dd] group-hover:text-amber-300">Uji Approval Gate</div>
                             <div class="text-[11px] text-[#8e8b82] mt-0.5">Permintaan akses data pribadi pelanggan (PII)</div>
+                        </div>
+                    </button>
+
+                    <button class="prompt-chip p-3.5 rounded-xl bg-[#201f1d] hover:bg-[#282724] border border-[#2e2c28] hover:border-[#423f3a] text-xs text-[#cfccc4] transition group flex items-start gap-3 sm:col-span-2" data-query="Buatkan grafik perbandingan total pesanan untuk setiap kategori produk">
+                        <div class="w-7 h-7 rounded-lg bg-[#272623] border border-[#36342f] flex items-center justify-center text-clay-400 shrink-0 mt-0.5">
+                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="font-medium text-[#e8e6dd] group-hover:text-clay-300">Visualisasi Grafik (Dynamic Chart)</div>
+                            <div class="text-[11px] text-[#8e8b82] mt-0.5">Generate grafik batang interaktif dari perbandingan kategori produk</div>
                         </div>
                     </button>
                 </div>
@@ -569,6 +584,120 @@
                                         tbl.innerHTML = `<thead><tr>${ths}</tr></thead><tbody>${trs}</tbody>`;
                                         tblWrap.appendChild(tbl);
                                         agentBox.appendChild(tblWrap);
+                                    });
+                                }
+
+                                if (parsed.charts && parsed.charts.length > 0) {
+                                    parsed.charts.forEach((ch, chIdx) => {
+                                        const chartCard = document.createElement('div');
+                                        chartCard.className = 'mt-4 rounded-xl border border-[#2e2c28] bg-[#161513] p-4 overflow-hidden shadow-sm';
+                                        
+                                        const chartHeader = document.createElement('div');
+                                        chartHeader.className = 'flex items-center justify-between mb-3 pb-2.5 border-b border-[#262421]';
+                                        chartHeader.innerHTML = `
+                                            <div class="flex items-center gap-2">
+                                                <span class="w-2 h-2 rounded-full bg-clay-500"></span>
+                                                <span class="text-xs font-medium text-[#dedcd5] font-sans">${ch.title || 'Visualisasi Data'}</span>
+                                            </div>
+                                            <span class="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-[#242320] text-clay-400 border border-[#383632]">
+                                                ${ch.chart_type}
+                                            </span>
+                                        `;
+                                        chartCard.appendChild(chartHeader);
+
+                                        const canvasWrap = document.createElement('div');
+                                        canvasWrap.className = 'relative w-full h-64 md:h-72';
+                                        const canvas = document.createElement('canvas');
+                                        canvas.id = `chart_${Date.now()}_${chIdx}`;
+                                        canvasWrap.appendChild(canvas);
+                                        chartCard.appendChild(canvasWrap);
+
+                                        agentBox.appendChild(chartCard);
+
+                                        const labels = (ch.data || []).map(d => d[ch.x_axis] ?? Object.values(d)[0] ?? '');
+                                        const values = (ch.data || []).map(d => Number(d[ch.y_axis] ?? Object.values(d)[1] ?? 0));
+
+                                        const palette = [
+                                            'rgba(217, 119, 87, 0.85)',
+                                            'rgba(52, 211, 153, 0.85)',
+                                            'rgba(224, 168, 46, 0.85)',
+                                            'rgba(129, 140, 248, 0.85)',
+                                            'rgba(244, 114, 182, 0.85)',
+                                            'rgba(56, 189, 248, 0.85)',
+                                        ];
+                                        const borderPalette = [
+                                            'rgb(217, 119, 87)',
+                                            'rgb(52, 211, 153)',
+                                            'rgb(224, 168, 46)',
+                                            'rgb(129, 140, 248)',
+                                            'rgb(244, 114, 182)',
+                                            'rgb(56, 189, 248)',
+                                        ];
+
+                                        let cType = (ch.chart_type || 'bar').toLowerCase();
+                                        if (cType === 'scatter') cType = 'line';
+
+                                        const isPieOrDoughnut = cType === 'pie';
+                                        const bgColors = isPieOrDoughnut ? palette : 'rgba(217, 119, 87, 0.75)';
+                                        const borderColors = isPieOrDoughnut ? borderPalette : 'rgb(217, 119, 87)';
+
+                                        if (window.Chart) {
+                                            new Chart(canvas.getContext('2d'), {
+                                                type: cType,
+                                                data: {
+                                                    labels: labels,
+                                                    datasets: [{
+                                                        label: ch.y_axis,
+                                                        data: values,
+                                                        backgroundColor: bgColors,
+                                                        borderColor: borderColors,
+                                                        borderWidth: 1.5,
+                                                        borderRadius: cType === 'bar' ? 4 : 0,
+                                                        tension: cType === 'line' ? 0.35 : 0,
+                                                        fill: cType === 'line' ? { target: 'origin', above: 'rgba(217, 119, 87, 0.15)' } : false,
+                                                        pointBackgroundColor: 'rgb(217, 119, 87)',
+                                                        pointBorderColor: '#161513',
+                                                        pointRadius: 4,
+                                                    }]
+                                                },
+                                                options: {
+                                                    responsive: true,
+                                                    maintainAspectRatio: false,
+                                                    plugins: {
+                                                        legend: {
+                                                            display: isPieOrDoughnut,
+                                                            position: 'bottom',
+                                                            labels: {
+                                                                color: '#a3a097',
+                                                                font: { family: 'Plus Jakarta Sans', size: 11 },
+                                                                boxWidth: 12,
+                                                                padding: 12,
+                                                            }
+                                                        },
+                                                        tooltip: {
+                                                            backgroundColor: '#242320',
+                                                            titleColor: '#f5f4ef',
+                                                            bodyColor: '#dedcd5',
+                                                            borderColor: '#383632',
+                                                            borderWidth: 1,
+                                                            padding: 10,
+                                                            bodyFont: { family: 'JetBrains Mono', size: 11 },
+                                                            titleFont: { family: 'Plus Jakarta Sans', size: 12, weight: 'bold' },
+                                                        }
+                                                    },
+                                                    scales: isPieOrDoughnut ? {} : {
+                                                        x: {
+                                                            grid: { color: 'rgba(46, 44, 40, 0.6)' },
+                                                            ticks: { color: '#8e8b82', font: { family: 'JetBrains Mono', size: 10 } }
+                                                        },
+                                                        y: {
+                                                            grid: { color: 'rgba(46, 44, 40, 0.6)' },
+                                                            ticks: { color: '#8e8b82', font: { family: 'JetBrains Mono', size: 10 } }
+                                                        }
+                                                    }
+                                                }
+                                            });
+                                        }
                                     });
                                 }
 
