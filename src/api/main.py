@@ -16,7 +16,15 @@ STATIC_INDEX_PATH = Path(__file__).parent / "static" / "index.html"
 from src.agent.langgraph_agent import LangGraphAgent
 from src.agent.manual_loop import ManualAgentLoop
 from src.agent.models import AgentTaskStatus
-from src.agent.state import get_task_record, get_task_by_approval_id, save_task_checkpoint, init_task_state_table
+from src.agent.state import (
+    get_task_record,
+    get_task_by_approval_id,
+    save_task_checkpoint,
+    init_task_state_table,
+    list_chat_sessions,
+    get_session_details,
+    delete_session,
+)
 from src.config import settings
 from src.db.connection import check_db_health
 from src.rag.glossary import seed_glossary_if_empty
@@ -302,6 +310,31 @@ async def resume_task_stream(task_id: str, request: ResumeTaskRequest | None = N
             }
 
     return EventSourceResponse(event_generator())
+
+
+@app.get("/v1/sessions", tags=["Sessions"])
+async def list_sessions(limit: int = 50):
+    """Retrieve summarized list of all conversation sessions."""
+    sessions = await list_chat_sessions(limit=limit)
+    return {"sessions": sessions}
+
+
+@app.get("/v1/sessions/{session_id}", tags=["Sessions"])
+async def get_session(session_id: str):
+    """Retrieve full conversation details and turns for a given session."""
+    session_data = await get_session_details(session_id=session_id)
+    if not session_data:
+        raise HTTPException(status_code=404, detail=f"Session '{session_id}' not found.")
+    return session_data
+
+
+@app.delete("/v1/sessions/{session_id}", tags=["Sessions"])
+async def remove_session(session_id: str):
+    """Delete a conversation session and all its associated tasks and checkpoints."""
+    success = await delete_session(session_id=session_id)
+    if not success:
+        raise HTTPException(status_code=404, detail=f"Session '{session_id}' not found or could not be deleted.")
+    return {"status": "deleted", "session_id": session_id}
 
 
 @app.get("/", response_class=HTMLResponse, tags=["UI"])

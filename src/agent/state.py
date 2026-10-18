@@ -109,6 +109,7 @@ async def save_task_checkpoint(
             (task_id, session_id, status, current_step, user_query, messages, pending_approval, final_result, error_message, updated_at)
             VALUES (:task_id, :session_id, :status, :current_step, :user_query, CAST(:messages AS JSONB), CAST(:pending_approval AS JSONB), CAST(:final_result AS JSONB), :error_message, CURRENT_TIMESTAMP)
             ON CONFLICT (task_id) DO UPDATE SET
+                session_id = COALESCE(EXCLUDED.session_id, analytics.agent_tasks.session_id),
                 status = EXCLUDED.status,
                 current_step = EXCLUDED.current_step,
                 messages = EXCLUDED.messages,
@@ -248,4 +249,94 @@ async def get_task_by_approval_id(approval_id: str) -> TaskRecord | None:
             created_at=row[10],
             updated_at=row[11],
         )
+
+
+async def list_chat_sessions(limit: int = 50) -> list[dict[str, Any]]:
+    """Retrieve summarized list of all conversation sessions with their first query as title."""
+    await init_task_state_table()
+    async with get_db_session() as session:
+        query = text("""
+            SELECT 
+                session_id,
+                MIN(created_at) as created_at,
+                MAX(updated_at) as last_activity,
+                COUNT(task_id) as total_turns,
+                (ARRAY_AGG(user_query ORDER BY created_at ASC))[1] as title
+            FROM analytics.agent_tasks
+            WHERE session_id IS NOT NULL AND TRIM(session_id) != ''
+            GROUP BY session_id
+            ORDER BY MAX(updated_at) DESC
+            LIMIT :limit;
+        """)
+        res = await session.execute(query, {"limit": limit})
+        rows = res.fetchall()
+        sessions = []
+        for r in rows:
+            sid, c_at, u_at, turns, title = r[0], r[1], r[2], r[3], r[4]
+            sessions.append({
+                "session_id": sid,
+                "title": (title or "Percakapan").strip()[:80],
+                "total_turns": turns,
+                "created_at": c_at.isoformat() if c_at else None,
+                "last_activity": u_at.isoformat() if u_at else None,
+            })
+        return sessions
+
+
+async def get_session_details(session_id: str) -> dict[str, Any] | None:
+    """Retrieve full conversation details and turns for a given session."""
+    if not session_id:
+        return None
+    await init_task_state_table()
+    async with get_db_session() as session:
+        query = text("""
+            SELECT task_id, status, user_query, final_result, created_at, updated_at
+            FROM analytics.agent_tasks
+            WHERE session_id = :session_id
+            ORDER BY created_at ASC;
+        """)
+        res = await session.execute(query, {"session_id": session_id})
+        rows = res.fetchall()
+        if not rows:
+            return None
+
+        turns = []
+        title = rows[0][2] if rows else "Percakapan"
+        for r in rows:
+            tid, st, u_query, f_res, c_at, u_at = r
+            f_dict = f_res if isinstance(f_res, dict) else (json.loads(f_res) if f_res else {})
+            turns.append({
+                "task_id": tid,
+                "status": st,
+                "user_query": u_query,
+                "answer_text": f_dict.get("answer_text", ""),
+                "sql_queries": f_dict.get("sql_queries", []),
+                "tables": f_dict.get("tables", []),
+                "charts": f_dict.get("charts", []),
+                "citations": f_dict.get("citations", []),
+                "metrics": f_dict.get("metrics"),
+                "created_at": c_at.isoformat() if c_at else None,
+            })
+
+        return {
+            "session_id": session_id,
+            "title": title[:80],
+            "total_turns": len(turns),
+            "turns": turns,
+        }
+
+
+async def delete_session(session_id: str) -> bool:
+    """Delete all tasks and checkpoints associated with a session."""
+    if not session_id:
+        return False
+    await init_task_state_table()
+    async with get_db_session() as session:
+        res = await session.execute(
+            text("DELETE FROM analytics.agent_tasks WHERE session_id = :session_id;"),
+            {"session_id": session_id},
+        )
+        await session.commit()
+        return res.rowcount > 0
+
 

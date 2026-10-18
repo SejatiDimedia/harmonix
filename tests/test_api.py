@@ -153,6 +153,90 @@ async def test_task_resume_stream_langgraph():
 
 
 @pytest.mark.asyncio
+async def test_sessions_lifecycle_endpoints():
+    """Verify listing, detail retrieval, and deletion of chat sessions via /v1/sessions endpoints."""
+    from src.agent.models import AgentTaskStatus
+    from src.agent.state import save_task_checkpoint
+
+    test_sid = "test_session_lifecycle_999"
+    task_1 = "test_task_s1"
+    task_2 = "test_task_s2"
+
+    # Seed 2 tasks for this session
+    await save_task_checkpoint(
+        task_id=task_1,
+        status=AgentTaskStatus.COMPLETED,
+        current_step=2,
+        messages=[{"role": "user", "content": "Berapa total pesanan?"}],
+        user_query="Berapa total pesanan?",
+        session_id=test_sid,
+        final_result={
+            "answer_text": "Total pesanan adalah 100.",
+            "sql_queries": ["SELECT count(*) FROM analytics.orders;"],
+            "tables": [{"columns": ["count"], "rows": [[100]]}],
+            "charts": [{"chart_type": "bar", "title": "Pesanan", "x_axis": "kategori", "y_axis": "count", "data": []}],
+        },
+    )
+
+    await save_task_checkpoint(
+        task_id=task_2,
+        status=AgentTaskStatus.COMPLETED,
+        current_step=3,
+        messages=[{"role": "user", "content": "Tampilkan grafik kategori"}],
+        user_query="Tampilkan grafik kategori",
+        session_id=test_sid,
+        final_result={
+            "answer_text": "Berikut grafik kategori produk.",
+            "sql_queries": ["SELECT category, count(*) FROM analytics.products GROUP BY 1;"],
+            "tables": [],
+            "charts": [{"chart_type": "pie", "title": "Kategori", "x_axis": "category", "y_axis": "count", "data": []}],
+        },
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        # 1. List sessions
+        list_resp = await client.get("/v1/sessions")
+        assert list_resp.status_code == 200
+        data = list_resp.json()
+        assert "sessions" in data
+        matching = [s for s in data["sessions"] if s["session_id"] == test_sid]
+        assert len(matching) == 1
+        assert matching[0]["title"] == "Berapa total pesanan?"
+        assert matching[0]["total_turns"] == 2
+
+        # 2. Get session details
+        detail_resp = await client.get(f"/v1/sessions/{test_sid}")
+        assert detail_resp.status_code == 200
+        detail = detail_resp.json()
+        assert detail["session_id"] == test_sid
+        assert detail["title"] == "Berapa total pesanan?"
+        assert detail["total_turns"] == 2
+        assert len(detail["turns"]) == 2
+        assert detail["turns"][0]["user_query"] == "Berapa total pesanan?"
+        assert detail["turns"][0]["answer_text"] == "Total pesanan adalah 100."
+        assert len(detail["turns"][0]["sql_queries"]) == 1
+        assert len(detail["turns"][0]["tables"]) == 1
+        assert detail["turns"][1]["charts"][0]["chart_type"] == "pie"
+
+        # 3. Non-existent session details returns 404
+        not_found_resp = await client.get("/v1/sessions/non_existent_session_xyz")
+        assert not_found_resp.status_code == 404
+
+        # 4. Delete session
+        del_resp = await client.delete(f"/v1/sessions/{test_sid}")
+        assert del_resp.status_code == 200
+        assert del_resp.json() == {"status": "deleted", "session_id": test_sid}
+
+        # 5. Subsequent GET returns 404
+        subsequent_get = await client.get(f"/v1/sessions/{test_sid}")
+        assert subsequent_get.status_code == 404
+
+        # 6. Deleting already deleted session returns 404
+        subsequent_del = await client.delete(f"/v1/sessions/{test_sid}")
+        assert subsequent_del.status_code == 404
+
+
+@pytest.mark.asyncio
 async def test_web_ui_endpoint():
     """Verify GET / returns the Claude-inspired anti-slop HTML interface."""
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
@@ -163,5 +247,3 @@ async def test_web_ui_endpoint():
         assert "Harnessly" in body
         assert "marked.min.js" in body
         assert "Newsreader" in body
-
-
