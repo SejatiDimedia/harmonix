@@ -23,6 +23,7 @@ from src.agent.models import (
 from src.agent.execution_logger import TerminalExecutionLogger
 from src.agent.prompts import BASE_ANALYST_SYSTEM_PROMPT
 from src.agent.state import get_session_history, save_task_checkpoint
+from src.agent.suggestions import get_smart_suggestions
 from src.config import settings
 from src.llm.provider import BaseLLMProvider, get_llm_provider
 from src.observability.models import SpanStatus, SpanType
@@ -662,8 +663,17 @@ class ManualAgentLoop:
                     )
                 )
 
-        final_response = AgentFinalResponse(
+        # FR-34: Smart follow-up suggestions (zero latency / zero extra cost)
+        clean_answer, follow_up_suggestions = get_smart_suggestions(
             answer_text=masked_answer,
+            user_query=user_query,
+            tables=captured_tables,
+            charts=captured_charts,
+            executed_sqls=executed_sqls,
+        )
+
+        final_response = AgentFinalResponse(
+            answer_text=clean_answer,
             sql_queries=executed_sqls,
             tables=captured_tables,
             charts=captured_charts,
@@ -675,6 +685,7 @@ class ManualAgentLoop:
                 "completion_tokens": completion_tokens,
             },
             metrics=task_metrics.model_dump(),
+            follow_up_suggestions=follow_up_suggestions,
         )
 
         # Persist COMPLETED task state in PostgreSQL

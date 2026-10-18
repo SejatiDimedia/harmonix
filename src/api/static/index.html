@@ -774,6 +774,44 @@
             container.appendChild(perfBadge);
         }
 
+        function renderFollowUpSuggestions(suggestions, container) {
+            if (!suggestions || suggestions.length === 0) return;
+            const wrapper = document.createElement('div');
+            wrapper.className = 'mt-3.5 pt-3 border-t border-[#2e2c28]/80';
+            
+            const header = document.createElement('div');
+            header.className = 'text-[11px] font-medium text-clay-400 flex items-center gap-1.5 mb-2 font-mono';
+            header.innerHTML = `
+                <svg class="w-3.5 h-3.5 text-clay-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                <span>Rekomendasi Analisis Lanjutan</span>
+            `;
+            wrapper.appendChild(header);
+
+            const chipContainer = document.createElement('div');
+            chipContainer.className = 'flex flex-wrap gap-2';
+
+            suggestions.forEach(text => {
+                const chip = document.createElement('button');
+                chip.type = 'button';
+                chip.className = 'text-left text-xs text-[#d6d4cb] hover:text-white bg-[#22211e] hover:bg-[#2c2a26] border border-[#383631] hover:border-clay-500/50 rounded-xl px-3 py-1.5 transition-all shadow-sm flex items-center gap-1.5 group cursor-pointer';
+                chip.innerHTML = `
+                    <span class="text-clay-400 group-hover:translate-x-0.5 transition-transform text-[11px]">↳</span>
+                    <span>${escapeHtml(text)}</span>
+                `;
+                chip.addEventListener('click', () => {
+                    queryInput.value = text;
+                    queryInput.dispatchEvent(new Event('input'));
+                    chatForm.dispatchEvent(new Event('submit'));
+                });
+                chipContainer.appendChild(chip);
+            });
+
+            wrapper.appendChild(chipContainer);
+            container.appendChild(wrapper);
+        }
+
         // ==============================================================================
         // Session Management & History Navigation
         // ==============================================================================
@@ -946,6 +984,9 @@
                     if (turn.metrics) {
                         renderMetrics(turn.metrics, agentBox);
                     }
+                    if (turn.follow_up_suggestions && turn.follow_up_suggestions.length > 0) {
+                        renderFollowUpSuggestions(turn.follow_up_suggestions, agentBox);
+                    }
                 }
                 messagesDiv.scrollTop = messagesDiv.scrollHeight;
 
@@ -1095,6 +1136,10 @@
 
                                 if (parsed.metrics) {
                                     renderMetrics(parsed.metrics, agentBox);
+                                }
+
+                                if (parsed.follow_up_suggestions && parsed.follow_up_suggestions.length > 0) {
+                                    renderFollowUpSuggestions(parsed.follow_up_suggestions, agentBox);
                                 }
 
                                 // Refresh session list to reflect new/updated session

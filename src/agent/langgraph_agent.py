@@ -22,6 +22,7 @@ from src.agent.models import (
 )
 from src.agent.prompts import BASE_ANALYST_SYSTEM_PROMPT
 from src.agent.state import save_task_checkpoint
+from src.agent.suggestions import get_smart_suggestions
 from src.config import settings
 from src.llm.provider import BaseLLMProvider, ToolCall, get_llm_provider
 from src.tools.base import BaseTool
@@ -575,14 +576,24 @@ class LangGraphAgent:
                     )
                 )
 
-        return AgentFinalResponse(
+        # FR-34: Smart follow-up suggestions (zero latency / zero extra cost)
+        clean_answer, follow_up_suggestions = get_smart_suggestions(
             answer_text=answer_text,
+            user_query=user_query,
+            tables=tables,
+            charts=charts,
+            executed_sqls=final_state.get("sql_queries", []),
+        )
+
+        return AgentFinalResponse(
+            answer_text=clean_answer,
             sql_queries=final_state.get("sql_queries", []),
             tables=tables,
             charts=charts,
             citations=citations,
             total_steps=final_state.get("current_step", 0),
             token_usage={"total_tokens": final_state.get("current_step", 0) * 80},
+            follow_up_suggestions=follow_up_suggestions,
         )
 
     async def run_stream(
@@ -782,8 +793,17 @@ class LangGraphAgent:
                     )
                 )
 
-        final_response = AgentFinalResponse(
+        # FR-34: Smart follow-up suggestions (zero latency / zero extra cost)
+        clean_answer, follow_up_suggestions = get_smart_suggestions(
             answer_text=masked_answer,
+            user_query=user_query,
+            tables=tables,
+            charts=charts,
+            executed_sqls=final_state.get("sql_queries", []),
+        )
+
+        final_response = AgentFinalResponse(
+            answer_text=clean_answer,
             sql_queries=final_state.get("sql_queries", []),
             tables=tables,
             charts=charts,
@@ -791,6 +811,7 @@ class LangGraphAgent:
             total_steps=final_state.get("current_step", 1),
             token_usage={"total_tokens": total_toks},
             metrics={"total_latency_ms": int(elapsed_sec * 1000), "total_tokens": total_toks},
+            follow_up_suggestions=follow_up_suggestions,
         )
 
         try:

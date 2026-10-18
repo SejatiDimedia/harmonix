@@ -4,9 +4,9 @@ Proyek portofolio AI Agent Engineer (Python Backend): agent text-to-SQL tahan pr
 
 | **Atribut** | **Keterangan**                                                 |
 |-------------|----------------------------------------------------------------|
-| Versi       | 1.1 (Zero-Cost Baseline)                                       |
-| Tanggal     | 16 Oktober 2026                                                |
-| Status      | Disetujui (Baseline 100% Gratis)                               |
+| Versi       | 1.2 (Smart Follow-Up Suggestions & Session Management)         |
+| Tanggal     | 18 Oktober 2026                                                |
+| Status      | Disetujui (Fitur Aktif & Roadmap)                             |
 | Pemilik     | Pengembang proyek (portofolio)                                 |
 | Domain      | Analisis data / text-to-SQL (PostgreSQL, Zero-Cost AI Harness) |
 
@@ -160,6 +160,9 @@ Prioritas: **P0** (wajib untuk MVP), **P1** (penting), **P2** (nice to have).
 | FR-30  | Backend FastAPI dengan endpoint percakapan yang melakukan streaming respons via SSE dengan event types terstandarisasi (step_start, token, approval_required, final_result, error). | P0            |
 | FR-31  | Endpoint persetujuan (approve/reject) untuk approval gate.                                             | P0            |
 | FR-32  | UI web sederhana yang menampilkan jawaban, SQL, grafik, langkah agent, dan tombol approval.            | P1            |
+| FR-33  | Manajemen sesi percakapan & riwayat chat persisten: pengelompokan task multi-turn per session_id di PostgreSQL, API listing/detail/delete sesi, dan UI sidebar collapsible dengan penyimpanan localStorage. | P1            |
+| FR-34  | Smart follow-up suggestions (rekomendasi pertanyaan lanjutan kontekstual): agen menyertakan 3 pertanyaan eksplorasi data relevan via structured output (piggybacking LLM tanpa biaya ekstra) dengan fallback heuristik dari metadata tabel, dirender sebagai chip interaktif satu klik di UI. | P1            |
+
 
 ## 6. Observability dan Evaluasi
 
@@ -226,13 +229,16 @@ Lapisan sistem yang harus tergambar pada diagram arsitektur:
 | POST       | /v1/approvals/{id}    | Menyetujui atau menolak aksi yang menunggu persetujuan.                       |
 | GET        | /v1/tasks/{id}        | Status task, checkpoint, dan hasil.                                           |
 | POST       | /v1/tasks/{id}/resume | Melanjutkan task dari checkpoint terakhir.                                    |
+| GET        | /v1/sessions          | Mengambil daftar ringkasan riwayat sesi percakapan (judul, turn, waktu).      |
+| GET        | /v1/sessions/{id}     | Mengambil detail percakapan lengkap dari suatu sesi.                          |
+| DELETE     | /v1/sessions/{id}     | Menghapus sesi percakapan beserta seluruh task dan checkpoint-nya.            |
 | GET        | /health               | Pemeriksaan kesehatan layanan.                                                |
 
 #### Format Event SSE (`/v1/chat`):
 - `event: step_start` -> payload: `{"step": 1, "action": "planning | tool_call", "details": ...}`
 - `event: token` -> payload: `{"delta": "..."}`
 - `event: approval_required` -> payload: `{"approval_id": "...", "sql": "...", "risk_reason": "..."}` (client pause)
-- `event: final_result` -> payload: `{"text": "...", "sql": "...", "table": [...], "chart": {...}, "citations": [...]}`
+- `event: final_result` -> payload: `{"answer_text": "...", "sql_queries": [...], "tables": [...], "charts": [...], "citations": [...], "follow_up_suggestions": ["...", "...", "..."], "metrics": {...}}`
 - `event: error` -> payload: `{"message": "..."}`
 
 ### 8.2 Dataset Demo

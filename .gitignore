@@ -33,3 +33,6 @@ htmlcov/
 # Logs
 *.log
 logs/
+
+# Scratch & temporary workspace artifacts
+scratch/

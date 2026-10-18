@@ -314,6 +314,7 @@ async def get_session_details(session_id: str) -> dict[str, Any] | None:
                 "tables": f_dict.get("tables", []),
                 "charts": f_dict.get("charts", []),
                 "citations": f_dict.get("citations", []),
+                "follow_up_suggestions": f_dict.get("follow_up_suggestions", []),
                 "metrics": f_dict.get("metrics"),
                 "created_at": c_at.isoformat() if c_at else None,
             })

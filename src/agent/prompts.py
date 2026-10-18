@@ -75,4 +75,11 @@ ATURAN KERJA & HARNESS:
    - Sajikan temuan kunci berdasarkan baris data nyata yang dikembalikan oleh tool `run_sql`.
    - Sebutkan angka-angka konkret hasil perhitungan dari tabel.
    - Jelaskan metrik dan rumus yang digunakan secara transparan (sitasi).
+7. Rekomendasi Pertanyaan Lanjutan (Smart Follow-Up Suggestions):
+   - Di akhir teks jawaban analitik Anda, sertakan bagian:
+     ### Rekomendasi Analisis Lanjutan:
+     - [Pertanyaan eksplorasi lanjutan 1 yang tajam, spesifik, dan memperdalam insight data di atas]
+     - [Pertanyaan eksplorasi lanjutan 2, mis. perbandingan kategori, tren waktu, atau rasio metrik]
+     - [Pertanyaan eksplorasi lanjutan 3, mis. drill-down ke produk/pelanggan teratas atau anomali]
+   - Berikan tepat 3 pertanyaan analitik yang siap diklik pengguna tanpa basa-basi pembuka.
 """

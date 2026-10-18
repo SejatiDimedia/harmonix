@@ -56,6 +56,11 @@ class AgentFinalResponse(BaseModel):
     tables: list[TableData] = Field(default_factory=list)
     charts: list[ChartSpec] = Field(default_factory=list)
     citations: list[Citation] = Field(default_factory=list)
+    follow_up_suggestions: list[str] = Field(
+        default_factory=list,
+        description="3 concise, highly relevant follow-up exploration questions for the user (FR-34)",
+    )
     total_steps: int = 0
     token_usage: dict[str, int] = Field(default_factory=dict)
     metrics: dict[str, Any] | None = None
+

@@ -175,6 +175,11 @@ async def test_sessions_lifecycle_endpoints():
             "sql_queries": ["SELECT count(*) FROM analytics.orders;"],
             "tables": [{"columns": ["count"], "rows": [[100]]}],
             "charts": [{"chart_type": "bar", "title": "Pesanan", "x_axis": "kategori", "y_axis": "count", "data": []}],
+            "follow_up_suggestions": [
+                "Bagaimana rincian pesanan berdasarkan status pengiriman?",
+                "Tampilkan tren pesanan bulanan sepanjang tahun.",
+                "Berapa rata-rata nilai transaksi per pesanan?",
+            ],
         },
     )
 
@@ -216,7 +221,10 @@ async def test_sessions_lifecycle_endpoints():
         assert detail["turns"][0]["answer_text"] == "Total pesanan adalah 100."
         assert len(detail["turns"][0]["sql_queries"]) == 1
         assert len(detail["turns"][0]["tables"]) == 1
+        assert len(detail["turns"][0]["follow_up_suggestions"]) == 3
+        assert detail["turns"][0]["follow_up_suggestions"][0] == "Bagaimana rincian pesanan berdasarkan status pengiriman?"
         assert detail["turns"][1]["charts"][0]["chart_type"] == "pie"
+        assert detail["turns"][1]["follow_up_suggestions"] == []
 
         # 3. Non-existent session details returns 404
         not_found_resp = await client.get("/v1/sessions/non_existent_session_xyz")
