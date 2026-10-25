@@ -2,13 +2,13 @@
 
 Proyek portofolio AI Agent Engineer (Python Backend): agent text-to-SQL tahan produksi dengan harness lengkap
 
-| **Atribut** | **Keterangan**                                                 |
-|-------------|----------------------------------------------------------------|
-| Versi       | 1.3 (Multi-Agent Architecture: Data Auditor & Quality Gate)    |
-| Tanggal     | 18 Oktober 2026                                                |
-| Status      | Disetujui (Fitur Aktif & Roadmap)                             |
-| Pemilik     | Pengembang proyek (portofolio)                                 |
-| Domain      | Analisis data / text-to-SQL (PostgreSQL, Zero-Cost AI Harness) |
+| **Atribut** | **Keterangan**                                                              |
+|-------------|-----------------------------------------------------------------------------|
+| Versi       | 1.4 (Dynamic Model Management & OpenRouter Free Tier Integration)           |
+| Tanggal     | 25 Oktober 2026                                                             |
+| Status      | Disetujui (Fitur Aktif & Roadmap)                                          |
+| Pemilik     | Pengembang proyek (portofolio)                                              |
+| Domain      | Analisis data / text-to-SQL (PostgreSQL, Zero-Cost Multi-Provider AI Harness) |
 
 ## Daftar Isi
 
@@ -169,6 +169,12 @@ Prioritas: **P0** (wajib untuk MVP), **P1** (penting), **P2** (nice to have).
 |--------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------|
 | FR-35  | Data Auditor & Verification Agent: agent kedua independen yang bertindak sebagai quality gate (evaluator skeptis) sebelum respons disajikan ke pengguna. Memverifikasi 3 pilar: (1) keabsahan logika SQL (mencegah Cartesian/fan-out traps, filter status order aktif, penanganan NULL), (2) konsistensi numerik teks terhadap raw dataset hasil SQL (anti-halusinasi), dan (3) kelengkapan data. Menghasilkan structured output JSON (status `PASSED`/`FLAGGED`, confidence score, critique, badge). Dilengkapi one-shot self-correction loop jika terdeteksi high-severity issues, model diversity (Groq Llama-3.3 70B / Gemini 2.0 Flash / DeepSeek R1 lokal), dan badge status verifikasi interaktif di UI. | P1            |
 
+### 5.9 Manajemen Model Dinamis & Integrasi OpenRouter Free Tier
+
+| **ID** | **Kebutuhan**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | **Prioritas** |
+|--------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------|
+| FR-36  | Dynamic Model Management & OpenRouter Integration: Sistem pengelolaan model dinamis yang memungkinkan pergantian provider dan model LLM secara instan via API dan antarmuka UI tanpa me-restart server. Mendukung 3 ekosistem Zero-Cost: (1) Lokal offline (Ollama: `qwen2.5-coder:7b`, `llama3.1:8b`, `deepseek-r1:7b`), (2) Cloud Provider Free Tier (Groq Llama-3.3 70B, Google Gemini 2.0 Flash), dan (3) OpenRouter Free Models (`:free`, misal `meta-llama/llama-3.3-70b-instruct:free`, `deepseek/deepseek-r1:free`, `qwen/qwen-2.5-coder-32b-instruct:free`). Menyediakan endpoint `GET /v1/models` untuk listing ketersediaan model, `POST /v1/models/active` untuk update konfigurasi aktif, dukungan override per-request di payload `/v1/chat`, serta dropdown/modal switcher di UI untuk mengatur model Analyst dan Auditor secara independen. | P1            |
+
 
 ## 6. Observability dan Evaluasi
 
@@ -224,6 +230,7 @@ Lapisan sistem yang harus tergambar pada diagram arsitektur:
 - **LLM Engine & Routing:** LiteLLM / OpenAI-compatible abstraction layer:
   - *Lokal (100% offline & gratis):* Ollama (`qwen2.5-coder:7b`, `llama3.1:8b`, `deepseek-r1:7b`).
   - *Cloud Free Tier:* Google AI Studio API (`gemini-2.0-flash`, `gemini-1.5-flash`) / Groq API (`llama-3.3-70b-versatile`) tanpa biaya kartu kredit.
+  - *OpenRouter Free Models:* OpenRouter API (`https://openrouter.ai/api/v1`) dengan katalog model gratis bertanda `:free` (misal `meta-llama/llama-3.3-70b-instruct:free`, `deepseek/deepseek-r1:free`, `qwen/qwen-2.5-coder-32b-instruct:free`).
 - **Embeddings & RAG:** FastEmbed (lokal ONNX runtime, misal `BAAI/bge-small-en-v1.5`) atau Ollama (`nomic-embed-text`) + pgvector hybrid search (BM25 + dense lokal).
 - **Observability:** Langfuse (Self-Hosted via Docker lokal atau Langfuse Cloud Free Tier 50k traces/bulan).
 - **Containerization & CI:** Docker, Docker Compose, GitHub Actions (Free tier 2.000 menit/bulan).
@@ -239,6 +246,8 @@ Lapisan sistem yang harus tergambar pada diagram arsitektur:
 | GET        | /v1/sessions          | Mengambil daftar ringkasan riwayat sesi percakapan (judul, turn, waktu).      |
 | GET        | /v1/sessions/{id}     | Mengambil detail percakapan lengkap dari suatu sesi.                          |
 | DELETE     | /v1/sessions/{id}     | Menghapus sesi percakapan beserta seluruh task dan checkpoint-nya.            |
+| GET        | /v1/models            | Mengambil katalog provider & model yang tersedia (lokal, Groq, Gemini, OpenRouter). |
+| POST       | /v1/models/active     | Mengubah provider dan model aktif untuk Analyst dan Auditor secara dinamis.   |
 | GET        | /health               | Pemeriksaan kesehatan layanan.                                                |
 
 #### Format Event SSE (`/v1/chat`):
@@ -309,6 +318,7 @@ Skema multi-tabel e-commerce sintetis (pelanggan, produk, pesanan, item pesanan,
 4. **Framework Pembanding:** **LangGraph**. Merupakan framework orchestration agen paling banyak diminta pada lowongan kerja AI Agent Engineer saat ini.
 5. **Target Deployment:** **Docker Compose lokal** (`docker compose up`) yang menjalankan FastAPI backend, PostgreSQL 16 + pgvector, dan Langfuse dalam satu perintah tanpa dependensi cloud berbayar.
 6. **Strategi Multi-Agent:** Memilih arsitektur **Maker-Checker (Analyst Agent + Data Auditor Agent)** daripada memecah tool deterministik menjadi agent terpisah. Pendekatan ini memisahkan eksplorasi analitik dari audit kualitas independen, memanfaatkan prinsip *Model Diversity* (memakai model cloud 70B gratis seperti Groq Llama-3.3-70B / Gemini Flash saat Analyst memakai model lokal 7B) untuk mengeliminasi *shared blind spots* dan halusinasi angka.
+7. **Manajemen Model Dinamis & OpenRouter Free Tier:** Sistem mendukung multi-provider switching (Ollama lokal, Groq Cloud, Gemini, dan OpenRouter Free Models) yang dapat diatur via endpoint API dan UI switcher di header. OpenRouter memperluas akses ke berbagai varian model gratis (`:free`) tanpa kartu kredit, mempermudah eksperimen komparasi model dan konfigurasi independen untuk Analyst Agent dan Auditor Agent.
 
 ## 14. Pemetaan ke Kualifikasi Loker
 
@@ -320,6 +330,7 @@ Skema multi-tabel e-commerce sintetis (pelanggan, produk, pesanan, item pesanan,
 | Tool use dan structured output                                   | FR-05 s.d. FR-09, FR-35                   |
 | MCP                                                              | FR-10                                     |
 | Orchestration (single/sub/multi-agent)                           | FR-01, FR-03, FR-04, FR-35 (Maker-Checker)|
+| Multi-provider LLM routing & dynamic management (Ollama, Groq, Gemini, OpenRouter) | FR-28, FR-36              |
 | State dan durability                                             | FR-19                                     |
 | Memory                                                           | FR-16 s.d. FR-18                          |
 | RAG modern, grounding, citation                                  | FR-11 s.d. FR-13                          |
