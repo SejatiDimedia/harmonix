@@ -16,6 +16,7 @@ from fastapi.staticfiles import StaticFiles
 STATIC_DIR = Path(__file__).parent / "static"
 STATIC_INDEX_PATH = STATIC_DIR / "index.html"
 
+from src.agent.auditor import DataAuditorAgent
 from src.agent.langgraph_agent import LangGraphAgent
 from src.agent.manual_loop import ManualAgentLoop
 from src.agent.models import AgentTaskStatus
@@ -30,6 +31,7 @@ from src.agent.state import (
 )
 from src.config import settings
 from src.db.connection import check_db_health
+from src.llm.registry import ModelRegistry
 from src.rag.glossary import seed_glossary_if_empty
 from src.tools.database import RunSQLTool
 
@@ -90,6 +92,17 @@ class ChatRequest(BaseModel):
         default="manual",
         description="Orchestrator engine: 'manual' (ManualAgentLoop) or 'langgraph' (LangGraphAgent)",
     )
+    provider: str | None = Field(default=None, description="Optional runtime LLM provider override")
+    model: str | None = Field(default=None, description="Optional runtime LLM model override")
+    auditor_provider: str | None = Field(default=None, description="Optional runtime Auditor provider override")
+    auditor_model: str | None = Field(default=None, description="Optional runtime Auditor model override")
+
+
+class UpdateActiveModelRequest(BaseModel):
+    analyst_provider: str | None = None
+    analyst_model: str | None = None
+    auditor_provider: str | None = None
+    auditor_model: str | None = None
 
 
 class ApprovalRequest(BaseModel):
@@ -109,12 +122,32 @@ class ResumeTaskRequest(BaseModel):
 async def health_check():
     """Service health check verifying database and provider status."""
     db_ok = await check_db_health()
+    active_cfg = ModelRegistry.get_instance().active_config
     return {
         "status": "healthy" if db_ok else "degraded",
         "database_connected": db_ok,
-        "llm_provider": settings.llm_provider,
+        "llm_provider": active_cfg.analyst_provider,
+        "active_model": active_cfg.analyst_model,
         "environment": settings.app_env,
     }
+
+
+@app.get("/v1/models", tags=["Models"])
+async def list_models():
+    """Retrieve full catalog of providers, available models, and currently active config (FR-36)."""
+    return await ModelRegistry.get_instance().get_catalog()
+
+
+@app.post("/v1/models/active", tags=["Models"])
+async def set_active_models(request: UpdateActiveModelRequest):
+    """Update active models for Analyst and Auditor dynamically without server restart (FR-36)."""
+    updated = ModelRegistry.get_instance().update_active_config(
+        analyst_provider=request.analyst_provider,
+        analyst_model=request.analyst_model,
+        auditor_provider=request.auditor_provider,
+        auditor_model=request.auditor_model,
+    )
+    return {"status": "success", "active_config": updated.model_dump()}
 
 
 @app.get("/v1/metrics", tags=["Observability"])
@@ -131,15 +164,26 @@ async def chat_stream(request: ChatRequest):
     - `manual`: Procedural ManualAgentLoop
     - `langgraph`: LangGraph StateGraph Agent
     """
+    registry = ModelRegistry.get_instance()
+    analyst_llm = registry.create_analyst_llm(
+        override_provider=request.provider,
+        override_model=request.model,
+    )
+    auditor_llm = registry.create_auditor_llm(
+        override_provider=request.auditor_provider,
+        override_model=request.auditor_model,
+    )
+    custom_auditor = DataAuditorAgent(llm=auditor_llm)
+
     if request.engine == "langgraph":
-        agent_runner = LangGraphAgent()
+        agent_runner = LangGraphAgent(llm=analyst_llm, auditor=custom_auditor)
         stream_iter = agent_runner.run_stream(
             user_query=request.query,
             task_id=request.task_id,
             session_id=request.session_id,
         )
     else:
-        agent_runner = ManualAgentLoop()
+        agent_runner = ManualAgentLoop(llm=analyst_llm, auditor=custom_auditor)
         stream_iter = agent_runner.run(
             user_query=request.query,
             task_id=request.task_id,

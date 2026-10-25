@@ -1,0 +1,54 @@
+"""API integration tests for Dynamic Model Management (FR-36 Step 2)."""
+
+import pytest
+from httpx import ASGITransport, AsyncClient
+from src.api.main import app
+
+
+@pytest.mark.asyncio
+async def test_get_models_catalog():
+    """Verify GET /v1/models returns active config and all providers."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.get("/v1/models")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "active_config" in data
+        assert "providers" in data
+
+        providers = {p["provider"]: p for p in data["providers"]}
+        assert "ollama" in providers
+        assert "groq" in providers
+        assert "gemini" in providers
+        assert "openrouter" in providers
+
+        # OpenRouter catalog check
+        or_models = [m["id"] for m in providers["openrouter"]["available_models"]]
+        assert "nvidia/nemotron-3.5-lightning:free" in or_models
+
+
+@pytest.mark.asyncio
+async def test_set_active_models():
+    """Verify POST /v1/models/active updates configuration in real time."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        update_payload = {
+            "analyst_provider": "openrouter",
+            "analyst_model": "nvidia/nemotron-3.5-lightning:free",
+            "auditor_provider": "groq",
+            "auditor_model": "llama-3.3-70b-versatile",
+        }
+        resp = await client.post("/v1/models/active", json=update_payload)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["status"] == "success"
+        active = data["active_config"]
+        assert active["analyst_provider"] == "openrouter"
+        assert active["analyst_model"] == "nvidia/nemotron-3.5-lightning:free"
+        assert active["auditor_provider"] == "groq"
+
+        # Re-fetch via GET to confirm persistence
+        get_resp = await client.get("/v1/models")
+        assert get_resp.status_code == 200
+        get_active = get_resp.json()["active_config"]
+        assert get_active["analyst_provider"] == "openrouter"

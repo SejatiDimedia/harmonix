@@ -53,7 +53,7 @@ class Settings(BaseSettings):
     # Option 4: OpenRouter (Free Tier Models)
     openrouter_api_key: str | None = Field(default=None)
     openrouter_base_url: str = Field(default="https://openrouter.ai/api/v1")
-    openrouter_model: str = Field(default="meta-llama/llama-3.3-70b-instruct:free")
+    openrouter_model: str = Field(default="nvidia/nemotron-3.5-lightning:free")
 
     # LLM Fallback & Routing settings (FR-28)
     llm_fallback_provider: Literal["ollama", "gemini", "groq", "openrouter", "mock", "none"] = Field(
