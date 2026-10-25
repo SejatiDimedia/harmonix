@@ -159,6 +159,35 @@ class TerminalExecutionLogger:
         c = TerminalColors
         print(f"{c.BOLD}{c.CYAN}📝 [SYNTHESIZING ANSWER]{c.RESET} Menyiapkan laporan analisis akhir data...")
 
+    def log_auditing(self, model: str = "") -> None:
+        """Log when Data Auditor quality gate is invoked (FR-35)."""
+        if not self.enabled:
+            return
+
+        c = TerminalColors
+        model_str = f" via {c.WHITE}{model}{c.RESET}" if model else ""
+        print(f"{c.BOLD}{c.MAGENTA}🛡️ [DATA AUDITOR GATE]{c.RESET} Memverifikasi logika SQL & konsistensi data{model_str}...")
+
+    def log_audit_verdict(self, status: str, confidence: float, badge: str, critique: str) -> None:
+        """Log the Data Auditor quality gate outcome (FR-35)."""
+        if not self.enabled:
+            return
+
+        c = TerminalColors
+        if status.upper() == "PASSED":
+            color = c.GREEN
+            icon = "✅"
+        elif status.upper() == "WARNING":
+            color = c.YELLOW
+            icon = "⚠️"
+        else:
+            color = c.RED
+            icon = "🚨"
+
+        print(f"   {color}{icon} [{status.upper()}]{c.RESET} {c.BOLD}{badge}{c.RESET} (Confidence: {confidence:.0%})")
+        if critique:
+            print(f"      {c.DIM}{critique}{c.RESET}")
+
     def log_task_completed(
         self,
         task_id: str,

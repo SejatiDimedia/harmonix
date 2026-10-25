@@ -16,10 +16,12 @@ from src.agent.models import (
     AgentFinalResponse,
     AgentStepEvent,
     AgentTaskStatus,
+    AuditVerdict,
     ChartSpec,
     Citation,
     TableData,
 )
+from src.agent.auditor import DataAuditorAgent
 from src.agent.execution_logger import TerminalExecutionLogger
 from src.agent.prompts import BASE_ANALYST_SYSTEM_PROMPT
 from src.agent.state import get_session_history, save_task_checkpoint
@@ -53,8 +55,10 @@ class ManualAgentLoop:
         step_timeout_seconds: int | None = None,
         total_timeout_seconds: int | None = None,
         term_logger: TerminalExecutionLogger | None = None,
+        auditor: DataAuditorAgent | None = None,
     ):
         self.llm = llm or get_llm_provider()
+        self.auditor = auditor or DataAuditorAgent()
         tool_instances = tools or [
             SearchGlossaryTool(),
             GetSchemaTool(),
@@ -689,6 +693,36 @@ class ManualAgentLoop:
             executed_sqls=executed_sqls,
         )
 
+        # FR-35: Data Auditor & Verification Agent (Maker-Checker Quality Gate)
+        audit_verdict = None
+        if settings.auditor_enabled:
+            yield {
+                "event": "audit_step",
+                "data": {
+                    "status": "auditing",
+                    "badge": "Auditing...",
+                    "critique": "Data Auditor sedang memverifikasi logika SQL dan konsistensi data...",
+                },
+            }
+            self.term_logger.log_auditing(model=getattr(self.auditor.llm, "model", ""))
+            audit_verdict = await self.auditor.audit(
+                user_query=user_query,
+                answer_text=clean_answer,
+                executed_sqls=executed_sqls,
+                tables=captured_tables,
+                charts=captured_charts,
+            )
+            self.term_logger.log_audit_verdict(
+                status=audit_verdict.status.value,
+                confidence=audit_verdict.confidence_score,
+                badge=audit_verdict.badge,
+                critique=audit_verdict.critique,
+            )
+            yield {
+                "event": "audit_step",
+                "data": audit_verdict.model_dump(),
+            }
+
         final_response = AgentFinalResponse(
             answer_text=clean_answer,
             sql_queries=executed_sqls,
@@ -703,6 +737,7 @@ class ManualAgentLoop:
             },
             metrics=task_metrics.model_dump(),
             follow_up_suggestions=follow_up_suggestions,
+            audit_result=audit_verdict,
         )
 
         # Persist COMPLETED task state in PostgreSQL

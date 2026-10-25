@@ -84,5 +84,20 @@ class Settings(BaseSettings):
     langfuse_secret_key: str | None = Field(default=None, description="Langfuse secret API key")
     langfuse_host: str = Field(default="https://cloud.langfuse.com", description="Langfuse API host URL")
 
+    # Auditor Agent settings (FR-35 Maker-Checker Quality Gate)
+    auditor_enabled: bool = Field(default=True, description="Enable Data Auditor agent verification")
+    auditor_provider: Literal["ollama", "gemini", "groq", "mock", "auto"] = Field(
+        default="auto",
+        description="Auditor provider: 'auto' (chooses diversity), or specific provider",
+    )
+    auditor_model: str | None = Field(
+        default=None,
+        description="Model override for auditor (e.g. 'llama-3.3-70b-versatile' or 'deepseek-r1:7b')",
+    )
+    auditor_max_self_corrections: int = Field(
+        default=1,
+        description="Max self-correction loops when auditor flags high-severity issues",
+    )
+
 
 settings = Settings()

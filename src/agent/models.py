@@ -38,6 +38,32 @@ class Citation(BaseModel):
     source_tables: list[str] = Field(default_factory=list)
 
 
+class AuditStatus(str, Enum):
+    """Verdict status produced by the Data Auditor quality gate (FR-35)."""
+    PASSED = "PASSED"
+    FLAGGED = "FLAGGED"
+    WARNING = "WARNING"
+    SKIPPED = "SKIPPED"
+
+
+class AuditIssue(BaseModel):
+    """A specific issue or discrepancy identified by the auditor."""
+    category: Literal["sql_logic", "numerical_consistency", "completeness", "safety"]
+    severity: Literal["low", "medium", "high"]
+    description: str
+    suggested_fix: str | None = None
+
+
+class AuditVerdict(BaseModel):
+    """Structured verdict from the Data Auditor & Verification Agent (FR-35)."""
+    status: AuditStatus = AuditStatus.PASSED
+    confidence_score: float = Field(default=1.0, ge=0.0, le=1.0)
+    badge: str = "Verified by Data Auditor"
+    critique: str = ""
+    issues: list[AuditIssue] = Field(default_factory=list)
+    model_used: str = ""
+
+
 class AgentStepEvent(BaseModel):
     """Represents a single step in the agent reasoning loop."""
     step_number: int
@@ -59,6 +85,10 @@ class AgentFinalResponse(BaseModel):
     follow_up_suggestions: list[str] = Field(
         default_factory=list,
         description="3 concise, highly relevant follow-up exploration questions for the user (FR-34)",
+    )
+    audit_result: AuditVerdict | None = Field(
+        default=None,
+        description="Independent audit verdict produced by Data Auditor Agent (FR-35)",
     )
     total_steps: int = 0
     token_usage: dict[str, int] = Field(default_factory=dict)

@@ -812,6 +812,100 @@
             container.appendChild(wrapper);
         }
 
+        function renderAuditResult(audit, container) {
+            if (!audit) return;
+            const status = (audit.status || 'PASSED').toUpperCase();
+            const confidence = Math.round((audit.confidence_score || 1.0) * 100);
+            const badgeText = audit.badge || 'Verified by Data Auditor';
+            const critique = audit.critique || '';
+            const issues = audit.issues || [];
+
+            let badgeBg = 'bg-emerald-950/30 border-emerald-500/30 text-emerald-300';
+            let iconSvg = `
+                <svg class="w-3.5 h-3.5 text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+            `;
+
+            if (status === 'FLAGGED') {
+                badgeBg = 'bg-rose-950/30 border-rose-500/30 text-rose-300';
+                iconSvg = `
+                    <svg class="w-3.5 h-3.5 text-rose-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                `;
+            } else if (status === 'WARNING') {
+                badgeBg = 'bg-amber-950/30 border-amber-500/30 text-amber-300';
+                iconSvg = `
+                    <svg class="w-3.5 h-3.5 text-amber-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                `;
+            }
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'mt-3 pt-2.5 border-t border-[#2e2c28]/80 text-xs';
+
+            const card = document.createElement('div');
+            card.className = `rounded-xl p-3 border transition-all ${badgeBg}`;
+
+            const topRow = document.createElement('div');
+            topRow.className = 'flex items-center justify-between cursor-pointer select-none';
+            topRow.innerHTML = `
+                <div class="flex items-center gap-2 font-mono font-medium text-xs">
+                    ${iconSvg}
+                    <span>${escapeHtml(badgeText)}</span>
+                    <span class="opacity-75 text-[10px]">(${confidence}%)</span>
+                </div>
+                <div class="flex items-center gap-1.5 opacity-80 hover:opacity-100 text-[11px]">
+                    <span class="font-mono text-[10px]">Detail Audit</span>
+                    <svg class="w-3.5 h-3.5 transition-transform duration-200 transform audit-chevron" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </div>
+            `;
+
+            const detailPanel = document.createElement('div');
+            detailPanel.className = 'hidden mt-2 pt-2 border-t border-current/15 text-[11px] leading-relaxed space-y-1.5';
+            
+            let issuesHtml = '';
+            if (issues && issues.length > 0) {
+                issuesHtml = `
+                    <div class="mt-2 space-y-1.5">
+                        <div class="font-mono font-semibold text-[10px] uppercase opacity-90">Temuan Kritis Auditor:</div>
+                        ${issues.map(iss => `
+                            <div class="bg-black/25 rounded-lg p-2 border border-current/10">
+                                <div class="flex items-center gap-1.5">
+                                    <span class="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold uppercase bg-current/20">${escapeHtml(iss.severity || 'medium')}</span>
+                                    <span class="font-medium font-mono text-[10px]">${escapeHtml(iss.category || 'sql_logic')}</span>
+                                </div>
+                                <div class="mt-1 opacity-90">${escapeHtml(iss.description || '')}</div>
+                                ${iss.suggested_fix ? `<div class="mt-1 text-emerald-300 font-mono text-[10px]">💡 Saran: ${escapeHtml(iss.suggested_fix)}</div>` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+
+            detailPanel.innerHTML = `
+                <div class="opacity-95">${escapeHtml(critique)}</div>
+                ${issuesHtml}
+            `;
+
+            topRow.addEventListener('click', () => {
+                detailPanel.classList.toggle('hidden');
+                const chevron = topRow.querySelector('.audit-chevron');
+                if (chevron) {
+                    chevron.classList.toggle('rotate-180');
+                }
+            });
+
+            card.appendChild(topRow);
+            card.appendChild(detailPanel);
+            wrapper.appendChild(card);
+            container.appendChild(wrapper);
+        }
+
         // ==============================================================================
         // Session Management & History Navigation
         // ==============================================================================
@@ -987,6 +1081,9 @@
                     if (turn.follow_up_suggestions && turn.follow_up_suggestions.length > 0) {
                         renderFollowUpSuggestions(turn.follow_up_suggestions, agentBox);
                     }
+                    if (turn.audit_result) {
+                        renderAuditResult(turn.audit_result, agentBox);
+                    }
                 }
                 messagesDiv.scrollTop = messagesDiv.scrollHeight;
 
@@ -1110,6 +1207,31 @@
                                 approvalSQL.textContent = formatSQL(parsed.sanitized_query || '');
                                 approvalBanner.classList.remove('hidden');
                                 approvalBanner.scrollIntoView({ behavior: 'smooth' });
+                            } else if (currentEvent === 'audit_step') {
+                                const aStatus = (parsed.status || 'auditing').toLowerCase();
+                                if (aStatus === 'auditing') {
+                                    statusEl.innerHTML = `
+                                        <span class="text-indigo-400 font-mono text-[11px] flex items-center gap-1.5 animate-pulse">
+                                            <svg class="w-3.5 h-3.5 animate-spin shrink-0" fill="none" viewBox="0 0 24 24">
+                                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            </svg>
+                                            <span>[Data Auditor] Memverifikasi logika SQL & konsistensi angka...</span>
+                                        </span>
+                                    `;
+                                } else if (aStatus === 'passed') {
+                                    statusEl.innerHTML = `
+                                        <span class="text-emerald-400 font-mono text-[11px] flex items-center gap-1">
+                                            <span>🛡️ Auditor: Verified (${Math.round((parsed.confidence_score || 1) * 100)}%)</span>
+                                        </span>
+                                    `;
+                                } else {
+                                    statusEl.innerHTML = `
+                                        <span class="text-amber-400 font-mono text-[11px] flex items-center gap-1">
+                                            <span>⚠️ Auditor: ${escapeHtml(parsed.badge || 'Flagged')}</span>
+                                        </span>
+                                    `;
+                                }
                             } else if (currentEvent === 'final_result') {
                                 statusEl.innerHTML = `
                                     <span class="text-emerald-400 font-mono text-[11px] flex items-center gap-1">
@@ -1143,6 +1265,10 @@
 
                                 if (parsed.follow_up_suggestions && parsed.follow_up_suggestions.length > 0) {
                                     renderFollowUpSuggestions(parsed.follow_up_suggestions, agentBox);
+                                }
+
+                                if (parsed.audit_result) {
+                                    renderAuditResult(parsed.audit_result, agentBox);
                                 }
 
                                 // Refresh session list to reflect new/updated session
