@@ -33,9 +33,9 @@ class Settings(BaseSettings):
     )
 
     # LLM Provider settings (Zero-cost options)
-    llm_provider: Literal["ollama", "gemini", "groq", "mock"] = Field(
+    llm_provider: Literal["ollama", "gemini", "groq", "openrouter", "mock"] = Field(
         default="mock",
-        description="Active LLM provider: 'ollama', 'gemini', 'groq', or 'mock'",
+        description="Active LLM provider: 'ollama', 'gemini', 'groq', 'openrouter', or 'mock'",
     )
 
     # Option 1: Ollama (Local & Free)
@@ -50,8 +50,13 @@ class Settings(BaseSettings):
     groq_api_key: str | None = Field(default=None)
     groq_model: str = Field(default="llama-3.3-70b-versatile")
 
+    # Option 4: OpenRouter (Free Tier Models)
+    openrouter_api_key: str | None = Field(default=None)
+    openrouter_base_url: str = Field(default="https://openrouter.ai/api/v1")
+    openrouter_model: str = Field(default="meta-llama/llama-3.3-70b-instruct:free")
+
     # LLM Fallback & Routing settings (FR-28)
-    llm_fallback_provider: Literal["ollama", "gemini", "groq", "mock", "none"] = Field(
+    llm_fallback_provider: Literal["ollama", "gemini", "groq", "openrouter", "mock", "none"] = Field(
         default="none",
         description="Fallback LLM provider if primary fails or hits rate limits",
     )
@@ -86,7 +91,7 @@ class Settings(BaseSettings):
 
     # Auditor Agent settings (FR-35 Maker-Checker Quality Gate)
     auditor_enabled: bool = Field(default=True, description="Enable Data Auditor agent verification")
-    auditor_provider: Literal["ollama", "gemini", "groq", "mock", "auto"] = Field(
+    auditor_provider: Literal["ollama", "gemini", "groq", "openrouter", "mock", "auto"] = Field(
         default="auto",
         description="Auditor provider: 'auto' (chooses diversity), or specific provider",
     )

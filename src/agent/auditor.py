@@ -51,7 +51,15 @@ def get_auditor_provider() -> BaseLLMProvider:
             except Exception as e:
                 logger.warning("Failed to initialize Gemini for auditor: %s", e)
 
-        # 3. If auditor_model is explicitly configured on Ollama
+        # 3. Prefer OpenRouter if API key is present and primary is not OpenRouter
+        if settings.openrouter_api_key and primary_provider != "openrouter":
+            try:
+                logger.info("Auditor Agent using OpenRouter for Model Diversity.")
+                return create_single_provider("openrouter", settings.auditor_model)
+            except Exception as e:
+                logger.warning("Failed to initialize OpenRouter for auditor: %s", e)
+
+        # 4. If auditor_model is explicitly configured on Ollama
         if settings.auditor_model:
             try:
                 return OpenAICompatibleProvider(
@@ -62,18 +70,11 @@ def get_auditor_provider() -> BaseLLMProvider:
             except Exception as e:
                 logger.warning("Failed to initialize custom Ollama model for auditor: %s", e)
 
-        # 4. Fallback to default LLM provider
+        # 5. Fallback to default LLM provider
         return get_llm_provider()
 
     # Explicit provider configuration
-    if settings.auditor_model and provider_choice == "ollama":
-        return OpenAICompatibleProvider(
-            base_url=settings.ollama_base_url,
-            api_key=None,
-            model=settings.auditor_model,
-        )
-
-    return create_single_provider(provider_choice)
+    return create_single_provider(provider_choice, settings.auditor_model)
 
 
 class DataAuditorAgent:

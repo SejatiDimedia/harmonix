@@ -266,14 +266,23 @@ class OpenAICompatibleProvider(BaseLLMProvider):
     and Groq Cloud Free Tier.
     """
 
-    def __init__(self, base_url: str, api_key: str | None, model: str):
+    def __init__(
+        self,
+        base_url: str,
+        api_key: str | None,
+        model: str,
+        default_headers: dict[str, str] | None = None,
+    ):
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key or "not-needed"
         self.model = model
+        self.default_headers = default_headers or {}
 
     def _headers(self) -> dict[str, str]:
         headers = {"Content-Type": "application/json"}
-        if self.api_key:
+        if self.default_headers:
+            headers.update(self.default_headers)
+        if self.api_key and self.api_key != "not-needed":
             headers["Authorization"] = f"Bearer {self.api_key}"
         return headers
 
@@ -627,8 +636,11 @@ class RoutedLLMProvider(BaseLLMProvider):
 # Provider Factory
 # ==============================================================================
 
-def create_single_provider(provider_name: str) -> BaseLLMProvider:
-    """Instantiate a single raw provider by name."""
+def create_single_provider(
+    provider_name: str,
+    model_override: str | None = None,
+) -> BaseLLMProvider:
+    """Instantiate a single raw provider by name, optionally overriding the default model."""
     name = provider_name.lower().strip()
 
     if name == "mock":
@@ -638,7 +650,7 @@ def create_single_provider(provider_name: str) -> BaseLLMProvider:
         return OpenAICompatibleProvider(
             base_url=settings.ollama_base_url,
             api_key=None,
-            model=settings.ollama_model,
+            model=model_override or settings.ollama_model,
         )
 
     if name == "gemini":
@@ -646,7 +658,7 @@ def create_single_provider(provider_name: str) -> BaseLLMProvider:
         return OpenAICompatibleProvider(
             base_url=base_url,
             api_key=settings.gemini_api_key,
-            model=settings.gemini_model,
+            model=model_override or settings.gemini_model,
         )
 
     if name == "groq":
@@ -654,7 +666,20 @@ def create_single_provider(provider_name: str) -> BaseLLMProvider:
         return OpenAICompatibleProvider(
             base_url=base_url,
             api_key=settings.groq_api_key,
-            model=settings.groq_model,
+            model=model_override or settings.groq_model,
+        )
+
+    if name == "openrouter":
+        base_url = settings.openrouter_base_url
+        headers = {
+            "HTTP-Referer": "https://github.com/SejatiDimedia/harnessly",
+            "X-Title": "Harnessly AI Data Analyst",
+        }
+        return OpenAICompatibleProvider(
+            base_url=base_url,
+            api_key=settings.openrouter_api_key,
+            model=model_override or settings.openrouter_model,
+            default_headers=headers,
         )
 
     raise ValueError(f"Unsupported LLM provider: '{provider_name}'")
