@@ -58,6 +58,14 @@ def test_create_gemini_provider():
     assert provider.model == settings.gemini_model
 
 
+def test_create_9router_provider():
+    """Verify 9Router smart local gateway provider initialization."""
+    provider = create_single_provider("9router", model_override="claude-3-7-sonnet")
+    assert isinstance(provider, OpenAICompatibleProvider)
+    assert provider.base_url == settings.ninerouter_base_url
+    assert provider.model == "claude-3-7-sonnet"
+
+
 def test_auditor_model_diversity_selection():
     """Verify Auditor chooses a distinct cloud provider (Groq) when primary is Ollama."""
     original_llm_provider = settings.llm_provider

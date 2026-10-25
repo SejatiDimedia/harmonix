@@ -35,7 +35,7 @@ class ProviderCatalog(BaseModel):
     """Status and catalog of models for a specific LLM provider."""
     provider: str
     display_name: str
-    category: Literal["local", "cloud_free", "openrouter"]
+    category: Literal["local", "cloud_free", "openrouter", "gateway"]
     is_ready: bool
     status_message: str
     active_model: str
@@ -191,12 +191,69 @@ class ModelRegistry:
         ]
         return is_ready, msg, models
 
+    async def _fetch_ninerouter_models(self) -> tuple[bool, str, list[ModelOption]]:
+        """Query local 9Router instance (localhost:20128) for configured active models."""
+        url = settings.ninerouter_base_url.rstrip("/") + "/models"
+        headers = {}
+        if settings.ninerouter_api_key:
+            headers["Authorization"] = f"Bearer {settings.ninerouter_api_key}"
+
+        try:
+            async with httpx.AsyncClient(timeout=1.5) as client:
+                res = await client.get(url, headers=headers)
+                if res.status_code == 200:
+                    data = res.json()
+                    models = []
+                    for item in data.get("data", []):
+                        m_id = item.get("id", "")
+                        if m_id:
+                            models.append(
+                                ModelOption(
+                                    id=m_id,
+                                    name=f"{m_id} (9Router)",
+                                    provider="9router",
+                                    is_free=True,
+                                    description="Rute cerdas via 9Router Smart AI Gateway (port 20128)",
+                                )
+                            )
+                    if models:
+                        return True, "9Router terhubung di localhost:20128", models
+        except Exception:
+            pass
+
+        # Fallback / offline options when 9Router service isn't currently up
+        default_models = [
+            ModelOption(
+                id="claude-3-7-sonnet",
+                name="Claude 3.7 Sonnet (9Router)",
+                provider="9router",
+                context_length=200000,
+                description="Gateway route ke Claude 3.7 Sonnet via 9Router",
+            ),
+            ModelOption(
+                id="deepseek-r1",
+                name="DeepSeek R1 (9Router)",
+                provider="9router",
+                context_length=64000,
+                description="Gateway route ke DeepSeek R1 via 9Router",
+            ),
+            ModelOption(
+                id="gpt-4o",
+                name="GPT-4o (9Router)",
+                provider="9router",
+                context_length=128000,
+                description="Gateway route ke GPT-4o via 9Router",
+            ),
+        ]
+        return False, "9Router tidak terdeteksi di localhost:20128", default_models
+
     async def get_catalog(self) -> dict[str, Any]:
         """Compile complete catalog of all providers, statuses, and model options."""
         ollama_ready, ollama_msg, ollama_models = await self._fetch_ollama_models()
         groq_ready, groq_msg, groq_models = self._get_groq_models()
         gemini_ready, gemini_msg, gemini_models = self._get_gemini_models()
         openrouter_ready, openrouter_msg, openrouter_models = self._get_openrouter_models()
+        ninerouter_ready, ninerouter_msg, ninerouter_models = await self._fetch_ninerouter_models()
 
         providers = [
             ProviderCatalog(
@@ -234,6 +291,15 @@ class ModelRegistry:
                 status_message=openrouter_msg,
                 active_model=self.active_config.analyst_model if self.active_config.analyst_provider == "openrouter" else settings.openrouter_model,
                 available_models=openrouter_models,
+            ),
+            ProviderCatalog(
+                provider="9router",
+                display_name="9Router (Smart Local Gateway)",
+                category="gateway",
+                is_ready=ninerouter_ready,
+                status_message=ninerouter_msg,
+                active_model=self.active_config.analyst_model if self.active_config.analyst_provider == "9router" else settings.ninerouter_model,
+                available_models=ninerouter_models,
             ),
         ]
 

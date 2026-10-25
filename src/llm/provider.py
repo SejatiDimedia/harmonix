@@ -682,6 +682,13 @@ def create_single_provider(
             default_headers=headers,
         )
 
+    if name == "9router":
+        return OpenAICompatibleProvider(
+            base_url=settings.ninerouter_base_url,
+            api_key=settings.ninerouter_api_key or "sk-9router-local",
+            model=model_override or settings.ninerouter_model,
+        )
+
     raise ValueError(f"Unsupported LLM provider: '{provider_name}'")
 
 

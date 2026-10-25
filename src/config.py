@@ -33,9 +33,9 @@ class Settings(BaseSettings):
     )
 
     # LLM Provider settings (Zero-cost options)
-    llm_provider: Literal["ollama", "gemini", "groq", "openrouter", "mock"] = Field(
+    llm_provider: Literal["ollama", "gemini", "groq", "openrouter", "9router", "mock"] = Field(
         default="mock",
-        description="Active LLM provider: 'ollama', 'gemini', 'groq', 'openrouter', or 'mock'",
+        description="Active LLM provider: 'ollama', 'gemini', 'groq', 'openrouter', '9router', or 'mock'",
     )
 
     # Option 1: Ollama (Local & Free)
@@ -55,8 +55,13 @@ class Settings(BaseSettings):
     openrouter_base_url: str = Field(default="https://openrouter.ai/api/v1")
     openrouter_model: str = Field(default="nvidia/nemotron-3.5-lightning:free")
 
+    # Option 5: 9Router (Smart Local AI Gateway)
+    ninerouter_base_url: str = Field(default="http://localhost:20128/v1")
+    ninerouter_api_key: str | None = Field(default="sk-9router-local")
+    ninerouter_model: str = Field(default="claude-3-7-sonnet")
+
     # LLM Fallback & Routing settings (FR-28)
-    llm_fallback_provider: Literal["ollama", "gemini", "groq", "openrouter", "mock", "none"] = Field(
+    llm_fallback_provider: Literal["ollama", "gemini", "groq", "openrouter", "9router", "mock", "none"] = Field(
         default="none",
         description="Fallback LLM provider if primary fails or hits rate limits",
     )
@@ -91,7 +96,7 @@ class Settings(BaseSettings):
 
     # Auditor Agent settings (FR-35 Maker-Checker Quality Gate)
     auditor_enabled: bool = Field(default=True, description="Enable Data Auditor agent verification")
-    auditor_provider: Literal["ollama", "gemini", "groq", "openrouter", "mock", "auto"] = Field(
+    auditor_provider: Literal["ollama", "gemini", "groq", "openrouter", "9router", "mock", "auto"] = Field(
         default="auto",
         description="Auditor provider: 'auto' (chooses diversity), or specific provider",
     )
