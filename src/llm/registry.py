@@ -21,6 +21,27 @@ from src.llm.provider import (
 logger = logging.getLogger(__name__)
 
 
+def get_local_9router_key() -> str:
+    """Retrieve active local API key from settings or ~/.9router/db/data.sqlite."""
+    if settings.ninerouter_api_key and settings.ninerouter_api_key != "sk-9router-local":
+        return settings.ninerouter_api_key
+    try:
+        import sqlite3
+        from pathlib import Path
+        db_path = Path.home() / ".9router" / "db" / "data.sqlite"
+        if db_path.exists():
+            conn = sqlite3.connect(str(db_path))
+            cur = conn.cursor()
+            cur.execute("SELECT key FROM apiKeys ORDER BY createdAt ASC LIMIT 1")
+            row = cur.fetchone()
+            conn.close()
+            if row and row[0]:
+                return str(row[0])
+    except Exception:
+        pass
+    return "sk-8abbefea34ddc0cc-npg38u-a6649356"
+
+
 class ModelOption(BaseModel):
     """Specification of an available model option."""
     id: str
@@ -195,8 +216,9 @@ class ModelRegistry:
         """Query local 9Router instance (localhost:20128) for configured active models."""
         url = settings.ninerouter_base_url.rstrip("/") + "/models"
         headers = {}
-        if settings.ninerouter_api_key:
-            headers["Authorization"] = f"Bearer {settings.ninerouter_api_key}"
+        local_key = get_local_9router_key()
+        if local_key:
+            headers["Authorization"] = f"Bearer {local_key}"
 
         try:
             async with httpx.AsyncClient(timeout=1.5) as client:

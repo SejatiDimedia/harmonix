@@ -297,6 +297,7 @@ class OpenAICompatibleProvider(BaseLLMProvider):
             "model": self.model,
             "messages": messages,
             "temperature": temperature,
+            "stream": False,
         }
         if tools:
             payload["tools"] = tools
@@ -683,9 +684,16 @@ def create_single_provider(
         )
 
     if name == "9router":
+        key = settings.ninerouter_api_key
+        if not key or key == "sk-9router-local":
+            try:
+                from src.llm.registry import get_local_9router_key
+                key = get_local_9router_key()
+            except Exception:
+                key = "sk-8abbefea34ddc0cc-npg38u-a6649356"
         return OpenAICompatibleProvider(
             base_url=settings.ninerouter_base_url,
-            api_key=settings.ninerouter_api_key or "sk-9router-local",
+            api_key=key,
             model=model_override or settings.ninerouter_model,
         )
 

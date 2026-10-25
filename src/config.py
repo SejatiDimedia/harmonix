@@ -57,8 +57,8 @@ class Settings(BaseSettings):
 
     # Option 5: 9Router (Smart Local AI Gateway)
     ninerouter_base_url: str = Field(default="http://localhost:20128/v1")
-    ninerouter_api_key: str | None = Field(default="sk-9router-local")
-    ninerouter_model: str = Field(default="claude-3-7-sonnet")
+    ninerouter_api_key: str | None = Field(default="sk-8abbefea34ddc0cc-npg38u-a6649356")
+    ninerouter_model: str = Field(default="ag/gemini-3.8-flash")
 
     # LLM Fallback & Routing settings (FR-28)
     llm_fallback_provider: Literal["ollama", "gemini", "groq", "openrouter", "9router", "mock", "none"] = Field(
@@ -82,7 +82,7 @@ class Settings(BaseSettings):
     agent_max_steps: int = Field(default=10, description="Maximum iterations in agent loop")
     agent_step_timeout_seconds: int = Field(default=30, description="Timeout for a single agent step")
     agent_total_timeout_seconds: int = Field(default=120, description="Maximum duration for entire task")
-    agent_max_token_budget: int = Field(default=15000, description="Token budget per task")
+    agent_max_token_budget: int = Field(default=60000, description="Token budget per task")
     agent_terminal_logs: bool = Field(default=True, description="Enable real-time visual execution logs in the terminal")
 
     # SQL Guardrail Parameters
