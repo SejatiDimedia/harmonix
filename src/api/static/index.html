@@ -159,6 +159,16 @@
                 </button>
             </div>
 
+            <!-- Manage Model Toggle Button (FR-36) -->
+            <button id="btnManageModel" type="button" class="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-medium text-[#cfccc4] bg-[#22211e] hover:bg-[#2b2a26] border border-[#36342f] hover:border-clay-500/50 transition shadow-sm group" title="Kelola Model AI (Local / Groq / Gemini / OpenRouter)">
+                <svg class="w-3.5 h-3.5 text-clay-400 group-hover:rotate-45 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                <span id="activeModelBadge" class="hidden sm:inline font-mono text-[11px] text-[#e5e3dc] max-w-[130px] lg:max-w-[180px] truncate">Model: Memuat...</span>
+                <span class="sm:hidden">Model</span>
+            </button>
+
             <!-- Connection Status -->
             <div id="healthBadge" class="flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-mono bg-[#22211e] text-[#a3a097] border border-[#312f2b]">
                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
@@ -218,6 +228,127 @@
                 </div>
                 <p class="leading-relaxed">Seluruh trace latensi, TTFT, dan span dicatat secara persisten ke tabel PostgreSQL <code>analytics.agent_traces</code> dengan zero runtime API cost.</p>
             </div>
+        </div>
+    </div>
+
+    <!-- Manage Model Modal (FR-36) -->
+    <div id="modelModal" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="w-full max-w-xl bg-stone-900 border border-[#383632] rounded-2xl p-5 sm:p-6 shadow-2xl flex flex-col gap-4 sm:gap-5 max-h-[92vh] overflow-y-auto">
+            
+            <!-- Modal Header -->
+            <div class="flex justify-between items-start border-b border-[#2d2b27] pb-3.5">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-xl bg-clay-500/10 border border-clay-500/30 flex items-center justify-center text-clay-400 shrink-0">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="font-serif text-lg text-[#f5f4ef] font-medium leading-tight">Kelola Model AI (Multi-Tier LLM)</h3>
+                        <p class="text-xs text-[#9c9990] mt-0.5">Konfigurasi runtime untuk Analyst Agent & Data Auditor Agent (FR-36)</p>
+                    </div>
+                </div>
+                <button id="btnCloseModelModal" type="button" class="text-[#9c9990] hover:text-white p-1.5 rounded-lg hover:bg-[#242320] transition">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Modal Body: Two Agent Cards -->
+            <div class="space-y-4 text-xs">
+                
+                <!-- Card 1: Data Analyst Agent -->
+                <div class="p-4 rounded-xl bg-[#201f1d] border border-[#2e2c28] space-y-3">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-clay-500"></span>
+                            <span class="font-medium text-[#f5f4ef] text-sm">Data Analyst Agent</span>
+                        </div>
+                        <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-clay-500/10 text-clay-300 border border-clay-500/20">Primary Agent</span>
+                    </div>
+                    <p class="text-[#9c9990] text-[11px] leading-relaxed">
+                        Menginspeksi skema SQL, merencanakan langkah analitik, menghasilkan SQL tervalidasi, dan menyajikan narasi bisnis serta chart visual.
+                    </p>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                        <div>
+                            <label class="block text-[11px] font-mono text-[#a3a097] mb-1">Provider LLM</label>
+                            <select id="selectAnalystProvider" class="w-full bg-[#161513] border border-[#383631] text-[#ecebe6] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-clay-500 transition">
+                                <!-- Populated dynamically -->
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-mono text-[#a3a097] mb-1">Model Aktif</label>
+                            <select id="selectAnalystModel" class="w-full bg-[#161513] border border-[#383631] text-[#ecebe6] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-clay-500 transition">
+                                <!-- Populated dynamically -->
+                            </select>
+                        </div>
+                    </div>
+                    <div id="analystModelDesc" class="text-[11px] text-clay-300/90 font-mono bg-[#181715] px-2.5 py-1.5 rounded-lg border border-[#2a2824] leading-relaxed">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+
+                <!-- Card 2: Data Auditor Agent -->
+                <div class="p-4 rounded-xl bg-[#201f1d] border border-[#2e2c28] space-y-3">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-indigo-400"></span>
+                            <span class="font-medium text-[#f5f4ef] text-sm">Data Auditor Agent</span>
+                        </div>
+                        <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">Verification Guard</span>
+                    </div>
+                    <p class="text-[#9c9990] text-[11px] leading-relaxed">
+                        Memverifikasi keabsahan query SQL dan mencocokkan angka analitik dengan data mentah tabel. Direkomendasikan provider berbeda untuk mencegah bias halusinasi.
+                    </p>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                        <div>
+                            <label class="block text-[11px] font-mono text-[#a3a097] mb-1">Provider LLM</label>
+                            <select id="selectAuditorProvider" class="w-full bg-[#161513] border border-[#383631] text-[#ecebe6] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500 transition">
+                                <option value="auto">Auto (Model Diversity)</option>
+                                <!-- Populated dynamically -->
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-mono text-[#a3a097] mb-1">Model Aktif</label>
+                            <select id="selectAuditorModel" class="w-full bg-[#161513] border border-[#383631] text-[#ecebe6] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                                <!-- Populated dynamically -->
+                            </select>
+                        </div>
+                    </div>
+                    <div id="auditorModelDesc" class="text-[11px] text-indigo-300/90 font-mono bg-[#181715] px-2.5 py-1.5 rounded-lg border border-[#2a2824] leading-relaxed">
+                        Mode Auto: Sistem memilih provider alternatif (misal: Groq Llama 3.3 70B atau OpenRouter) jika Analyst menggunakan Ollama lokal.
+                    </div>
+                </div>
+
+                <!-- Card 3: Provider Status Grid -->
+                <div class="p-3.5 rounded-xl bg-[#191816] border border-[#282622]">
+                    <span class="text-[10px] uppercase font-mono text-[#8a877e] tracking-wider block mb-2">Ketersediaan Provider & Status</span>
+                    <div id="providerStatusGrid" class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] font-mono">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="flex items-center justify-between border-t border-[#2d2b27] pt-4">
+                <span id="modelModalFeedback" class="text-xs font-mono text-emerald-400"></span>
+                <div class="flex items-center gap-2">
+                    <button id="btnCancelModelModal" type="button" class="px-3.5 py-1.5 rounded-lg text-xs font-medium text-[#a3a097] hover:text-white hover:bg-[#242320] transition">
+                        Batal
+                    </button>
+                    <button id="btnSaveModelModal" type="button" class="px-4 py-1.5 rounded-lg text-xs font-medium text-white bg-clay-600 hover:bg-clay-500 transition shadow-sm flex items-center gap-1.5">
+                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span>Simpan & Terapkan</span>
+                    </button>
+                </div>
+            </div>
+
         </div>
     </div>
 
@@ -402,11 +533,17 @@
                 </div>
             </form>
             <div class="text-center text-[10px] text-[#7a7770] pt-2 font-mono">
-                Harnessly v0.1.0 — 100% Zero-Cost Architecture (Ollama / Gemini Free Tier)
+                Harnessly v0.1.0 — 100% Zero-Cost Multi-Tier (Ollama / Groq / Gemini / OpenRouter Free)
             </div>
         </div>
 
     </main>
+    </div>
+
+    <!-- Toast Notification (FR-36) -->
+    <div id="toastNotification" class="fixed bottom-6 right-6 z-50 transform translate-y-12 opacity-0 pointer-events-none transition-all duration-300 flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-[#201f1d] border border-clay-500/40 text-xs text-[#f5f4ef] shadow-2xl font-mono">
+        <span class="w-2 h-2 rounded-full bg-clay-500 animate-ping"></span>
+        <span id="toastMessage">Tersimpan</span>
     </div>
 
     <script>
@@ -426,6 +563,30 @@
         const btnCloseMetrics = document.getElementById('btnCloseMetrics');
         const btnEngineManual = document.getElementById('btnEngineManual');
         const btnEngineLangGraph = document.getElementById('btnEngineLangGraph');
+
+        // Manage Model UI Elements (FR-36)
+        const btnManageModel = document.getElementById('btnManageModel');
+        const activeModelBadge = document.getElementById('activeModelBadge');
+        const modelModal = document.getElementById('modelModal');
+        const btnCloseModelModal = document.getElementById('btnCloseModelModal');
+        const btnCancelModelModal = document.getElementById('btnCancelModelModal');
+        const btnSaveModelModal = document.getElementById('btnSaveModelModal');
+        const selectAnalystProvider = document.getElementById('selectAnalystProvider');
+        const selectAnalystModel = document.getElementById('selectAnalystModel');
+        const selectAuditorProvider = document.getElementById('selectAuditorProvider');
+        const selectAuditorModel = document.getElementById('selectAuditorModel');
+        const analystModelDesc = document.getElementById('analystModelDesc');
+        const auditorModelDesc = document.getElementById('auditorModelDesc');
+        const providerStatusGrid = document.getElementById('providerStatusGrid');
+        const modelModalFeedback = document.getElementById('modelModalFeedback');
+        const toastNotification = document.getElementById('toastNotification');
+        const toastMessage = document.getElementById('toastMessage');
+
+        let modelCatalog = null;
+        let activeAnalystProvider = 'ollama';
+        let activeAnalystModel = 'qwen2.5-coder:7b';
+        let activeAuditorProvider = 'auto';
+        let activeAuditorModel = '';
 
         // Sidebar & Session UI Elements
         const btnToggleSidebar = document.getElementById('btnToggleSidebar');
@@ -553,6 +714,250 @@
             loadMetrics();
         });
         btnCloseMetrics.addEventListener('click', () => metricsPanel.classList.add('hidden'));
+
+        // ==============================================================================
+        // Manage Model Logic & Modal Controller (FR-36)
+        // ==============================================================================
+
+        function showToast(msg) {
+            if (!toastNotification || !toastMessage) return;
+            toastMessage.textContent = msg;
+            toastNotification.classList.remove('translate-y-12', 'opacity-0', 'pointer-events-none');
+            toastNotification.classList.add('translate-y-0', 'opacity-100');
+            setTimeout(() => {
+                toastNotification.classList.add('translate-y-12', 'opacity-0', 'pointer-events-none');
+                toastNotification.classList.remove('translate-y-0', 'opacity-100');
+            }, 3200);
+        }
+
+        function formatModelNameShort(modelId) {
+            if (!modelId) return '';
+            if (modelId.includes('nemotron')) return 'Nemotron 3.5 Free';
+            if (modelId.includes('gemma')) return 'Gemma Free';
+            if (modelId.includes('qwen2.5-coder')) return 'Qwen 2.5 7B';
+            if (modelId.includes('llama-3.3-70b')) return 'Llama 3.3 70B';
+            if (modelId.includes('llama-3.1-8b')) return 'Llama 3.1 8B';
+            if (modelId.includes('gemini-2.5-flash')) return 'Gemini 2.5 Flash';
+            if (modelId.includes('gemini-1.5-flash')) return 'Gemini 1.5 Flash';
+            const parts = modelId.split('/');
+            return parts[parts.length - 1];
+        }
+
+        function updateBadgeLabel() {
+            if (!activeModelBadge) return;
+            const shortName = formatModelNameShort(activeAnalystModel) || activeAnalystProvider;
+            activeModelBadge.textContent = `${activeAnalystProvider.toUpperCase()}: ${shortName}`;
+            activeModelBadge.title = `Analyst: ${activeAnalystProvider} (${activeAnalystModel}) | Auditor: ${activeAuditorProvider} (${activeAuditorModel || 'auto'})`;
+        }
+
+        async function fetchModelCatalog() {
+            try {
+                const res = await fetch('/v1/models');
+                if (!res.ok) return;
+                modelCatalog = await res.json();
+                
+                if (modelCatalog.active_config) {
+                    activeAnalystProvider = modelCatalog.active_config.analyst_provider || 'ollama';
+                    activeAnalystModel = modelCatalog.active_config.analyst_model || '';
+                    activeAuditorProvider = modelCatalog.active_config.auditor_provider || 'auto';
+                    activeAuditorModel = modelCatalog.active_config.auditor_model || '';
+                }
+                updateBadgeLabel();
+                renderProviderStatusGrid();
+            } catch (err) {
+                console.error("Failed to load model catalog:", err);
+            }
+        }
+
+        function renderProviderStatusGrid() {
+            if (!providerStatusGrid || !modelCatalog || !modelCatalog.providers) return;
+            providerStatusGrid.innerHTML = '';
+            modelCatalog.providers.forEach(p => {
+                const pill = document.createElement('div');
+                pill.className = `p-2 rounded-lg border flex flex-col justify-between gap-1 ${
+                    p.is_ready ? 'bg-[#18231c] border-emerald-900/60 text-emerald-300' : 'bg-[#221c1a] border-[#3d2a26] text-[#9c9990]'
+                }`;
+                pill.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <span class="font-medium text-[#f5f4ef] text-[11px]">${escapeHtml(p.provider.toUpperCase())}</span>
+                        <span class="w-1.5 h-1.5 rounded-full ${p.is_ready ? 'bg-emerald-400' : 'bg-amber-500'}"></span>
+                    </div>
+                    <span class="text-[10px] truncate text-[#a3a097]">${escapeHtml(p.status_message || '')}</span>
+                `;
+                providerStatusGrid.appendChild(pill);
+            });
+        }
+
+        function populateModalOptions() {
+            if (!modelCatalog || !modelCatalog.providers) return;
+
+            // 1. Populate Analyst Providers
+            selectAnalystProvider.innerHTML = '';
+            modelCatalog.providers.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.provider;
+                opt.textContent = `${p.display_name}${p.is_ready ? '' : ' (Key Belum Ada)'}`;
+                if (p.provider === activeAnalystProvider) opt.selected = true;
+                selectAnalystProvider.appendChild(opt);
+            });
+
+            // 2. Populate Auditor Providers
+            selectAuditorProvider.innerHTML = '<option value="auto">Auto (Model Diversity)</option>';
+            modelCatalog.providers.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.provider;
+                opt.textContent = `${p.display_name}${p.is_ready ? '' : ' (Key Belum Ada)'}`;
+                if (p.provider === activeAuditorProvider) opt.selected = true;
+                selectAuditorProvider.appendChild(opt);
+            });
+
+            syncAnalystModels();
+            syncAuditorModels();
+        }
+
+        function syncAnalystModels() {
+            if (!modelCatalog) return;
+            const provId = selectAnalystProvider.value;
+            const provData = modelCatalog.providers.find(p => p.provider === provId);
+            selectAnalystModel.innerHTML = '';
+
+            if (provData && provData.available_models) {
+                provData.available_models.forEach(m => {
+                    const opt = document.createElement('option');
+                    opt.value = m.id;
+                    opt.textContent = m.name;
+                    if (m.id === activeAnalystModel) opt.selected = true;
+                    selectAnalystModel.appendChild(opt);
+                });
+            }
+
+            if (!selectAnalystModel.value && selectAnalystModel.options.length > 0) {
+                selectAnalystModel.selectedIndex = 0;
+            }
+            updateAnalystDesc();
+        }
+
+        function updateAnalystDesc() {
+            if (!modelCatalog) return;
+            const provId = selectAnalystProvider.value;
+            const modelId = selectAnalystModel.value;
+            const provData = modelCatalog.providers.find(p => p.provider === provId);
+            const mData = provData?.available_models?.find(m => m.id === modelId);
+
+            if (mData) {
+                analystModelDesc.textContent = `[${mData.context_length.toLocaleString()} ctx] ${mData.description || 'Model siap digunakan'}`;
+            } else {
+                analystModelDesc.textContent = 'Model kustom atau bawaan sistem.';
+            }
+        }
+
+        function syncAuditorModels() {
+            if (!modelCatalog) return;
+            const provId = selectAuditorProvider.value;
+            if (provId === 'auto') {
+                selectAuditorModel.innerHTML = '<option value="">Otomatis Dipilihkan Sistem</option>';
+                selectAuditorModel.disabled = true;
+                auditorModelDesc.textContent = 'Mode Auto: Sistem memilih provider alternatif (misal: Groq 70B atau OpenRouter) jika Analyst menggunakan Ollama.';
+                return;
+            }
+
+            selectAuditorModel.disabled = false;
+            selectAuditorModel.innerHTML = '';
+            const provData = modelCatalog.providers.find(p => p.provider === provId);
+            if (provData && provData.available_models) {
+                provData.available_models.forEach(m => {
+                    const opt = document.createElement('option');
+                    opt.value = m.id;
+                    opt.textContent = m.name;
+                    if (m.id === activeAuditorModel) opt.selected = true;
+                    selectAuditorModel.appendChild(opt);
+                });
+            }
+
+            if (!selectAuditorModel.value && selectAuditorModel.options.length > 0) {
+                selectAuditorModel.selectedIndex = 0;
+            }
+            updateAuditorDesc();
+        }
+
+        function updateAuditorDesc() {
+            if (!modelCatalog) return;
+            const provId = selectAuditorProvider.value;
+            if (provId === 'auto') return;
+
+            const modelId = selectAuditorModel.value;
+            const provData = modelCatalog.providers.find(p => p.provider === provId);
+            const mData = provData?.available_models?.find(m => m.id === modelId);
+
+            if (mData) {
+                auditorModelDesc.textContent = `[Auditor Khusus] ${mData.description || mData.name}`;
+            } else {
+                auditorModelDesc.textContent = 'Model auditor kustom.';
+            }
+        }
+
+        selectAnalystProvider.addEventListener('change', syncAnalystModels);
+        selectAnalystModel.addEventListener('change', updateAnalystDesc);
+        selectAuditorProvider.addEventListener('change', syncAuditorModels);
+        selectAuditorModel.addEventListener('change', updateAuditorDesc);
+
+        function openModelModal() {
+            modelModal.classList.remove('hidden');
+            modelModalFeedback.textContent = '';
+            populateModalOptions();
+        }
+
+        function closeModelModal() {
+            modelModal.classList.add('hidden');
+        }
+
+        btnManageModel.addEventListener('click', openModelModal);
+        btnCloseModelModal.addEventListener('click', closeModelModal);
+        btnCancelModelModal.addEventListener('click', closeModelModal);
+        modelModal.addEventListener('click', (e) => {
+            if (e.target === modelModal) closeModelModal();
+        });
+
+        btnSaveModelModal.addEventListener('click', async () => {
+            const newAnalystProv = selectAnalystProvider.value;
+            const newAnalystMod = selectAnalystModel.value;
+            const newAuditorProv = selectAuditorProvider.value;
+            const newAuditorMod = newAuditorProv === 'auto' ? '' : selectAuditorModel.value;
+
+            btnSaveModelModal.disabled = true;
+            modelModalFeedback.textContent = 'Menerapkan konfigurasi...';
+
+            try {
+                const res = await fetch('/v1/models/active', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        analyst_provider: newAnalystProv,
+                        analyst_model: newAnalystMod,
+                        auditor_provider: newAuditorProv,
+                        auditor_model: newAuditorMod
+                    })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    activeAnalystProvider = newAnalystProv;
+                    activeAnalystModel = newAnalystMod;
+                    activeAuditorProvider = newAuditorProv;
+                    activeAuditorModel = newAuditorMod;
+                    updateBadgeLabel();
+                    closeModelModal();
+                    showToast(`Model berhasil diubah: ${newAnalystProv.toUpperCase()} (${formatModelNameShort(newAnalystMod)})`);
+                    checkHealth();
+                } else {
+                    modelModalFeedback.textContent = 'Gagal menyimpan konfigurasi model.';
+                }
+            } catch (err) {
+                modelModalFeedback.textContent = `Error: ${err.message}`;
+            } finally {
+                btnSaveModelModal.disabled = false;
+            }
+        });
 
         // ==============================================================================
         // Modular Visual Components: SQL Box, Tables, Chart.js, Metrics
@@ -1329,7 +1734,15 @@
                 const response = await fetch('/v1/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ query: q, engine: currentEngine, session_id: sid })
+                    body: JSON.stringify({
+                        query: q,
+                        engine: currentEngine,
+                        session_id: sid,
+                        provider: activeAnalystProvider,
+                        model: activeAnalystModel,
+                        auditor_provider: activeAuditorProvider,
+                        auditor_model: activeAuditorModel
+                    })
                 });
                 await readSSEStream(response, statusEl, contentEl, agentBox);
             } catch (err) {
@@ -1379,6 +1792,7 @@
 
         // Initialize application state
         checkHealth();
+        fetchModelCatalog();
         loadSessions();
         if (currentSessionId) {
             switchSession(currentSessionId);
