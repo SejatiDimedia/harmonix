@@ -87,3 +87,91 @@
   margin: 0.75rem 0;
   font-style: italic;
 }
+
+/* ==============================================================================
+ * Executive PDF & Print Stylesheet (FR-38)
+ * Transforms dark theme UI into a crisp, corporate executive report for PDF/print
+ * ============================================================================== */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 1.2cm 1cm;
+  }
+
+  html, body {
+    background-color: #ffffff !important;
+    color: #111827 !important;
+    font-size: 10pt !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    overflow: visible !important;
+  }
+
+  /* Hide screen chrome & controls */
+  header,
+  aside,
+  form,
+  button,
+  .no-print {
+    display: none !important;
+  }
+
+  /* Show executive print letterhead & elements */
+  .print-only {
+    display: block !important;
+  }
+
+  #root,
+  .app-container,
+  main,
+  div[role="dialog"],
+  .flex-1,
+  .overflow-hidden,
+  .overflow-y-auto {
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+  }
+
+  /* Card and widget print layout */
+  .report-card,
+  .print-widget-card {
+    background-color: #ffffff !important;
+    border: 1px solid #d1d5db !important;
+    box-shadow: none !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    margin-bottom: 1.5rem !important;
+    padding: 1.25rem !important;
+    border-radius: 0.75rem !important;
+  }
+
+  .print-widget-card * {
+    color: #1f2937 !important;
+  }
+
+  .print-widget-card table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    font-size: 8.5pt !important;
+  }
+
+  .print-widget-card table th {
+    background-color: #f3f4f6 !important;
+    color: #111827 !important;
+    border: 1px solid #d1d5db !important;
+    font-weight: 600 !important;
+    padding: 6px 8px !important;
+  }
+
+  .print-widget-card table td {
+    border: 1px solid #e5e7eb !important;
+    color: #1f2937 !important;
+    padding: 6px 8px !important;
+  }
+
+  .print-widget-card canvas {
+    max-height: 280px !important;
+  }
+}
+

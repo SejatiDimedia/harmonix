@@ -604,6 +604,9 @@ export const App: React.FC = () => {
             onRefresh={handleRefreshDashboard}
             onDeleteWidget={handleDeleteWidget}
             onSwitchToChat={() => setActiveTab('chat')}
+            sessionTitle={sessionDetailsData?.title}
+            sessionId={currentSessionId || undefined}
+            activeModel={activeModel}
           />
         )}
       </div>
