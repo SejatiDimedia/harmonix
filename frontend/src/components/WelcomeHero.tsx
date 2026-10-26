@@ -12,7 +12,7 @@ const QUICK_PROMPTS = [
   'Analisis tren status pengiriman pesanan (delivered, shipped, canceled)',
 ];
 
-export const WelcomeHero: React.FC<WelcomeHeroProps> = ({ onSelectPrompt }) => {
+const WelcomeHeroComponent: React.FC<WelcomeHeroProps> = ({ onSelectPrompt }) => {
   return (
     <div className="py-12 md:py-16 text-center space-y-6 max-w-xl mx-auto px-4 select-none">
       <div className="relative inline-block">
@@ -50,3 +50,5 @@ export const WelcomeHero: React.FC<WelcomeHeroProps> = ({ onSelectPrompt }) => {
     </div>
   );
 };
+
+export const WelcomeHero = React.memo(WelcomeHeroComponent);

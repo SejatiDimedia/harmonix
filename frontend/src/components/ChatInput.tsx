@@ -16,7 +16,7 @@ interface ChatInputProps {
   onSubmit: (query: string) => void;
 }
 
-export const ChatInput: React.FC<ChatInputProps> = ({
+const ChatInputComponent: React.FC<ChatInputProps> = ({
   isLoading,
   engine,
   catalog,
@@ -167,3 +167,5 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     </div>
   );
 };
+
+export const ChatInput = React.memo(ChatInputComponent);

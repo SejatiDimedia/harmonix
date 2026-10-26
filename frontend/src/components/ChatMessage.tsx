@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import { Check, Loader2 } from 'lucide-react';
@@ -8,6 +8,7 @@ import { DataTable } from './DataTable';
 import { DataChart } from './DataChart';
 import { AuditorGate } from './AuditorGate';
 import { FollowUpChips } from './FollowUpChips';
+import { ErrorBoundary } from './ErrorBoundary';
 
 interface ChatMessageProps {
   turn: ChatTurn;
@@ -16,15 +17,17 @@ interface ChatMessageProps {
   onSelectSuggestion: (text: string) => void;
 }
 
-export const ChatMessage: React.FC<ChatMessageProps> = ({
+const ChatMessageComponent: React.FC<ChatMessageProps> = ({
   turn,
   isStreaming,
   streamingStatus,
   onSelectSuggestion,
 }) => {
-  const sanitizedMarkdown = turn.answer_text
-    ? DOMPurify.sanitize(marked.parse(turn.answer_text) as string)
-    : '';
+  const sanitizedMarkdown = useMemo(() => {
+    return turn.answer_text
+      ? DOMPurify.sanitize(marked.parse(turn.answer_text) as string)
+      : '';
+  }, [turn.answer_text]);
 
   return (
     <div className="space-y-4">
@@ -81,7 +84,9 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
 
           {/* Charts */}
           {turn.charts && turn.charts.length > 0 && (
-            <DataChart charts={turn.charts} tables={turn.tables} />
+            <ErrorBoundary fallbackTitle="Gagal memuat visualisasi grafik">
+              <DataChart charts={turn.charts} tables={turn.tables} />
+            </ErrorBoundary>
           )}
 
           {/* Latency & Token Metrics */}
@@ -110,3 +115,5 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
     </div>
   );
 };
+
+export const ChatMessage = React.memo(ChatMessageComponent);

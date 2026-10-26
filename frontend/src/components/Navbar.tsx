@@ -8,7 +8,7 @@ interface NavbarProps {
   onOpenMetrics: () => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({
+const NavbarComponent: React.FC<NavbarProps> = ({
   health,
   onToggleSidebar,
   onOpenMetrics,
@@ -72,3 +72,5 @@ export const Navbar: React.FC<NavbarProps> = ({
     </header>
   );
 };
+
+export const Navbar = React.memo(NavbarComponent);
