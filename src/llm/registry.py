@@ -131,6 +131,20 @@ class ModelRegistry:
         msg = "Groq API Key terkonfigurasi" if is_ready else "GROQ_API_KEY belum diisi di .env"
         models = [
             ModelOption(
+                id="openai/gpt-oss-120b",
+                name="OpenAI GPT-OSS 120B (MoE)",
+                provider="groq",
+                context_length=131072,
+                description="Flagship open-weight reasoning model OpenAI di Groq LPU (~500 t/s)",
+            ),
+            ModelOption(
+                id="openai/gpt-oss-20b",
+                name="OpenAI GPT-OSS 20B (MoE)",
+                provider="groq",
+                context_length=131072,
+                description="Fast agentic open-weight model OpenAI di Groq LPU (~1000 t/s)",
+            ),
+            ModelOption(
                 id="llama-3.3-70b-versatile",
                 name="Llama 3.3 70B Versatile",
                 provider="groq",
