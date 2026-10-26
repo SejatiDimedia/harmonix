@@ -518,22 +518,66 @@
 
         <!-- Floating Chat Input (Claude Signature Style) -->
         <div class="sticky bottom-0 z-20 pt-2 pb-2 bg-gradient-to-t from-stone-900 via-stone-900 to-transparent">
+            
+            <!-- Quick Model Switcher Popover (FR-36) -->
+            <div id="inputModelPopover" class="hidden absolute bottom-full left-0 mb-3 w-80 sm:w-[440px] max-h-[460px] bg-[#1a1917]/95 border border-[#383632] rounded-2xl shadow-2xl z-40 p-3.5 text-xs flex flex-col gap-2.5 backdrop-blur-xl">
+                <div class="flex items-center justify-between pb-2 border-b border-[#2d2b27]">
+                    <div class="flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-clay-500 animate-pulse"></span>
+                        <span class="font-serif font-medium text-sm text-[#f5f4ef]">Pilih Model Analyst</span>
+                    </div>
+                    <button type="button" id="btnCloseInputModelPopover" class="text-[#817e75] hover:text-white p-1 rounded-lg hover:bg-[#242320]">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                
+                <!-- Dynamic Model Groups Container -->
+                <div id="inputModelGroupsList" class="space-y-3 overflow-y-auto max-h-[320px] pr-1.5 scrollbar-thin">
+                    <!-- Populated dynamically via JS -->
+                </div>
+
+                <!-- Footer: Open Advanced Modal -->
+                <div class="pt-2.5 border-t border-[#2d2b27] flex justify-between items-center text-[11px]">
+                    <span class="text-[#78756d] font-mono text-[10px]">100% Zero-Cost Multi-Tier</span>
+                    <button type="button" id="btnOpenFullModalFromPopover" class="text-clay-400 hover:text-clay-300 font-medium hover:underline flex items-center gap-1 font-mono text-[11px]">
+                        <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <span>Pengaturan Lanjutan & Auditor</span>
+                    </button>
+                </div>
+            </div>
+
             <form id="chatForm" class="relative rounded-2xl bg-[#201f1d] border border-[#33312c] focus-within:border-clay-500/80 focus-within:ring-1 focus-within:ring-clay-500/50 shadow-xl transition">
                 <textarea id="queryInput" rows="2" placeholder="Tanyakan tentang data penjualan, analisis pelanggan, atau uji metrik..." 
                     class="w-full bg-transparent px-4 pt-3.5 pb-12 text-sm text-[#f5f4ef] placeholder-[#817e75] resize-none focus:outline-none" required></textarea>
                 
                 <div class="absolute bottom-2.5 left-3.5 right-3 flex justify-between items-center text-[11px] text-[#817e75]">
-                    <span class="hidden sm:inline font-mono text-[10px]">Tekan Enter untuk kirim, Shift+Enter untuk baris baru</span>
-                    <span class="sm:hidden"></span>
-                    <button type="submit" id="submitBtn" class="w-8 h-8 rounded-xl bg-clay-500 hover:bg-clay-600 disabled:opacity-40 text-white flex items-center justify-center transition shadow-sm ml-auto">
-                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M12 5l7 7-7 7" />
+                    
+                    <!-- Quick Model Selector Button inside Chat Input Box -->
+                    <button type="button" id="btnInputModelPicker" class="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#282622] hover:bg-[#33312b] border border-[#3a3833] hover:border-clay-500/60 text-[#ecebe6] transition shadow-sm font-mono text-[11px] group cursor-pointer" title="Ganti Model AI">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 shrink-0"></span>
+                        <span id="inputModelLabel" class="font-medium truncate max-w-[140px] sm:max-w-[240px] text-[#f5f4ef]">Model: Memuat...</span>
+                        <svg class="w-3.5 h-3.5 text-[#9c9990] group-hover:text-white transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                         </svg>
                     </button>
+
+                    <div class="flex items-center gap-2">
+                        <span class="hidden md:inline font-mono text-[10px] text-[#78756d]">Enter ↵ kirim, Shift+Enter baris baru</span>
+                        <button type="submit" id="submitBtn" class="w-8 h-8 rounded-xl bg-clay-500 hover:bg-clay-600 disabled:opacity-40 text-white flex items-center justify-center transition shadow-sm cursor-pointer">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M12 5l7 7-7 7" />
+                            </svg>
+                        </button>
+                    </div>
                 </div>
             </form>
             <div class="text-center text-[10px] text-[#7a7770] pt-2 font-mono">
-                Harnessly v0.1.0 — 100% Zero-Cost Multi-Tier (Ollama / Groq / Gemini / OpenRouter Free)
+                Harnessly v0.1.0 — 100% Zero-Cost Multi-Tier (Ollama / Groq / Gemini / OpenRouter Free / 9Router)
             </div>
         </div>
 
@@ -567,6 +611,12 @@
         // Manage Model UI Elements (FR-36)
         const btnManageModel = document.getElementById('btnManageModel');
         const activeModelBadge = document.getElementById('activeModelBadge');
+        const btnInputModelPicker = document.getElementById('btnInputModelPicker');
+        const inputModelLabel = document.getElementById('inputModelLabel');
+        const inputModelPopover = document.getElementById('inputModelPopover');
+        const btnCloseInputModelPopover = document.getElementById('btnCloseInputModelPopover');
+        const inputModelGroupsList = document.getElementById('inputModelGroupsList');
+        const btnOpenFullModalFromPopover = document.getElementById('btnOpenFullModalFromPopover');
         const modelModal = document.getElementById('modelModal');
         const btnCloseModelModal = document.getElementById('btnCloseModelModal');
         const btnCancelModelModal = document.getElementById('btnCancelModelModal');
@@ -750,10 +800,16 @@
         }
 
         function updateBadgeLabel() {
-            if (!activeModelBadge) return;
             const shortName = formatModelNameShort(activeAnalystModel) || activeAnalystProvider;
-            activeModelBadge.textContent = `${activeAnalystProvider.toUpperCase()}: ${shortName}`;
-            activeModelBadge.title = `Analyst: ${activeAnalystProvider} (${activeAnalystModel}) | Auditor: ${activeAuditorProvider} (${activeAuditorModel || 'auto'})`;
+            const fullLabel = `${activeAnalystProvider.toUpperCase()}: ${shortName}`;
+            if (activeModelBadge) {
+                activeModelBadge.textContent = fullLabel;
+                activeModelBadge.title = `Analyst: ${activeAnalystProvider} (${activeAnalystModel}) | Auditor: ${activeAuditorProvider} (${activeAuditorModel || 'auto'})`;
+            }
+            if (inputModelLabel) {
+                inputModelLabel.textContent = fullLabel;
+                inputModelLabel.title = `Model Aktif: ${activeAnalystProvider.toUpperCase()} (${activeAnalystModel})`;
+            }
         }
 
         async function fetchModelCatalog() {
@@ -770,6 +826,7 @@
                 }
                 updateBadgeLabel();
                 renderProviderStatusGrid();
+                renderInputModelPopover();
             } catch (err) {
                 console.error("Failed to load model catalog:", err);
             }
@@ -962,6 +1019,155 @@
                 modelModalFeedback.textContent = `Error: ${err.message}`;
             } finally {
                 btnSaveModelModal.disabled = false;
+            }
+        });
+
+        // ==============================================================================
+        // Quick Model Selector inside Chat Input Box (FR-36 Popover Controller)
+        // ==============================================================================
+
+        function renderInputModelPopover() {
+            if (!inputModelGroupsList || !modelCatalog || !modelCatalog.providers) return;
+            inputModelGroupsList.innerHTML = '';
+
+            modelCatalog.providers.forEach(p => {
+                const groupWrap = document.createElement('div');
+                groupWrap.className = 'space-y-1.5 pt-1';
+
+                const groupHeader = document.createElement('div');
+                groupHeader.className = 'flex items-center justify-between px-1 text-[10px] font-mono uppercase tracking-wider text-[#9c9990]';
+                groupHeader.innerHTML = `
+                    <span class="font-semibold text-[#dedcd5]">${escapeHtml(p.display_name)}</span>
+                    <span class="inline-flex items-center gap-1 ${p.is_ready ? 'text-emerald-400' : 'text-amber-500'}">
+                        <span class="w-1.5 h-1.5 rounded-full ${p.is_ready ? 'bg-emerald-400' : 'bg-amber-500'}"></span>
+                        <span>${p.is_ready ? 'Ready' : 'Offline'}</span>
+                    </span>
+                `;
+                groupWrap.appendChild(groupHeader);
+
+                const modelsList = document.createElement('div');
+                modelsList.className = 'space-y-1';
+
+                (p.available_models || []).forEach(m => {
+                    const isActive = p.provider === activeAnalystProvider && m.id === activeAnalystModel;
+                    const item = document.createElement('button');
+                    item.type = 'button';
+                    item.className = `w-full text-left p-2 rounded-xl border transition flex items-center justify-between group cursor-pointer ${
+                        isActive 
+                            ? 'bg-clay-500/15 border-clay-500/60 text-white shadow-sm ring-1 ring-clay-500/30' 
+                            : 'bg-[#21201d] border-[#2e2c28] hover:bg-[#282723] hover:border-[#3d3b36] text-[#dedcd5]'
+                    }`;
+                    
+                    const ctxStr = m.context_length ? `${Math.round(m.context_length / 1000)}k ctx` : '';
+
+                    item.innerHTML = `
+                        <div class="min-w-0 flex-1 pr-2">
+                            <div class="font-medium text-xs leading-tight truncate flex items-center gap-1.5">
+                                <span class="${isActive ? 'text-clay-300 font-semibold' : 'text-[#f5f4ef]'}">${escapeHtml(m.name)}</span>
+                                ${ctxStr ? `<span class="text-[10px] font-mono px-1 py-0.5 rounded bg-[#2a2925] text-[#8e8b82] shrink-0">${ctxStr}</span>` : ''}
+                            </div>
+                            ${m.description ? `<div class="text-[10px] text-[#817e75] truncate mt-0.5">${escapeHtml(m.description)}</div>` : ''}
+                        </div>
+                        ${isActive ? `
+                            <span class="text-emerald-400 text-xs font-mono font-bold flex items-center gap-1 shrink-0 bg-emerald-950/40 border border-emerald-500/30 px-1.5 py-0.5 rounded-lg">
+                                <span>✓</span>
+                                <span class="text-[10px]">Aktif</span>
+                            </span>
+                        ` : `
+                            <span class="text-[10px] text-clay-400 opacity-0 group-hover:opacity-100 transition shrink-0 font-mono">Pilih →</span>
+                        `}
+                    `;
+
+                    item.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        selectModelQuick(p.provider, m.id);
+                    });
+
+                    modelsList.appendChild(item);
+                });
+
+                groupWrap.appendChild(modelsList);
+                inputModelGroupsList.appendChild(groupWrap);
+            });
+        }
+
+        async function selectModelQuick(provider, modelId) {
+            try {
+                showToast(`Mengaktifkan ${provider.toUpperCase()}: ${formatModelNameShort(modelId)}...`);
+                const res = await fetch('/v1/models/active', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        analyst_provider: provider,
+                        analyst_model: modelId,
+                        auditor_provider: activeAuditorProvider,
+                        auditor_model: activeAuditorModel
+                    })
+                });
+
+                if (res.ok) {
+                    activeAnalystProvider = provider;
+                    activeAnalystModel = modelId;
+                    updateBadgeLabel();
+                    closeInputModelPopover();
+                    renderInputModelPopover();
+                    showToast(`Model aktif: ${provider.toUpperCase()} (${formatModelNameShort(modelId)})`);
+                    checkHealth();
+                } else {
+                    showToast('Gagal mengubah model.');
+                }
+            } catch (err) {
+                showToast(`Error: ${err.message}`);
+            }
+        }
+
+        function openInputModelPopover() {
+            if (!inputModelPopover) return;
+            renderInputModelPopover();
+            inputModelPopover.classList.remove('hidden');
+        }
+
+        function closeInputModelPopover() {
+            if (!inputModelPopover) return;
+            inputModelPopover.classList.add('hidden');
+        }
+
+        function toggleInputModelPopover() {
+            if (!inputModelPopover) return;
+            if (inputModelPopover.classList.contains('hidden')) {
+                openInputModelPopover();
+            } else {
+                closeInputModelPopover();
+            }
+        }
+
+        if (btnInputModelPicker) {
+            btnInputModelPicker.addEventListener('click', (e) => {
+                e.stopPropagation();
+                toggleInputModelPopover();
+            });
+        }
+
+        if (btnCloseInputModelPopover) {
+            btnCloseInputModelPopover.addEventListener('click', (e) => {
+                e.stopPropagation();
+                closeInputModelPopover();
+            });
+        }
+
+        if (btnOpenFullModalFromPopover) {
+            btnOpenFullModalFromPopover.addEventListener('click', (e) => {
+                e.stopPropagation();
+                closeInputModelPopover();
+                openModelModal();
+            });
+        }
+
+        document.addEventListener('click', (e) => {
+            if (inputModelPopover && !inputModelPopover.classList.contains('hidden')) {
+                if (!inputModelPopover.contains(e.target) && !btnInputModelPicker.contains(e.target)) {
+                    closeInputModelPopover();
+                }
             }
         });
 
