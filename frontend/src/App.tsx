@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ChartSpec, TableData } from './types';
 import { useAppStore } from './store/useAppStore';
 import {
@@ -29,6 +29,7 @@ import { ApprovalBanner } from './components/ApprovalBanner';
 import { MetricsModal } from './components/MetricsModal';
 import { ModelSettingsModal } from './components/ModelSettingsModal';
 import { DashboardCanvas } from './components/DashboardCanvas';
+import { ConfirmDeleteModal } from './components/ConfirmDeleteModal';
 import { Toast } from './components/Toast';
 
 export const App: React.FC = () => {
@@ -151,22 +152,30 @@ export const App: React.FC = () => {
     }
   }, [resetStream, setCurrentSessionId, setTurns, setActiveTab, setIsSidebarOpen]);
 
-  const handleDeleteSession = useCallback(
-    async (sid: string, title: string) => {
-      const ok = window.confirm(`Hapus riwayat percakapan:\n"${title || 'Sesi ini'}"?`);
-      if (!ok) return;
+  // Delete Confirmation State
+  const [sessionToDelete, setSessionToDelete] = useState<{ id: string; title: string } | null>(null);
 
-      deleteSessionMutation.mutate(sid, {
-        onSuccess: () => {
-          if (currentSessionId === sid) {
-            handleNewChat();
-          }
-          showToast('Sesi berhasil dihapus');
-        },
-      });
-    },
-    [deleteSessionMutation, currentSessionId, handleNewChat, showToast]
-  );
+  const handleDeleteSessionClick = useCallback((sid: string, title: string) => {
+    setSessionToDelete({ id: sid, title });
+  }, []);
+
+  const handleConfirmDelete = useCallback(() => {
+    if (!sessionToDelete) return;
+    const { id } = sessionToDelete;
+    deleteSessionMutation.mutate(id, {
+      onSuccess: () => {
+        if (currentSessionId === id) {
+          handleNewChat();
+        }
+        setSessionToDelete(null);
+        showToast('Riwayat percakapan berhasil dihapus');
+      },
+      onError: (err: any) => {
+        showToast(`Gagal menghapus sesi: ${err.message}`);
+        setSessionToDelete(null);
+      },
+    });
+  }, [sessionToDelete, deleteSessionMutation, currentSessionId, handleNewChat, showToast]);
 
   // Model Selection Handlers
   const handleSelectModel = useCallback(
@@ -510,7 +519,7 @@ export const App: React.FC = () => {
         onSelectSession={handleSelectSession}
         onNewChat={handleNewChat}
         onRefreshSessions={refetchSessions}
-        onDeleteSession={handleDeleteSession}
+        onDeleteSession={handleDeleteSessionClick}
         onCloseMobile={() => setIsSidebarOpen(false)}
       />
 
@@ -615,6 +624,15 @@ export const App: React.FC = () => {
         activeAuditorModel={activeAuditorModel}
         onSave={handleSaveModelModal}
         onClose={() => setIsModelModalOpen(false)}
+      />
+
+      {/* Confirmation Modal for Session Deletion */}
+      <ConfirmDeleteModal
+        isOpen={!!sessionToDelete}
+        sessionTitle={sessionToDelete?.title}
+        isDeleting={deleteSessionMutation.isPending}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setSessionToDelete(null)}
       />
 
       {/* Toast Notification */}
