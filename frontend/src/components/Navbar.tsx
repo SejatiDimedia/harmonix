@@ -1,20 +1,27 @@
 import React from 'react';
-import { PanelLeft, Activity } from 'lucide-react';
-import { HealthStatus } from '../types';
+import { PanelLeft, Activity, MessageSquare, LayoutDashboard } from 'lucide-react';
+import { HealthStatus, ActiveTab } from '../types';
 
 interface NavbarProps {
   health: HealthStatus | null;
+  activeTab: ActiveTab;
+  widgetCount?: number;
+  onSelectTab: (tab: ActiveTab) => void;
   onToggleSidebar: () => void;
   onOpenMetrics: () => void;
 }
 
 const NavbarComponent: React.FC<NavbarProps> = ({
   health,
+  activeTab,
+  widgetCount = 0,
+  onSelectTab,
   onToggleSidebar,
   onOpenMetrics,
 }) => {
   return (
-    <header className="h-14 border-b border-[#2e2c28] bg-[#161513]/90 backdrop-blur-md px-4 flex items-center justify-between z-20 shrink-0">
+    <header className="h-14 border-b border-[#2e2c28] bg-[#161513]/90 backdrop-blur-md px-4 flex items-center justify-between z-20 shrink-0 gap-2">
+      {/* Left: Brand & Sidebar Toggle */}
       <div className="flex items-center gap-3">
         <button
           type="button"
@@ -31,7 +38,7 @@ const NavbarComponent: React.FC<NavbarProps> = ({
             alt="Harnessly Logo"
             className="w-8 h-8 rounded-lg object-cover shadow-sm border border-clay-500/30 shrink-0"
           />
-          <div className="flex flex-col">
+          <div className="flex flex-col hidden sm:flex">
             <span className="text-sm font-semibold tracking-tight text-[#f5f4ef] leading-tight font-sans">
               Harnessly
             </span>
@@ -42,10 +49,50 @@ const NavbarComponent: React.FC<NavbarProps> = ({
         </div>
       </div>
 
+      {/* Center: Navigation Tabs (Chat vs Live BI Dashboard) */}
+      <div className="flex items-center rounded-xl bg-[#1c1b18] p-1 border border-[#2e2c28]">
+        <button
+          type="button"
+          onClick={() => onSelectTab('chat')}
+          className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition cursor-pointer ${
+            activeTab === 'chat'
+              ? 'bg-clay-600 text-white shadow-sm'
+              : 'text-[#9c9990] hover:text-[#f5f4ef]'
+          }`}
+        >
+          <MessageSquare className="w-3.5 h-3.5" />
+          <span>Percakapan</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => onSelectTab('dashboard')}
+          className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition cursor-pointer ${
+            activeTab === 'dashboard'
+              ? 'bg-clay-600 text-white shadow-sm'
+              : 'text-[#9c9990] hover:text-[#f5f4ef]'
+          }`}
+        >
+          <LayoutDashboard className="w-3.5 h-3.5" />
+          <span>Live Dashboard</span>
+          {widgetCount > 0 && (
+            <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-white/20 text-white font-mono font-bold">
+              {widgetCount}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* Right: Health Badge & Observability Trigger */}
       <div className="flex items-center gap-2">
         <div
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono bg-[#1b1a18] border border-[#2e2c28] text-[#9c9990] select-none"
-          title={health ? `Provider: ${health.llm_provider} | Database: ${health.database_connected ? 'Connected' : 'Disconnected'}` : 'Memuat status...'}
+          className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono bg-[#1b1a18] border border-[#2e2c28] text-[#9c9990] select-none"
+          title={
+            health
+              ? `Provider: ${health.llm_provider} | Database: ${
+                  health.database_connected ? 'Connected' : 'Disconnected'
+                }`
+              : 'Memuat status...'
+          }
         >
           <span
             className={`w-1.5 h-1.5 rounded-full ${
@@ -56,7 +103,9 @@ const NavbarComponent: React.FC<NavbarProps> = ({
                 : 'bg-rose-500'
             }`}
           />
-          <span>{health ? `${health.llm_provider.toUpperCase()} (${health.status})` : 'CHECKING...'}</span>
+          <span>
+            {health ? `${health.llm_provider.toUpperCase()} (${health.status})` : 'CHECKING...'}
+          </span>
         </div>
 
         <button

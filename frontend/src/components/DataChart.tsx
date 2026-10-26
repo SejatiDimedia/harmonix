@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { Chart as ChartJS, registerables } from 'chart.js';
+import { Pin } from 'lucide-react';
 import { ChartSpec, TableData } from '../types';
 
 ChartJS.register(...registerables);
@@ -7,15 +8,17 @@ ChartJS.register(...registerables);
 interface DataChartProps {
   charts: ChartSpec[];
   tables?: TableData[];
+  onPinChart?: (spec: ChartSpec) => void;
 }
 
 interface SingleChartProps {
   spec: ChartSpec;
   tables?: TableData[];
   index: number;
+  onPinChart?: (spec: ChartSpec) => void;
 }
 
-const SingleChartCanvas: React.FC<SingleChartProps> = ({ spec, tables, index }) => {
+const SingleChartCanvas: React.FC<SingleChartProps> = ({ spec, tables, index, onPinChart }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const chartInstanceRef = useRef<ChartJS | null>(null);
 
@@ -164,9 +167,22 @@ const SingleChartCanvas: React.FC<SingleChartProps> = ({ spec, tables, index }) 
             {spec.title || 'Visualisasi Data'}
           </span>
         </div>
-        <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-[#242320] text-clay-400 border border-[#383632]">
-          {spec.chart_type}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-[#242320] text-clay-400 border border-[#383632]">
+            {spec.chart_type}
+          </span>
+          {onPinChart && (
+            <button
+              type="button"
+              onClick={() => onPinChart(spec)}
+              className="flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded bg-[#242320] hover:bg-clay-600/30 text-[#dedcd5] hover:text-clay-300 border border-[#383632] hover:border-clay-500/50 transition cursor-pointer"
+              title="Sematkan grafik ini ke Live Dashboard"
+            >
+              <Pin className="w-3 h-3 text-clay-400" />
+              <span>Pin</span>
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="relative w-full h-64 md:h-72">
@@ -176,13 +192,19 @@ const SingleChartCanvas: React.FC<SingleChartProps> = ({ spec, tables, index }) 
   );
 };
 
-export const DataChart: React.FC<DataChartProps> = ({ charts, tables }) => {
+export const DataChart: React.FC<DataChartProps> = ({ charts, tables, onPinChart }) => {
   if (!charts || charts.length === 0) return null;
 
   return (
     <div className="space-y-4 mt-4">
       {charts.map((c, idx) => (
-        <SingleChartCanvas key={idx} spec={c} tables={tables} index={idx} />
+        <SingleChartCanvas
+          key={idx}
+          spec={c}
+          tables={tables}
+          index={idx}
+          onPinChart={onPinChart}
+        />
       ))}
     </div>
   );

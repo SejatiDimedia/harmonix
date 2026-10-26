@@ -42,17 +42,26 @@ logger = logging.getLogger("harnessly.api")
 
 from src.observability.metrics import get_system_metrics_summary
 from src.observability.tracer import init_traces_table
+from src.dashboard.manager import (
+    PinWidgetInput,
+    init_dashboard_table,
+    pin_widget,
+    get_dashboard_widgets,
+    delete_dashboard_widget,
+    refresh_dashboard_widgets,
+)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Lifecycle events: seed metric glossary, init state tables, and traces table on startup."""
+    """Lifecycle events: seed metric glossary, init state tables, traces table, and dashboard table on startup."""
     try:
         if await check_db_health():
             await seed_glossary_if_empty()
             await init_task_state_table()
             await init_traces_table()
-            logger.info("Auto-seeded metric glossary and initialized state/trace tables at startup.")
+            await init_dashboard_table()
+            logger.info("Auto-seeded metric glossary and initialized state/trace/dashboard tables at startup.")
     except Exception as e:
         logger.warning("Startup initialization error: %s", e)
     yield
@@ -394,6 +403,48 @@ async def remove_session(session_id: str):
     if not success:
         raise HTTPException(status_code=404, detail=f"Session '{session_id}' not found or could not be deleted.")
     return {"status": "deleted", "session_id": session_id}
+
+
+# ==============================================================================
+# Live BI Dashboard Canvas Endpoints (FR-37)
+# ==============================================================================
+
+@app.get("/v1/dashboard/{session_id}", tags=["Dashboard"])
+async def list_dashboard_widgets(session_id: str):
+    """Retrieve all pinned widgets for a given session's live dashboard."""
+    widgets = await get_dashboard_widgets(session_id=session_id)
+    return {
+        "session_id": session_id,
+        "widgets": [w.model_dump() for w in widgets],
+        "total": len(widgets),
+    }
+
+
+@app.post("/v1/dashboard/pin", tags=["Dashboard"])
+async def pin_to_dashboard(payload: PinWidgetInput):
+    """Pin a chart, table, or KPI metric card to the session's live dashboard."""
+    widget = await pin_widget(payload)
+    return widget.model_dump()
+
+
+@app.delete("/v1/dashboard/{widget_id}", tags=["Dashboard"])
+async def delete_widget(widget_id: str):
+    """Remove/unpin a widget from the dashboard."""
+    success = await delete_dashboard_widget(widget_id=widget_id)
+    if not success:
+        raise HTTPException(status_code=404, detail=f"Widget '{widget_id}' not found.")
+    return {"status": "deleted", "widget_id": widget_id}
+
+
+@app.post("/v1/dashboard/refresh/{session_id}", tags=["Dashboard"])
+async def refresh_dashboard(session_id: str):
+    """Re-execute all pinned widgets' SQL queries directly against PostgreSQL (0 LLM Cost)."""
+    updated_widgets = await refresh_dashboard_widgets(session_id=session_id)
+    return {
+        "session_id": session_id,
+        "widgets": [w.model_dump() for w in updated_widgets],
+        "total": len(updated_widgets),
+    }
 
 
 @app.get("/", response_class=HTMLResponse, tags=["UI"])

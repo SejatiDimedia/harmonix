@@ -5,6 +5,9 @@ import {
   ChatSessionSummary,
   ChatSessionDetail,
   EngineType,
+  DashboardListResponse,
+  DashboardWidget,
+  PinWidgetPayload,
 } from '../types';
 
 export async function getHealth(): Promise<HealthStatus> {
@@ -146,3 +149,42 @@ export async function resumeTask(
   }
   await readSSEStream(res, onEvent);
 }
+
+export async function getDashboardWidgets(sessionId: string): Promise<DashboardListResponse> {
+  const res = await fetch(`/v1/dashboard/${sessionId}`);
+  if (!res.ok) {
+    if (res.status === 404) return { session_id: sessionId, widgets: [], total: 0 };
+    throw new Error('Failed to fetch dashboard widgets');
+  }
+  return res.json();
+}
+
+export async function pinDashboardWidget(payload: PinWidgetPayload): Promise<DashboardWidget> {
+  const res = await fetch('/v1/dashboard/pin', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: 'Failed to pin widget' }));
+    throw new Error(err.detail || 'Failed to pin widget');
+  }
+  return res.json();
+}
+
+export async function deleteDashboardWidget(widgetId: string): Promise<{ success: boolean }> {
+  const res = await fetch(`/v1/dashboard/${widgetId}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw new Error('Failed to delete widget');
+  return res.json();
+}
+
+export async function refreshDashboardWidgets(sessionId: string): Promise<DashboardListResponse> {
+  const res = await fetch(`/v1/dashboard/refresh/${sessionId}`, {
+    method: 'POST',
+  });
+  if (!res.ok) throw new Error('Failed to refresh dashboard widgets');
+  return res.json();
+}
+

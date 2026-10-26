@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import { Check, Loader2 } from 'lucide-react';
-import { ChatTurn } from '../types';
+import { ChatTurn, ChartSpec, TableData } from '../types';
 import { SQLBox } from './SQLBox';
 import { DataTable } from './DataTable';
 import { DataChart } from './DataChart';
@@ -15,6 +15,8 @@ interface ChatMessageProps {
   isStreaming?: boolean;
   streamingStatus?: string;
   onSelectSuggestion: (text: string) => void;
+  onPinChart?: (spec: ChartSpec, sqlQuery?: string) => void;
+  onPinTable?: (table: TableData, title: string, sqlQuery?: string) => void;
 }
 
 const ChatMessageComponent: React.FC<ChatMessageProps> = ({
@@ -22,6 +24,8 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
   isStreaming,
   streamingStatus,
   onSelectSuggestion,
+  onPinChart,
+  onPinTable,
 }) => {
   const sanitizedMarkdown = useMemo(() => {
     return turn.answer_text
@@ -79,13 +83,41 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
 
           {/* Tables */}
           {turn.tables && turn.tables.length > 0 && (
-            <DataTable tables={turn.tables} />
+            <DataTable
+              tables={turn.tables}
+              onPinTable={
+                onPinTable
+                  ? (tbl, title) =>
+                      onPinTable(
+                        tbl,
+                        title,
+                        turn.sql_queries && turn.sql_queries.length > 0
+                          ? turn.sql_queries[0]
+                          : undefined
+                      )
+                  : undefined
+              }
+            />
           )}
 
           {/* Charts */}
           {turn.charts && turn.charts.length > 0 && (
             <ErrorBoundary fallbackTitle="Gagal memuat visualisasi grafik">
-              <DataChart charts={turn.charts} tables={turn.tables} />
+              <DataChart
+                charts={turn.charts}
+                tables={turn.tables}
+                onPinChart={
+                  onPinChart
+                    ? (spec) =>
+                        onPinChart(
+                          spec,
+                          turn.sql_queries && turn.sql_queries.length > 0
+                            ? turn.sql_queries[0]
+                            : undefined
+                        )
+                    : undefined
+                }
+              />
             </ErrorBoundary>
           )}
 

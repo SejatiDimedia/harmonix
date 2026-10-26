@@ -126,3 +126,37 @@ export interface HealthStatus {
   active_model: string;
   environment?: string;
 }
+
+export type ActiveTab = 'chat' | 'dashboard';
+
+export type WidgetType = 'chart' | 'table' | 'kpi';
+
+export interface DashboardWidget {
+  widget_id: string;
+  session_id: string;
+  widget_type: WidgetType;
+  title: string;
+  sql_query?: string | null;
+  chart_spec?: ChartSpec | null;
+  table_data?: TableData | null;
+  metric_summary?: string | null;
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface PinWidgetPayload {
+  session_id: string;
+  widget_type: WidgetType;
+  title: string;
+  sql_query?: string | null;
+  chart_spec?: ChartSpec | null;
+  table_data?: TableData | null;
+  metric_summary?: string | null;
+}
+
+export interface DashboardListResponse {
+  session_id: string;
+  widgets: DashboardWidget[];
+  total: number;
+}
+
