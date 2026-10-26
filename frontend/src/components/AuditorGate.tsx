@@ -16,16 +16,16 @@ export const AuditorGate: React.FC<AuditorGateProps> = ({ verdict }) => {
   const critique = verdict.critique || '';
   const issues = verdict.issues || [];
 
-  let badgeBg = 'bg-emerald-950/30 border-emerald-500/30 text-emerald-300';
+  let badgeBg = 'bg-[#181d19]/70 border-emerald-900/50 text-emerald-400/90';
   let Icon = ShieldCheck;
   let iconColor = 'text-emerald-400';
 
   if (status === 'flagged') {
-    badgeBg = 'bg-rose-950/30 border-rose-500/30 text-rose-300';
+    badgeBg = 'bg-rose-950/40 border-rose-800/60 text-rose-300';
     Icon = AlertOctagon;
     iconColor = 'text-rose-400';
   } else if (status === 'warning') {
-    badgeBg = 'bg-amber-950/30 border-amber-500/30 text-amber-300';
+    badgeBg = 'bg-amber-950/40 border-amber-800/60 text-amber-300';
     Icon = AlertTriangle;
     iconColor = 'text-amber-400';
   }

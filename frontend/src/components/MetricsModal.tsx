@@ -59,7 +59,7 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({
               <span className="text-[10px] font-mono uppercase text-[#8e8b82]">
                 Total Permintaan
               </span>
-              <div className="text-2xl font-bold font-mono text-[#f5f4ef] mt-1">
+              <div className="text-2xl font-bold font-mono tabular-nums text-[#f5f4ef] mt-1">
                 {metrics ? metrics.total_requests : '—'}
               </div>
             </div>
@@ -68,7 +68,7 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({
               <span className="text-[10px] font-mono uppercase text-[#8e8b82]">
                 Success Rate
               </span>
-              <div className="text-2xl font-bold font-mono text-emerald-400 mt-1">
+              <div className="text-2xl font-bold font-mono tabular-nums text-emerald-400 mt-1">
                 {metrics ? `${metrics.success_rate_percentage}%` : '—'}
               </div>
             </div>
@@ -77,7 +77,7 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({
               <span className="text-[10px] font-mono uppercase text-[#8e8b82]">
                 Latensi (p50 / p95)
               </span>
-              <div className="text-xl font-bold font-mono text-[#f5f4ef] mt-1">
+              <div className="text-xl font-bold font-mono tabular-nums text-[#f5f4ef] mt-1">
                 {metrics
                   ? `${metrics.p50_latency_ms}ms / ${metrics.p95_latency_ms}ms`
                   : '—'}
@@ -88,7 +88,7 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({
               <span className="text-[10px] font-mono uppercase text-[#8e8b82]">
                 Total Token Consumed
               </span>
-              <div className="text-xl font-bold font-mono text-[#f5f4ef] mt-1">
+              <div className="text-xl font-bold font-mono tabular-nums text-[#f5f4ef] mt-1">
                 {metrics
                   ? `${metrics.total_tokens_consumed.toLocaleString()} tokens`
                   : '—'}

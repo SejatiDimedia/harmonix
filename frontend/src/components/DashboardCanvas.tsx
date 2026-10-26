@@ -103,30 +103,30 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
             </div>
           </div>
 
-          {/* Accent Ribbon */}
-          <div className="h-1 bg-gradient-to-r from-clay-500 via-amber-500 to-clay-600 rounded-full" />
+          {/* Accent Divider */}
+          <div className="h-px bg-gray-200" />
 
           {/* Executive KPI & Governance Cards */}
           <div className="grid grid-cols-4 gap-3 text-xs">
-            <div className="p-3.5 rounded-xl bg-gray-50 border border-gray-200 border-t-2 border-t-clay-600">
+            <div className="p-3.5 rounded-lg bg-gray-50 border border-gray-200">
               <span className="text-[9px] text-gray-500 uppercase font-mono block">Topik Analisis</span>
               <span className="font-bold text-gray-900 text-[11px] truncate block mt-0.5">
                 {sessionTitle || 'Analisis Data Eksekutif'}
               </span>
             </div>
-            <div className="p-3.5 rounded-xl bg-gray-50 border border-gray-200 border-t-2 border-t-clay-600">
+            <div className="p-3.5 rounded-lg bg-gray-50 border border-gray-200">
               <span className="text-[9px] text-gray-500 uppercase font-mono block">AI Reasoning Engine</span>
               <span className="font-semibold text-gray-800 text-[11px] truncate block mt-0.5">
                 {activeModel || 'Llama 3.3 70B (Groq)'}
               </span>
             </div>
-            <div className="p-3.5 rounded-xl bg-gray-50 border border-gray-200 border-t-2 border-t-clay-600">
+            <div className="p-3.5 rounded-lg bg-gray-50 border border-gray-200">
               <span className="text-[9px] text-gray-500 uppercase font-mono block">Warehouse Database</span>
               <span className="font-semibold text-gray-800 text-[11px] truncate block mt-0.5">
                 PostgreSQL 16 Enterprise
               </span>
             </div>
-            <div className="p-3.5 rounded-xl bg-gray-50 border border-gray-200 border-t-2 border-t-emerald-600">
+            <div className="p-3.5 rounded-lg bg-gray-50 border border-gray-200">
               <span className="text-[9px] text-gray-500 uppercase font-mono block">Auditor Verification</span>
               <span className="font-semibold text-emerald-700 text-[11px] flex items-center gap-1 mt-0.5">
                 <CheckCircle2 className="w-3.5 h-3.5 shrink-0 text-emerald-600" />

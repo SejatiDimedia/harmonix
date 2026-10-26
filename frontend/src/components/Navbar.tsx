@@ -97,10 +97,10 @@ const NavbarComponent: React.FC<NavbarProps> = ({
           <span
             className={`w-1.5 h-1.5 rounded-full ${
               health?.status === 'healthy'
-                ? 'bg-emerald-500 animate-pulse'
+                ? 'bg-emerald-400'
                 : health?.status === 'degraded'
-                ? 'bg-amber-500'
-                : 'bg-rose-500'
+                ? 'bg-amber-400'
+                : 'bg-rose-400'
             }`}
           />
           <span>

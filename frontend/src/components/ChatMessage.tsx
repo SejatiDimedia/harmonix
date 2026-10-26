@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
-import { Check, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { ChatTurn, ChartSpec, TableData } from '../types';
 import { SQLBox } from './SQLBox';
 import { DataTable } from './DataTable';
@@ -53,20 +53,15 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
         />
 
         <div className="flex-1 space-y-2 leading-relaxed min-w-0">
-          {/* Status badge */}
-          <div className="text-xs font-mono flex items-center gap-1.5 select-none">
-            {isStreaming ? (
+          {/* Streaming status badge */}
+          {isStreaming && (
+            <div className="text-xs font-mono flex items-center gap-1.5 select-none pb-1">
               <span className="text-clay-400 font-mono text-[11px] flex items-center gap-1.5 animate-pulse">
                 <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
                 <span>{streamingStatus || 'Merancang rencana analitik...'}</span>
               </span>
-            ) : (
-              <span className="text-emerald-400 font-mono text-[11px] flex items-center gap-1">
-                <Check className="w-3.5 h-3.5" />
-                <span>Selesai</span>
-              </span>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* Answer Markdown content */}
           {sanitizedMarkdown && (

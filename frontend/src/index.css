@@ -81,10 +81,10 @@
   line-height: 1.6;
 }
 .markdown-body blockquote {
-  border-left: 3px solid #d97757;
-  padding-left: 0.875rem;
+  border-left: 1px solid #48453f;
+  padding-left: 1rem;
   color: #a3a097;
-  margin: 0.75rem 0;
+  margin: 0.875rem 0;
   font-style: italic;
 }
 

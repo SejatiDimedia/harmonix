@@ -24,9 +24,9 @@ export const ApprovalBanner: React.FC<ApprovalBannerProps> = ({
             <ShieldAlert className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-xs font-semibold text-amber-300 font-mono flex items-center gap-1.5">
-              <span>HUMAN-IN-THE-LOOP APPROVAL REQUIRED</span>
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
+            <div className="text-xs font-semibold text-amber-300 font-mono flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
+              <span>PERSETUJUAN MANUAL DIPERLUKAN (GUARDRAIL VERIFICATION)</span>
             </div>
             <p className="text-xs text-[#d6d4cb] mt-0.5">
               Alasan: <span className="font-medium text-amber-200">{(payload.risk_reasons || []).join(', ')}</span>

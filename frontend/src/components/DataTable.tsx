@@ -72,7 +72,7 @@ export const DataTable: React.FC<DataTableProps> = ({ tables, onPinTable }) => {
                     {row.map((val, cellIdx) => (
                       <td
                         key={cellIdx}
-                        className="p-2.5 border-b border-[#262421] text-[#dedcd5] font-mono text-[11px] whitespace-normal break-words max-w-xs leading-relaxed"
+                        className="p-2.5 border-b border-[#262421] text-[#dedcd5] font-mono text-[11px] tabular-nums whitespace-normal break-words max-w-xs leading-relaxed"
                       >
                         {val !== null && val !== undefined ? (
                           String(val)

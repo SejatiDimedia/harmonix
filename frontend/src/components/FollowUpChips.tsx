@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, CornerDownRight } from 'lucide-react';
+import { Compass, CornerDownRight } from 'lucide-react';
 
 interface FollowUpChipsProps {
   suggestions?: string[];
@@ -11,9 +11,9 @@ export const FollowUpChips: React.FC<FollowUpChipsProps> = ({ suggestions, onSel
 
   return (
     <div className="mt-3.5 pt-3 border-t border-[#2e2c28]/80">
-      <div className="text-[11px] font-medium text-clay-400 flex items-center gap-1.5 mb-2 font-mono">
-        <Sparkles className="w-3.5 h-3.5 text-clay-400" />
-        <span>Rekomendasi Analisis Lanjutan</span>
+      <div className="text-[11px] font-medium text-[#a3a097] flex items-center gap-1.5 mb-2 font-mono">
+        <Compass className="w-3.5 h-3.5 text-clay-400" />
+        <span>Eksplorasi Analisis Lanjutan</span>
       </div>
 
       <div className="flex flex-wrap gap-2">
