@@ -6,6 +6,7 @@ same tools, guardrails, PII masking, metrics glossary, and structured output.
 
 import json
 import logging
+import re
 import time
 import uuid
 from typing import Any, AsyncIterator, TypedDict
@@ -14,6 +15,8 @@ from langgraph.graph import END, START, StateGraph
 
 from src.agent.auditor import DataAuditorAgent
 from src.agent.execution_logger import TerminalExecutionLogger
+from src.agent.guardrail_evaluator import GuardrailEvaluator
+from src.agent.observation_processor import ObservationProcessor
 from src.agent.models import (
     AgentFinalResponse,
     AgentTaskStatus,
@@ -208,19 +211,15 @@ class LangGraphAgent:
         # Check if LLM requested tool calls or generated SQL in text without formal tool call
         tool_calls = response.tool_calls or []
         if not tool_calls and not state.get("sql_queries") and response.content:
-            m_sql = re.search(r'```(?:sql)?\s*(SELECT\b[\s\S]+?)(?:```|;)', response.content, re.IGNORECASE)
-            if not m_sql:
-                m_sql = re.search(r'\b(SELECT\s+[a-zA-Z0-9_.*,\s]+\s+FROM\s+[\s\S]+?)(?:```|;|\n\n|$)', response.content, re.IGNORECASE)
-            if m_sql:
-                ext_query = m_sql.group(1).strip()
-                if "FROM" in ext_query.upper():
-                    tool_calls = [
-                        ToolCall(
-                            id=f"call_auto_sql_{uuid.uuid4().hex[:6]}",
-                            name="run_sql",
-                            arguments={"query": ext_query},
-                        )
-                    ]
+            ext_query = GuardrailEvaluator.detect_unexecuted_sql(response.content)
+            if ext_query:
+                tool_calls = [
+                    ToolCall(
+                        id=f"call_auto_sql_{uuid.uuid4().hex[:6]}",
+                        name="run_sql",
+                        arguments={"query": ext_query},
+                    )
+                ]
 
         if tool_calls:
             state["tool_calls"] = [
@@ -537,64 +536,12 @@ class LangGraphAgent:
             for c in final_state.get("charts", [])
         ]
 
-        # Deduplicate charts with identical title, keeping the latest one
-        deduped_charts: list[ChartSpec] = []
-        seen_titles: set[str] = set()
-        for ch in reversed(charts):
-            normalized_title = ch.title.strip().lower()
-            if normalized_title not in seen_titles:
-                seen_titles.add(normalized_title)
-                deduped_charts.append(ch)
-        charts = list(reversed(deduped_charts))
-
-        # Ensure charts have data if tables exists and respect user chart type
-        uq_lower = user_query.lower()
-        for ch in charts:
-            if not ch.data and tables:
-                last_tbl = tables[-1]
-                if len(last_tbl.columns) >= 2 and last_tbl.rows:
-                    t_x = ch.x_axis if ch.x_axis in last_tbl.columns else last_tbl.columns[0]
-                    t_y = ch.y_axis if ch.y_axis in last_tbl.columns else last_tbl.columns[1]
-                    ch.x_axis = t_x
-                    ch.y_axis = t_y
-                    ch.data = [
-                        {t_x: r[0] if r[0] is not None else "(NULL)", t_y: r[1]}
-                        for r in last_tbl.rows
-                    ]
-            if any(w in uq_lower for w in ("donat", "donut", "doughnut")):
-                ch.chart_type = "doughnut"
-            elif any(w in uq_lower for w in ("pie", "lingkaran", "proporsi", "porsi")) and not any(w in uq_lower for w in ("batang", "bar")):
-                ch.chart_type = "pie"
-            elif any(w in uq_lower for w in ("garis", "line", "tren", "trend")) and not any(w in uq_lower for w in ("batang", "bar")):
-                ch.chart_type = "line"
-
-        chart_keywords = ("grafik", "chart", "visualisasi", "diagram", "plot", "tren", "trend")
-        if not charts and tables and any(kw in user_query.lower() for kw in chart_keywords):
-            last_tbl = tables[-1]
-            if len(last_tbl.columns) >= 2 and last_tbl.rows:
-                col_x = last_tbl.columns[0]
-                col_y = last_tbl.columns[1]
-                if any(w in user_query.lower() for w in ("donat", "donut", "doughnut")):
-                    c_type = "doughnut"
-                elif any(w in user_query.lower() for w in ("pie", "lingkaran", "proporsi", "komposisi", "porsi", "share")):
-                    c_type = "pie"
-                elif any(w in user_query.lower() for w in ("tren", "trend", "bulanan", "waktu", "harian")):
-                    c_type = "line"
-                else:
-                    c_type = "bar"
-                title_text = f"Visualisasi {col_x.replace('_', ' ').title()} vs {col_y.replace('_', ' ').title()}"
-                charts.append(
-                    ChartSpec(
-                        chart_type=c_type,
-                        title=title_text,
-                        x_axis=col_x,
-                        y_axis=col_y,
-                        data=[
-                            {col_x: r[0] if r[0] is not None else "(NULL)", col_y: r[1]}
-                            for r in last_tbl.rows
-                        ],
-                    )
-                )
+        # Deduplicate, sanitize, and auto-synthesize charts via ObservationProcessor
+        charts = ObservationProcessor.finalize_charts(
+            captured_charts=charts,
+            captured_tables=tables,
+            user_query=user_query,
+        )
 
         # FR-34: Smart follow-up suggestions (zero latency / zero extra cost)
         clean_answer, follow_up_suggestions = get_smart_suggestions(
@@ -754,64 +701,12 @@ class LangGraphAgent:
             for c in final_state.get("charts", [])
         ]
 
-        # Deduplicate charts with identical title, keeping the latest one
-        deduped_charts: list[ChartSpec] = []
-        seen_titles: set[str] = set()
-        for ch in reversed(charts):
-            normalized_title = ch.title.strip().lower()
-            if normalized_title not in seen_titles:
-                seen_titles.add(normalized_title)
-                deduped_charts.append(ch)
-        charts = list(reversed(deduped_charts))
-
-        # Ensure charts have data if tables exists and respect user chart type
-        uq_lower = user_query.lower()
-        for ch in charts:
-            if not ch.data and tables:
-                last_tbl = tables[-1]
-                if len(last_tbl.columns) >= 2 and last_tbl.rows:
-                    t_x = ch.x_axis if ch.x_axis in last_tbl.columns else last_tbl.columns[0]
-                    t_y = ch.y_axis if ch.y_axis in last_tbl.columns else last_tbl.columns[1]
-                    ch.x_axis = t_x
-                    ch.y_axis = t_y
-                    ch.data = [
-                        {t_x: r[0] if r[0] is not None else "(NULL)", t_y: r[1]}
-                        for r in last_tbl.rows
-                    ]
-            if any(w in uq_lower for w in ("donat", "donut", "doughnut")):
-                ch.chart_type = "doughnut"
-            elif any(w in uq_lower for w in ("pie", "lingkaran", "proporsi", "porsi")) and not any(w in uq_lower for w in ("batang", "bar")):
-                ch.chart_type = "pie"
-            elif any(w in uq_lower for w in ("garis", "line", "tren", "trend")) and not any(w in uq_lower for w in ("batang", "bar")):
-                ch.chart_type = "line"
-
-        chart_keywords = ("grafik", "chart", "visualisasi", "diagram", "plot", "tren", "trend")
-        if not charts and tables and any(kw in user_query.lower() for kw in chart_keywords):
-            last_tbl = tables[-1]
-            if len(last_tbl.columns) >= 2 and last_tbl.rows:
-                col_x = last_tbl.columns[0]
-                col_y = last_tbl.columns[1]
-                if any(w in user_query.lower() for w in ("donat", "donut", "doughnut")):
-                    c_type = "doughnut"
-                elif any(w in user_query.lower() for w in ("pie", "lingkaran", "proporsi", "komposisi", "porsi", "share")):
-                    c_type = "pie"
-                elif any(w in user_query.lower() for w in ("tren", "trend", "bulanan", "waktu", "harian")):
-                    c_type = "line"
-                else:
-                    c_type = "bar"
-                title_text = f"Visualisasi {col_x.replace('_', ' ').title()} vs {col_y.replace('_', ' ').title()}"
-                charts.append(
-                    ChartSpec(
-                        chart_type=c_type,
-                        title=title_text,
-                        x_axis=col_x,
-                        y_axis=col_y,
-                        data=[
-                            {col_x: r[0] if r[0] is not None else "(NULL)", col_y: r[1]}
-                            for r in last_tbl.rows
-                        ],
-                    )
-                )
+        # Deduplicate, sanitize, and auto-synthesize charts via ObservationProcessor
+        charts = ObservationProcessor.finalize_charts(
+            captured_charts=charts,
+            captured_tables=tables,
+            user_query=user_query,
+        )
 
         # FR-34: Smart follow-up suggestions (zero latency / zero extra cost)
         clean_answer, follow_up_suggestions = get_smart_suggestions(

@@ -23,6 +23,8 @@ from src.agent.models import (
 )
 from src.agent.auditor import DataAuditorAgent
 from src.agent.execution_logger import TerminalExecutionLogger
+from src.agent.guardrail_evaluator import GuardrailEvaluator
+from src.agent.observation_processor import ObservationProcessor
 from src.agent.prompts import BASE_ANALYST_SYSTEM_PROMPT
 from src.agent.state import get_session_history, save_task_checkpoint
 from src.agent.suggestions import get_smart_suggestions
@@ -338,21 +340,17 @@ class ManualAgentLoop:
                 }
 
             # Auto-detect unexecuted SQL query generated in text without formal function call
-            if not llm_response.tool_calls and not executed_sqls and llm_response.content:
-                m_sql = re.search(r'```(?:sql)?\s*(SELECT\b[\s\S]+?)(?:```|;)', llm_response.content, re.IGNORECASE)
-                if not m_sql:
-                    m_sql = re.search(r'\b(SELECT\s+[a-zA-Z0-9_.*,\s]+\s+FROM\s+[\s\S]+?)(?:```|;|\n\n|$)', llm_response.content, re.IGNORECASE)
-                if m_sql:
-                    ext_query = m_sql.group(1).strip()
-                    if "FROM" in ext_query.upper():
-                        logger.info("Auto-executing unexecuted SQL written in text by model: %s", ext_query[:80])
-                        llm_response.tool_calls = [
-                            ToolCall(
-                                id=f"call_auto_sql_{uuid.uuid4().hex[:6]}",
-                                name="run_sql",
-                                arguments={"query": ext_query},
-                            )
-                        ]
+            if not llm_response.tool_calls and not executed_sqls:
+                ext_query = GuardrailEvaluator.detect_unexecuted_sql(llm_response.content)
+                if ext_query:
+                    logger.info("Auto-executing unexecuted SQL written in text by model: %s", ext_query[:80])
+                    llm_response.tool_calls = [
+                        ToolCall(
+                            id=f"call_auto_sql_{uuid.uuid4().hex[:6]}",
+                            name="run_sql",
+                            arguments={"query": ext_query},
+                        )
+                    ]
 
             # 4. Handle Tool Calls
             if llm_response.tool_calls:
@@ -507,57 +505,22 @@ class ManualAgentLoop:
                             )
 
                     # Collect tables and SQL queries for final citations
-                    if tool_name == "run_sql" and isinstance(observation, dict):
-                        if observation.get("status") == "success":
-                            sanitized = observation.get("sanitized_query", "")
-                            if sanitized:
-                                executed_sqls.append(sanitized)
-                                citations.append(Citation(sql_query=sanitized, source_tables=[]))
-
-                            cols = observation.get("columns", [])
-                            rows = observation.get("rows", [])
-                            if cols and rows:
-                                captured_tables.append(
-                                    TableData(columns=cols, rows=rows, row_count=len(rows))
-                                )
+                    if tool_name == "run_sql":
+                        ObservationProcessor.process_sql_observation(
+                            observation=observation,
+                            executed_sqls=executed_sqls,
+                            citations=citations,
+                            captured_tables=captured_tables,
+                        )
 
                     # Collect chart specifications (FR-07)
-                    if tool_name == "make_chart" and isinstance(observation, dict):
-                        if observation.get("status") == "success":
-                            c_spec = observation.get("chart", {})
-                            c_data = c_spec.get("data", [])
-                            # Auto-fill from captured_tables if c_data is empty
-                            if not c_data and captured_tables:
-                                last_tbl = captured_tables[-1]
-                                if len(last_tbl.columns) >= 2 and last_tbl.rows:
-                                    t_x = c_spec.get("x_axis") if c_spec.get("x_axis") in last_tbl.columns else last_tbl.columns[0]
-                                    t_y = c_spec.get("y_axis") if c_spec.get("y_axis") in last_tbl.columns else last_tbl.columns[1]
-                                    c_data = [
-                                        {t_x: r[0] if r[0] is not None else "(NULL)", t_y: r[1]}
-                                        for r in last_tbl.rows
-                                    ]
-                                    c_spec["x_axis"] = t_x
-                                    c_spec["y_axis"] = t_y
-                            raw_c_type = c_spec.get("chart_type", "bar")
-                            uq_lower = user_query.lower()
-                            if any(w in uq_lower for w in ("donat", "donut", "doughnut")):
-                                final_c_type = "doughnut"
-                            elif any(w in uq_lower for w in ("pie", "lingkaran", "proporsi", "porsi")) and not any(w in uq_lower for w in ("batang", "bar")):
-                                final_c_type = "pie"
-                            elif any(w in uq_lower for w in ("garis", "line", "tren", "trend")) and not any(w in uq_lower for w in ("batang", "bar")):
-                                final_c_type = "line"
-                            else:
-                                final_c_type = raw_c_type
-
-                            captured_charts.append(
-                                ChartSpec(
-                                    chart_type=final_c_type,
-                                    title=c_spec.get("title", ""),
-                                    x_axis=c_spec.get("x_axis", "x"),
-                                    y_axis=c_spec.get("y_axis", "y"),
-                                    data=c_data,
-                                )
-                            )
+                    if tool_name == "make_chart":
+                        ObservationProcessor.process_chart_observation(
+                            observation=observation,
+                            captured_charts=captured_charts,
+                            captured_tables=captured_tables,
+                            user_query=user_query,
+                        )
 
                     # Append observation to message history
                     messages.append({
@@ -571,45 +534,22 @@ class ManualAgentLoop:
                 continue
 
             # 5. Check if agent is attempting to finalize prematurely without running SQL on an analytical database question
-            if not executed_sqls and step < 3:
-                resp_text = llm_response.content or ""
-                has_unexecuted_sql = bool(re.search(r'```(?:sql)?\s*SELECT\b|\bSELECT\s+[a-zA-Z0-9_.*,\s]+\s+FROM\s+', resp_text, re.IGNORECASE))
-                q_lower = user_query.lower()
-
-                # Meta, identity, conversational, or greeting questions should NOT be forced to run SQL
-                is_meta_or_greeting = any(phrase in q_lower for phrase in [
-                    "siapa kamu", "kamu siapa", "siapa anda", "identitas", "dibuat oleh",
-                    "menciptakanmu", "menciptakan kamu", "perusahaan yang", "context window",
-                    "konteks window", "model apa", "kamu model", "arsitektur", "halo",
-                    "hai", "hello", "hi", "hey", "selamat pagi", "selamat siang",
-                    "selamat sore", "selamat malam", "terima kasih", "makasih", "thanks",
-                    "who are you", "what model", "context length"
-                ])
-
-                # Analytical query specifically targeting the domain/database
-                domain_keywords = [
-                    "kategori", "pesanan", "produk", "customer", "pelanggan",
-                    "penjualan", "transaksi", "status", "terbanyak", "terlaris",
-                    "termahal", "paling", "omset", "revenue", "sales", "order",
-                    "barang", "toko", "diskon", "kupon", "pembayaran", "payment",
-                    "tabel", "kolom", "database", "skema"
-                ]
-                has_domain_keywords = any(kw in q_lower for kw in domain_keywords)
-                has_agg_request = any(w in q_lower for w in ["total", "rata-rata", "rata2", "rata", "jumlah", "count", "average", "sum", "top"])
-
-                is_db_analytical = (has_domain_keywords or (has_agg_request and not is_meta_or_greeting)) and not is_meta_or_greeting
-
-                if (has_unexecuted_sql or is_db_analytical) and not is_meta_or_greeting:
-                    logger.info("Agent concluded without running SQL on a database query. Nudging tool execution.")
-                    messages.append({
-                        "role": "assistant",
-                        "content": llm_response.content or "",
-                    })
-                    messages.append({
-                        "role": "user",
-                        "content": "PENTING: Anda belum mengeksekusi query SQL dengan tool `run_sql`! Jangan hanya menuliskan query dalam teks. Panggil tool `run_sql` sekarang untuk menjalankan query tersebut di database PostgreSQL dan dapatkan baris data nyatanya!",
-                    })
-                    continue
+            if GuardrailEvaluator.should_nudge_for_sql(
+                resp_text=llm_response.content or "",
+                user_query=user_query,
+                executed_sqls=executed_sqls,
+                step=step,
+            ):
+                logger.info("Agent concluded without running SQL on a database query. Nudging tool execution.")
+                messages.append({
+                    "role": "assistant",
+                    "content": llm_response.content or "",
+                })
+                messages.append({
+                    "role": "user",
+                    "content": "PENTING: Anda belum mengeksekusi query SQL dengan tool `run_sql`! Jangan hanya menuliskan query dalam teks. Panggil tool `run_sql` sekarang untuk menjalankan query tersebut di database PostgreSQL dan dapatkan baris data nyatanya!",
+                })
+                continue
 
             # No tool calls -> Agent has concluded reasoning!
             break
@@ -640,65 +580,12 @@ class ManualAgentLoop:
             step_count=step,
         )
 
-        # Deduplicate charts with identical title, keeping the latest one
-        deduped_charts: list[ChartSpec] = []
-        seen_titles: set[str] = set()
-        for ch in reversed(captured_charts):
-            normalized_title = ch.title.strip().lower()
-            if normalized_title not in seen_titles:
-                seen_titles.add(normalized_title)
-                deduped_charts.append(ch)
-        captured_charts = list(reversed(deduped_charts))
-
-        # Ensure charts have data if captured_tables exists and respect user chart type
-        uq_lower = user_query.lower()
-        for ch in captured_charts:
-            if not ch.data and captured_tables:
-                last_tbl = captured_tables[-1]
-                if len(last_tbl.columns) >= 2 and last_tbl.rows:
-                    t_x = ch.x_axis if ch.x_axis in last_tbl.columns else last_tbl.columns[0]
-                    t_y = ch.y_axis if ch.y_axis in last_tbl.columns else last_tbl.columns[1]
-                    ch.x_axis = t_x
-                    ch.y_axis = t_y
-                    ch.data = [
-                        {t_x: r[0] if r[0] is not None else "(NULL)", t_y: r[1]}
-                        for r in last_tbl.rows
-                    ]
-            if any(w in uq_lower for w in ("donat", "donut", "doughnut")):
-                ch.chart_type = "doughnut"
-            elif any(w in uq_lower for w in ("pie", "lingkaran", "proporsi", "porsi")) and not any(w in uq_lower for w in ("batang", "bar")):
-                ch.chart_type = "pie"
-            elif any(w in uq_lower for w in ("garis", "line", "tren", "trend")) and not any(w in uq_lower for w in ("batang", "bar")):
-                ch.chart_type = "line"
-
-        # Auto-synthesize chart if user requested visual/chart but LLM didn't call make_chart
-        chart_keywords = ("grafik", "chart", "visualisasi", "diagram", "plot", "tren", "trend")
-        if not captured_charts and captured_tables and any(kw in user_query.lower() for kw in chart_keywords):
-            last_tbl = captured_tables[-1]
-            if len(last_tbl.columns) >= 2 and last_tbl.rows:
-                col_x = last_tbl.columns[0]
-                col_y = last_tbl.columns[1]
-                if any(w in user_query.lower() for w in ("donat", "donut", "doughnut")):
-                    c_type = "doughnut"
-                elif any(w in user_query.lower() for w in ("pie", "lingkaran", "proporsi", "komposisi", "porsi", "share")):
-                    c_type = "pie"
-                elif any(w in user_query.lower() for w in ("tren", "trend", "bulanan", "waktu", "harian")):
-                    c_type = "line"
-                else:
-                    c_type = "bar"
-                title_text = f"Visualisasi {col_x.replace('_', ' ').title()} vs {col_y.replace('_', ' ').title()}"
-                captured_charts.append(
-                    ChartSpec(
-                        chart_type=c_type,
-                        title=title_text,
-                        x_axis=col_x,
-                        y_axis=col_y,
-                        data=[
-                            {col_x: r[0] if r[0] is not None else "(NULL)", col_y: r[1]}
-                            for r in last_tbl.rows
-                        ],
-                    )
-                )
+        # Deduplicate, sanitize, and auto-synthesize charts via ObservationProcessor
+        captured_charts = ObservationProcessor.finalize_charts(
+            captured_charts=captured_charts,
+            captured_tables=captured_tables,
+            user_query=user_query,
+        )
 
         # FR-34: Smart follow-up suggestions (zero latency / zero extra cost)
         clean_answer, follow_up_suggestions = get_smart_suggestions(
