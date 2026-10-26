@@ -95,16 +95,19 @@
 @media print {
   @page {
     size: A4 portrait;
-    margin: 1.2cm 1cm;
+    margin: 1.5cm 1.2cm;
   }
 
   html, body {
     background-color: #ffffff !important;
+    background: #ffffff !important;
     color: #111827 !important;
     font-size: 10pt !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
     overflow: visible !important;
+    height: auto !important;
+    width: 100% !important;
   }
 
   /* Hide screen chrome & controls */
@@ -131,47 +134,100 @@
     overflow: visible !important;
     height: auto !important;
     max-height: none !important;
+    background-color: #ffffff !important;
+    background: #ffffff !important;
+  }
+
+  /* Container resets for print */
+  .max-w-6xl {
+    max-width: 100% !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
   /* Card and widget print layout */
   .report-card,
   .print-widget-card {
     background-color: #ffffff !important;
+    background: #ffffff !important;
     border: 1px solid #d1d5db !important;
     box-shadow: none !important;
     break-inside: avoid !important;
     page-break-inside: avoid !important;
-    margin-bottom: 1.5rem !important;
-    padding: 1.25rem !important;
+    margin-bottom: 2rem !important;
+    padding: 1.5rem !important;
     border-radius: 0.75rem !important;
   }
 
-  .print-widget-card * {
-    color: #1f2937 !important;
+  /* Neutralize dark backgrounds on any element inside print cards */
+  .print-widget-card div,
+  .print-widget-card section,
+  .print-widget-card p {
+    background-color: transparent !important;
+    border-color: #e5e7eb !important;
   }
 
+  .print-widget-card,
+  .print-widget-card > div {
+    background-color: #ffffff !important;
+    background: #ffffff !important;
+  }
+
+  .print-widget-card h2 {
+    color: #111827 !important;
+    font-size: 11pt !important;
+    font-weight: 700 !important;
+  }
+
+  /* Professional Table Styling for Print */
   .print-widget-card table {
     width: 100% !important;
     border-collapse: collapse !important;
     font-size: 8.5pt !important;
+    background-color: #ffffff !important;
+    border: 1px solid #d1d5db !important;
+    margin-top: 0.5rem !important;
+  }
+
+  .print-widget-card table thead tr {
+    background-color: #f3f4f6 !important;
   }
 
   .print-widget-card table th {
     background-color: #f3f4f6 !important;
     color: #111827 !important;
     border: 1px solid #d1d5db !important;
-    font-weight: 600 !important;
-    padding: 6px 8px !important;
+    font-weight: 700 !important;
+    padding: 8px 10px !important;
+    text-transform: uppercase !important;
+    font-size: 8pt !important;
+    letter-spacing: 0.05em !important;
+    text-align: left !important;
+  }
+
+  .print-widget-card table tbody tr:nth-child(even),
+  .print-widget-card table tbody tr:nth-child(even) td {
+    background-color: #f9fafb !important;
+  }
+
+  .print-widget-card table tbody tr:nth-child(odd),
+  .print-widget-card table tbody tr:nth-child(odd) td {
+    background-color: #ffffff !important;
   }
 
   .print-widget-card table td {
     border: 1px solid #e5e7eb !important;
     color: #1f2937 !important;
-    padding: 6px 8px !important;
+    padding: 7px 10px !important;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+    font-size: 8.5pt !important;
   }
 
   .print-widget-card canvas {
     max-height: 280px !important;
+    width: 100% !important;
+    margin: 0 auto !important;
   }
 }
 

@@ -158,7 +158,76 @@ const SingleChartCanvas: React.FC<SingleChartProps> = ({
       },
     });
 
+    const handleBeforePrint = () => {
+      const chart = chartInstanceRef.current;
+      if (!chart) return;
+
+      chart.data.datasets.forEach((ds) => {
+        if (isPieOrDoughnut) {
+          ds.borderColor = '#ffffff';
+          ds.borderWidth = 2;
+        } else {
+          ds.borderColor = 'rgb(194, 65, 12)';
+          (ds as any).pointBorderColor = '#ffffff';
+        }
+      });
+
+      if (chart.options.plugins?.legend?.labels) {
+        chart.options.plugins.legend.labels.color = '#111827';
+      }
+      if (chart.options.scales?.x) {
+        chart.options.scales.x.grid = { color: '#e5e7eb' };
+        if (chart.options.scales.x.ticks) {
+          chart.options.scales.x.ticks.color = '#374151';
+        }
+      }
+      if (chart.options.scales?.y) {
+        chart.options.scales.y.grid = { color: '#e5e7eb' };
+        if (chart.options.scales.y.ticks) {
+          chart.options.scales.y.ticks.color = '#374151';
+        }
+      }
+      chart.update('none');
+    };
+
+    const handleAfterPrint = () => {
+      const chart = chartInstanceRef.current;
+      if (!chart) return;
+
+      chart.data.datasets.forEach((ds) => {
+        if (isPieOrDoughnut) {
+          ds.borderColor = '#161513';
+          ds.borderWidth = 2;
+        } else {
+          ds.borderColor = 'rgb(217, 119, 87)';
+          (ds as any).pointBorderColor = '#161513';
+        }
+      });
+
+      if (chart.options.plugins?.legend?.labels) {
+        chart.options.plugins.legend.labels.color = '#a3a097';
+      }
+      if (chart.options.scales?.x) {
+        chart.options.scales.x.grid = { color: 'rgba(46, 44, 40, 0.6)' };
+        if (chart.options.scales.x.ticks) {
+          chart.options.scales.x.ticks.color = '#8e8b82';
+        }
+      }
+      if (chart.options.scales?.y) {
+        chart.options.scales.y.grid = { color: 'rgba(46, 44, 40, 0.6)' };
+        if (chart.options.scales.y.ticks) {
+          chart.options.scales.y.ticks.color = '#8e8b82';
+        }
+      }
+      chart.update('none');
+    };
+
+    window.addEventListener('beforeprint', handleBeforePrint);
+    window.addEventListener('afterprint', handleAfterPrint);
+
     return () => {
+      window.removeEventListener('beforeprint', handleBeforePrint);
+      window.removeEventListener('afterprint', handleAfterPrint);
       if (chartInstanceRef.current) {
         chartInstanceRef.current.destroy();
         chartInstanceRef.current = null;

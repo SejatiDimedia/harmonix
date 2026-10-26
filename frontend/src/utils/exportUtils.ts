@@ -53,5 +53,5 @@ export function triggerExecutivePDFPrint(): void {
   // Give a short delay to allow any pending chart animations or DOM updates to settle
   setTimeout(() => {
     window.print();
-  }, 100);
+  }, 250);
 }
