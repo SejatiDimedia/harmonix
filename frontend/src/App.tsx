@@ -19,7 +19,7 @@ import {
   resumeTask,
   setActiveModels as apiSetActiveModels,
 } from './services/api';
-import { formatModelNameShort } from './utils/formatters';
+import { formatModelNameShort, getChartDescriptiveTitle } from './utils/formatters';
 import { Navbar } from './components/Navbar';
 import { Sidebar } from './components/Sidebar';
 import { ChatMessage } from './components/ChatMessage';
@@ -439,17 +439,18 @@ export const App: React.FC = () => {
   const handlePinChart = useCallback(
     (spec: ChartSpec, sqlQuery?: string) => {
       const sid = ensureSession();
+      const resolvedTitle = getChartDescriptiveTitle(spec);
       pinWidgetMutation.mutate(
         {
           session_id: sid,
           widget_type: 'chart',
-          title: spec.title || 'Visualisasi Grafik',
+          title: resolvedTitle,
           sql_query: sqlQuery || null,
-          chart_spec: spec,
+          chart_spec: { ...spec, title: resolvedTitle },
         },
         {
           onSuccess: () => {
-            showToast(`Grafik "${spec.title || 'Grafik'}" disematkan ke Live Dashboard! 📌`);
+            showToast(`Grafik "${resolvedTitle}" disematkan ke Live Dashboard! 📌`);
           },
           onError: (err: any) => {
             showToast(`Gagal menyematkan: ${err.message}`);

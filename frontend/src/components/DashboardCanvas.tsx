@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { DashboardWidget, ChartSpec } from '../types';
 import { DataChart } from './DataChart';
-import { formatSQL } from '../utils/formatters';
+import { formatSQL, getChartDescriptiveTitle } from '../utils/formatters';
 
 interface DashboardCanvasProps {
   widgets: DashboardWidget[];
@@ -104,6 +104,12 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
               const isChart = w.widget_type === 'chart' && w.chart_spec;
               const isTable = w.widget_type === 'table' && w.table_data;
               const isSqlExpanded = !!expandedSqlIds[w.widget_id];
+              const displayTitle =
+                w.widget_type === 'chart'
+                  ? getChartDescriptiveTitle(w.chart_spec, w.title)
+                  : w.title && w.title.toLowerCase() !== 'table'
+                  ? w.title
+                  : `Tabel Data (${w.table_data?.rows?.length || 0} baris)`;
 
               return (
                 <div
@@ -116,7 +122,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                       <div className="flex items-center gap-2">
                         <span className="w-2 h-2 rounded-full bg-clay-500 shrink-0" />
                         <h2 className="text-sm font-semibold text-[#f5f4ef] truncate font-sans">
-                          {w.title}
+                          {displayTitle}
                         </h2>
                       </div>
                       <div className="flex items-center gap-2 text-[10px] text-[#8e8b82] font-mono">

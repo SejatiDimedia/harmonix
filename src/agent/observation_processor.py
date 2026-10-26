@@ -69,10 +69,24 @@ class ObservationProcessor:
         else:
             final_c_type = raw_c_type
 
+        raw_title = (c_spec.get("title") or "").strip()
+        generic_names = ("chart", "grafik", "visualisasi", "data visualization", "visualisasi data", "")
+        if not raw_title or raw_title.lower() in generic_names:
+            x_label = (c_spec.get("x_axis") or "Kategori").replace("_", " ").title()
+            y_label = (c_spec.get("y_axis") or "Nilai").replace("_", " ").title()
+            if final_c_type in ("pie", "doughnut"):
+                resolved_title = f"Distribusi {y_label} per {x_label}"
+            elif final_c_type == "line":
+                resolved_title = f"Tren {y_label} berdasarkan {x_label}"
+            else:
+                resolved_title = f"Perbandingan {y_label} per {x_label}"
+        else:
+            resolved_title = raw_title
+
         captured_charts.append(
             ChartSpec(
                 chart_type=final_c_type,
-                title=c_spec.get("title", ""),
+                title=resolved_title,
                 x_axis=c_spec.get("x_axis", "x"),
                 y_axis=c_spec.get("y_axis", "y"),
                 data=c_data,

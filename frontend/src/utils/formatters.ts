@@ -51,3 +51,66 @@ export function escapeHtml(str?: any): string {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
 }
+
+export function getChartDescriptiveTitle(
+  spec?: { title?: string; x_axis?: string; y_axis?: string; chart_type?: string } | null,
+  fallbackTitle?: string
+): string {
+  const genericTitles = [
+    'chart',
+    'grafik',
+    'visualisasi',
+    'visualisasi data',
+    'data visualization',
+    'visualisasi data chart',
+    '',
+  ];
+
+  if (spec?.title && !genericTitles.includes(spec.title.trim().toLowerCase())) {
+    return spec.title;
+  }
+  if (fallbackTitle && !genericTitles.includes(fallbackTitle.trim().toLowerCase())) {
+    return fallbackTitle;
+  }
+
+  if (spec?.x_axis && spec?.y_axis) {
+    const formatCol = (col: string) => {
+      const map: Record<string, string> = {
+        bulan: 'Bulan',
+        month: 'Bulan',
+        order_status: 'Status Pesanan',
+        status: 'Status Pesanan',
+        total_orders: 'Jumlah Pesanan',
+        customer_name: 'Pelanggan',
+        total_belanja: 'Total Belanja',
+        category_name: 'Kategori Produk',
+        product_category_name: 'Kategori Produk',
+        total_products: 'Jumlah Produk',
+        payment_type: 'Metode Pembayaran',
+        review_score: 'Rating Ulasan',
+        price: 'Harga',
+        revenue: 'Pendapatan',
+        freight_value: 'Ongkos Kirim',
+        delivered: 'Pengiriman Terkirim',
+      };
+      const key = col.toLowerCase().trim();
+      if (map[key]) return map[key];
+      return col.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+    };
+
+    const x = formatCol(spec.x_axis);
+    const y = formatCol(spec.y_axis);
+    const type = (spec.chart_type || '').toLowerCase();
+
+    if (['doughnut', 'donut', 'pie'].includes(type)) {
+      return `Distribusi ${y} per ${x}`;
+    }
+    if (type === 'line') {
+      return `Tren ${y} berdasarkan ${x}`;
+    }
+    return `Perbandingan ${y} per ${x}`;
+  }
+
+  return fallbackTitle || 'Visualisasi Analitik';
+}
+
