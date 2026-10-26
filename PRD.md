@@ -4,8 +4,8 @@ Proyek portofolio AI Agent Engineer (Python Backend): agent text-to-SQL tahan pr
 
 | **Atribut** | **Keterangan**                                                              |
 |-------------|-----------------------------------------------------------------------------|
-| Versi       | 1.4 (Dynamic Model Management & OpenRouter Free Tier Integration)           |
-| Tanggal     | 25 Oktober 2026                                                             |
+| Versi       | 1.5 (Interactive Live BI Dashboard Canvas & Model Gateway Maturation)       |
+| Tanggal     | 26 Oktober 2026                                                             |
 | Status      | Disetujui (Fitur Aktif & Roadmap)                                          |
 | Pemilik     | Pengembang proyek (portofolio)                                              |
 | Domain      | Analisis data / text-to-SQL (PostgreSQL, Zero-Cost Multi-Provider AI Harness) |
@@ -175,6 +175,12 @@ Prioritas: **P0** (wajib untuk MVP), **P1** (penting), **P2** (nice to have).
 |--------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------|
 | FR-36  | Dynamic Model Management, OpenRouter & 9Router Integration: Sistem pengelolaan model dinamis yang memungkinkan pergantian provider dan model LLM secara instan via API dan antarmuka UI tanpa me-restart server. Mendukung 4 ekosistem: (1) Lokal offline (Ollama: `qwen2.5-coder:7b`, `llama3.1:8b`, `deepseek-r1:7b`), (2) Cloud Provider Free Tier (Groq Llama-3.3 70B, Google Gemini 2.0 Flash), (3) OpenRouter Free Models (`:free`, misal `nvidia/nemotron-3.5-lightning:free`, `deepseek/deepseek-r1:free`), dan (4) 9Router Local Smart Gateway (`http://localhost:20128/v1` untuk unified model routing, 3-tier fallback, dan kompresi token RTK). Menyediakan endpoint `GET /v1/models` untuk listing ketersediaan model, `POST /v1/models/active` untuk update konfigurasi aktif, dukungan override per-request di payload `/v1/chat`, serta dropdown/modal switcher di UI untuk mengatur model Analyst dan Auditor secara independen. | P1            |
 
+### 5.10 Interactive Live BI Dashboard Canvas ("Pin to Dashboard")
+
+| **ID** | **Kebutuhan**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | **Prioritas** |
+|--------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------|
+| FR-37  | Interactive Live BI Dashboard Canvas ("Pin to Dashboard"): Kemampuan menyematkan (pin) visualisasi grafik Chart.js, tabel data SQL, dan kartu metrik KPI dari hasil respon percakapan chat ke kanvas dashboard bisnis terpadu. Menyediakan: (1) Tombol aksi "📌 Pin ke Dashboard" pada setiap kartu respon yang memuat grafik atau tabel, (2) Tab View Switcher di antarmuka web (`💬 Percakapan` vs `📊 Live Dashboard`), (3) Tata letak grid interaktif yang menyajikan widget analitik secara terorganisir dan responsif, (4) Tombol global "🔄 Segarkan Data" yang mengeksekusi ulang SQL query mendasar secara real-time ke database PostgreSQL analitik, (5) Persistensi widget dashboard per-sesi di database PostgreSQL (`analytics.dashboard_widgets`) / localStorage agar tetap utuh saat halaman direfresh, dan (6) Kontrol manajemen widget (hapus, pindahkan, atau ganti ukuran) dengan zero runtime API cost. | P1            |
+
 
 ## 6. Observability dan Evaluasi
 
@@ -320,6 +326,7 @@ Skema multi-tabel e-commerce sintetis (pelanggan, produk, pesanan, item pesanan,
 5. **Target Deployment:** **Docker Compose lokal** (`docker compose up`) yang menjalankan FastAPI backend, PostgreSQL 16 + pgvector, dan Langfuse dalam satu perintah tanpa dependensi cloud berbayar.
 6. **Strategi Multi-Agent:** Memilih arsitektur **Maker-Checker (Analyst Agent + Data Auditor Agent)** daripada memecah tool deterministik menjadi agent terpisah. Pendekatan ini memisahkan eksplorasi analitik dari audit kualitas independen, memanfaatkan prinsip *Model Diversity* (memakai model cloud 70B gratis seperti Groq Llama-3.3-70B / Gemini Flash saat Analyst memakai model lokal 7B) untuk mengeliminasi *shared blind spots* dan halusinasi angka.
 7. **Manajemen Model Dinamis, OpenRouter Free Tier & 9Router Gateway:** Sistem mendukung multi-provider switching (Ollama lokal, Groq Cloud, Gemini, OpenRouter Free Models, dan 9Router Local Smart Gateway) yang dapat diatur via endpoint API dan UI switcher di header. OpenRouter memperluas akses ke varian model gratis tanpa kartu kredit, sementara 9Router bertindak sebagai local gateway cerdas dengan automatic 3-tier fallback dan RTK token compression untuk efisiensi prompt analitik data.
+8. **Interactive Live BI Dashboard Canvas ("Pin to Dashboard"):** Pendekatan konvergensi antara Chatbot conversational dan BI Dashboard visual. Mengizinkan pengguna bisnis menyematkan widget visual (grafik & tabel) dari alur chat ke kanvas permanen per-sesi. Pembaruan data dijalankan dengan mengeksekusi ulang sanitized SQL query yang tersimpan langsung ke PostgreSQL tanpa perlu mengulang inferensi LLM, memastikan refresh data dashboard memiliki latensi sangat rendah (<50ms) dan biaya token USD 0,00.
 
 ## 14. Pemetaan ke Kualifikasi Loker
 
@@ -329,6 +336,7 @@ Skema multi-tabel e-commerce sintetis (pelanggan, produk, pesanan, item pesanan,
 | FastAPI + streaming SSE/WebSocket                                | FR-30, FR-35                              |
 | Agent loop sendiri tanpa framework                               | FR-01, FR-03                              |
 | Tool use dan structured output                                   | FR-05 s.d. FR-09, FR-35                   |
+| BI Dashboard, interactive visualization, and dynamic canvas      | FR-07, FR-37                              |
 | MCP                                                              | FR-10                                     |
 | Orchestration (single/sub/multi-agent)                           | FR-01, FR-03, FR-04, FR-35 (Maker-Checker)|
 | Multi-provider LLM routing & dynamic management (Ollama, Groq, Gemini, OpenRouter) | FR-28, FR-36              |
