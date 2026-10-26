@@ -63,8 +63,8 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
   });
 
   return (
-    <div className="flex-1 overflow-y-auto px-4 py-6 scroll-smooth print:p-0 print:overflow-visible print:bg-white">
-      <div className="max-w-6xl mx-auto space-y-6 print:max-w-none print:w-full print:space-y-6 print:p-0 print:bg-white">
+    <div className="flex-1 overflow-y-auto px-4 py-6 scroll-smooth print:p-0 print:m-0 print:w-full print:max-w-full print:overflow-visible print:bg-white print:block">
+      <div className="max-w-6xl mx-auto space-y-6 print:max-w-full print:w-full print:space-y-6 print:p-0 print:m-0 print:bg-white print:block">
         {/* Printable Executive Letterhead (Visible only when printing to PDF / Paper) */}
         <div className="print-only hidden pb-6 mb-6 border-b-2 border-gray-300 space-y-5">
           {/* Top Brand Bar */}
@@ -223,7 +223,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
 
         {/* Widgets Grid */}
         {widgets.length > 0 && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 print:grid-cols-1 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 print:block print:space-y-6 gap-6 w-full max-w-full">
             {widgets.map((w, idx) => {
               const isChart = w.widget_type === 'chart' && w.chart_spec;
               const isTable = w.widget_type === 'table' && w.table_data;
