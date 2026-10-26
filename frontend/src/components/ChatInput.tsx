@@ -129,7 +129,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
                       ? 'text-white bg-clay-600 shadow-sm'
                       : 'text-[#9c9990] hover:text-white'
                   }`}
-                  title="Manual Agent Loop (Zero-Latency, Bound Steps)"
+                  title="Engine Eksekusi Cepat (Deterministic Loop)"
                 >
                   Manual
                 </button>
@@ -141,7 +141,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
                       ? 'text-white bg-clay-600 shadow-sm'
                       : 'text-[#9c9990] hover:text-white'
                   }`}
-                  title="LangGraph StateGraph Engine"
+                  title="LangGraph Workflow Engine"
                 >
                   LangGraph
                 </button>
@@ -161,7 +161,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
         </form>
 
         <div className="text-center text-[10px] text-[#7a7770] pt-2 font-mono select-none">
-          Harnessly v1.5 — 100% Zero-Cost Multi-Tier (Ollama / Groq / Gemini / OpenRouter Free / 9Router)
+          Harnessly Enterprise Analytics — AI Data Analyst with Multi-Model Intelligence &amp; Privacy Guardrails
         </div>
       </div>
     </div>

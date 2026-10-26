@@ -128,7 +128,7 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
                 Latensi: {turn.metrics.total_latency_ms || 0}ms
                 {turn.metrics.ttft_ms ? ` (TTFT: ${turn.metrics.ttft_ms}ms)` : ''}
               </span>
-              <span>Token: {turn.metrics.total_tokens || 0} (USD 0.00)</span>
+              <span>Konsumsi Token: {turn.metrics.total_tokens?.toLocaleString() || 0}</span>
             </div>
           )}
 

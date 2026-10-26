@@ -80,8 +80,8 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                   <span className="text-xl font-bold tracking-tight text-gray-900 font-sans">
                     HARNESSLY ENTERPRISE
                   </span>
-                  <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-orange-100 text-orange-900 border border-orange-200 uppercase font-semibold">
-                    Zero-Cost BI
+                  <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-clay-100 text-clay-900 border border-clay-200 uppercase font-semibold">
+                    Executive BI
                   </span>
                 </div>
                 <p className="text-xs text-gray-500 font-sans tracking-wide">
@@ -164,7 +164,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
               </h1>
             </div>
             <p className="text-xs text-[#a3a097] leading-relaxed max-w-xl">
-              Papan visualisasi interaktif tersemat dari percakapan aktif. Data dapat disegarkan ulang secara berkala langsung ke PostgreSQL (0 biaya LLM) atau diekspor sebagai dokumen eksekutif.
+              Papan visualisasi interaktif tersemat dari percakapan aktif. Data dapat disegarkan ulang secara berkala langsung ke database analitik atau diekspor sebagai dokumen eksekutif.
             </p>
           </div>
 

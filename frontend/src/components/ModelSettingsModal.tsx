@@ -331,7 +331,7 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-indigo-500" />
                   <h4 className="text-sm font-medium text-[#f5f4ef]">
-                    Model Data Auditor (Maker-Checker Gate)
+                    Model Data Auditor (Verifikasi Silang)
                   </h4>
                 </div>
 
@@ -379,7 +379,7 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
 
                 <p className="text-[11px] text-[#8e8b82] font-mono">
                   {auditorProv === 'auto'
-                    ? 'Auditor akan memilih model independen yang berbeda secara otomatis untuk validasi maker-checker.'
+                    ? 'Auditor akan memilih model independen yang berbeda secara otomatis untuk validasi akurasi data.'
                     : auditorModelData
                     ? `${auditorModelData.description} • Konteks: ${(auditorModelData.context_length || 8192).toLocaleString()} token`
                     : ''}
@@ -435,14 +435,14 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
                 </div>
 
                 <div className="flex items-center justify-between text-[11px] text-[#78756d]">
-                  <span>Model OpenAI GPT-OSS 120B & Qwen 3.8 di LPU (~500 t/s)</span>
+                  <span>Model OpenAI GPT-OSS 120B &amp; Qwen 3.8 di LPU (~500 t/s)</span>
                   <a
                     href="https://console.groq.com/keys"
                     target="_blank"
                     rel="noreferrer"
                     className="text-clay-400 hover:text-clay-300 flex items-center gap-1 transition"
                   >
-                    <span>Dapatkan Kunci Gratis</span>
+                    <span>Dapatkan API Key</span>
                     <ExternalLink className="w-3 h-3" />
                   </a>
                 </div>
@@ -484,14 +484,14 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
                 </div>
 
                 <div className="flex items-center justify-between text-[11px] text-[#78756d]">
-                  <span>Gemini 2.0 Flash & Gemini 1.5 Flash (Free Tier 1.500 req/hari)</span>
+                  <span>Gemini 2.0 Flash &amp; Gemini 1.5 Flash (Google AI Cloud)</span>
                   <a
                     href="https://aistudio.google.com/apikey"
                     target="_blank"
                     rel="noreferrer"
                     className="text-clay-400 hover:text-clay-300 flex items-center gap-1 transition"
                   >
-                    <span>Dapatkan Kunci Gratis</span>
+                    <span>Dapatkan API Key</span>
                     <ExternalLink className="w-3 h-3" />
                   </a>
                 </div>
@@ -501,7 +501,7 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
               <div className="p-4 rounded-xl bg-[#161513] border border-[#2e2c28] space-y-2.5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="font-medium text-xs text-[#f5f4ef]">3. OpenRouter Free Tier</span>
+                    <span className="font-medium text-xs text-[#f5f4ef]">3. OpenRouter AI Gateway</span>
                     <span className="text-[10px] font-mono text-[#78756d]">OPENROUTER_API_KEY</span>
                   </div>
                   <span
@@ -533,14 +533,14 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
                 </div>
 
                 <div className="flex items-center justify-between text-[11px] text-[#78756d]">
-                  <span>Akses model gratis (:free) Nvidia Nemotron, Gemma 4, Cohere</span>
+                  <span>Akses model Llama 3, Gemma 4, Nvidia Nemotron via OpenRouter</span>
                   <a
                     href="https://openrouter.ai/keys"
                     target="_blank"
                     rel="noreferrer"
                     className="text-clay-400 hover:text-clay-300 flex items-center gap-1 transition"
                   >
-                    <span>Dapatkan Kunci</span>
+                    <span>Dapatkan API Key</span>
                     <ExternalLink className="w-3 h-3" />
                   </a>
                 </div>

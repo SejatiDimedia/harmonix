@@ -63,7 +63,7 @@ def get_all_masked_keys() -> dict[str, Any]:
         ).model_dump(),
         "openrouter": APIKeyInfo(
             provider="openrouter",
-            display_name="OpenRouter (Free Models)",
+            display_name="OpenRouter (AI Gateway)",
             is_set=bool(settings.openrouter_api_key and len(settings.openrouter_api_key.strip()) > 5),
             masked_key=mask_key(settings.openrouter_api_key),
             env_var="OPENROUTER_API_KEY",

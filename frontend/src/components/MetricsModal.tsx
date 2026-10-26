@@ -29,7 +29,7 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({
                 Observabilitas Sistem
               </h3>
               <p className="text-xs text-[#9c9990]">
-                Metrik latensi p50/p95, total token, dan deteksi anomali (OB-02, OB-03)
+                Metrik latensi p50/p95, konsumsi token, dan deteksi anomali performa
               </p>
             </div>
           </div>
@@ -90,7 +90,7 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({
               </span>
               <div className="text-xl font-bold font-mono text-[#f5f4ef] mt-1">
                 {metrics
-                  ? `${metrics.total_tokens_consumed.toLocaleString()} ($0.00)`
+                  ? `${metrics.total_tokens_consumed.toLocaleString()} tokens`
                   : '—'}
               </div>
             </div>

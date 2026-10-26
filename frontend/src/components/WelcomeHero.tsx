@@ -31,7 +31,7 @@ const WelcomeHeroComponent: React.FC<WelcomeHeroProps> = ({ onSelectPrompt }) =>
           Asisten Analitik Data Enterprise
         </h2>
         <p className="text-xs md:text-sm text-[#9c9990] leading-relaxed max-w-md mx-auto font-sans">
-          Ajukan pertanyaan bisnis dalam bahasa alami. Sistem mengeksekusi Text-to-SQL dengan 5 lapis pengaman: AST guardrails, PII masking, maker-checker auditor, dan visualisasi interaktif.
+          Ajukan pertanyaan bisnis dalam bahasa alami. Sistem mengeksekusi Text-to-SQL dengan proteksi privasi ketat, verifikasi akurasi data otomatis, dan visualisasi interaktif.
         </p>
       </div>
 

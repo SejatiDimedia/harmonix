@@ -109,7 +109,7 @@ class ModelRegistry:
                                 name=f"{m_name} ({param_sz})" if param_sz else m_name,
                                 provider="ollama",
                                 is_free=True,
-                                description="Model lokal berjalan 100% offline di laptop",
+                                description="Model lokal berjalan on-premise dengan privasi data penuh",
                             )
                         )
                     if not models:
@@ -209,7 +209,7 @@ class ModelRegistry:
                 name="Gemini 2.0 Flash",
                 provider="gemini",
                 context_length=1000000,
-                description="Model mutakhir Google, kuota 1500 req/hari gratis",
+                description="Model multimodal frontier Google dengan latensi rendah",
             ),
             ModelOption(
                 id="gemini-1.5-flash",
@@ -222,34 +222,34 @@ class ModelRegistry:
         return is_ready, msg, models
 
     def _get_openrouter_models(self) -> tuple[bool, str, list[ModelOption]]:
-        """Return curated free tier models (:free) on OpenRouter."""
+        """Return curated models on OpenRouter."""
         is_ready = bool(settings.openrouter_api_key and len(settings.openrouter_api_key) > 5)
         msg = "OpenRouter API Key terkonfigurasi" if is_ready else "OPENROUTER_API_KEY belum diisi di .env"
         models = [
             ModelOption(
                 id="nvidia/nemotron-3.5-lightning:free",
-                name="Nvidia Nemotron 3.5 Lightning (Free)",
+                name="Nvidia Nemotron 3.5 Lightning",
                 provider="openrouter",
                 context_length=131072,
-                description="Model penalaran cepat Nvidia (100% Free di OpenRouter)",
+                description="Model penalaran cepat Nvidia via OpenRouter API",
             ),
             ModelOption(
                 id="google/gemma-4-31b-it:free",
-                name="Google Gemma 4 31B (Free)",
+                name="Google Gemma 4 31B",
                 provider="openrouter",
                 context_length=8192,
                 description="Model Google open-weight 31B parameter",
             ),
             ModelOption(
                 id="cohere/north-mini-code:free",
-                name="Cohere North Mini Code (Free)",
+                name="Cohere North Mini Code",
                 provider="openrouter",
                 context_length=32768,
                 description="Model spesialis kode dan pemecahan masalah",
             ),
             ModelOption(
                 id="liquid/lfm-2.5-2.6b:free",
-                name="Liquid LFM 2.5 2.6B (Free)",
+                name="Liquid LFM 2.5 2.6B",
                 provider="openrouter",
                 context_length=32768,
                 description="Model Liquid AI arsitektur efisien",
@@ -325,7 +325,7 @@ class ModelRegistry:
         providers = [
             ProviderCatalog(
                 provider="ollama",
-                display_name="Ollama (Local Offline)",
+                display_name="Ollama (On-Premise)",
                 category="local",
                 is_ready=ollama_ready,
                 status_message=ollama_msg,
@@ -334,7 +334,7 @@ class ModelRegistry:
             ),
             ProviderCatalog(
                 provider="groq",
-                display_name="Groq Cloud (Free Tier)",
+                display_name="Groq Cloud (LPU Inference)",
                 category="cloud_free",
                 is_ready=groq_ready,
                 status_message=groq_msg,
@@ -343,7 +343,7 @@ class ModelRegistry:
             ),
             ProviderCatalog(
                 provider="gemini",
-                display_name="Google AI Studio Gemini (Free Tier)",
+                display_name="Google AI Gemini",
                 category="cloud_free",
                 is_ready=gemini_ready,
                 status_message=gemini_msg,
@@ -352,7 +352,7 @@ class ModelRegistry:
             ),
             ProviderCatalog(
                 provider="openrouter",
-                display_name="OpenRouter (Free Models)",
+                display_name="OpenRouter (AI Gateway)",
                 category="openrouter",
                 is_ready=openrouter_ready,
                 status_message=openrouter_msg,
@@ -361,7 +361,7 @@ class ModelRegistry:
             ),
             ProviderCatalog(
                 provider="9router",
-                display_name="9Router (Smart Local Gateway)",
+                display_name="9Router (Unified Gateway)",
                 category="gateway",
                 is_ready=ninerouter_ready,
                 status_message=ninerouter_msg,

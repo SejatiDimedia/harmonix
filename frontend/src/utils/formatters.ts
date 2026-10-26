@@ -27,8 +27,8 @@ export function formatModelNameShort(modelId?: string): string {
   if (modelId.includes('gpt-oss-120b')) return 'GPT-OSS 120B';
   if (modelId.includes('gpt-oss-20b')) return 'GPT-OSS 20B';
   if (modelId.includes('qwen3.8-27b')) return 'Qwen 3.8 27B';
-  if (modelId.includes('nemotron')) return 'Nemotron 3.5 Free';
-  if (modelId.includes('gemma')) return 'Gemma Free';
+  if (modelId.includes('nemotron')) return 'Nemotron 3.5';
+  if (modelId.includes('gemma')) return 'Gemma 4';
   if (modelId.includes('qwen2.5-coder')) return 'Qwen 2.5 7B';
   if (modelId.includes('llama-3.3-70b')) return 'Llama 3.3 70B';
   if (modelId.includes('llama-3.1-8b')) return 'Llama 3.1 8B';
