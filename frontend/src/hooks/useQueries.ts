@@ -69,13 +69,14 @@ export const useDeleteSessionMutation = () => {
   });
 };
 
-export const usePinWidgetMutation = (sessionId: string | null) => {
+export const usePinWidgetMutation = (sessionId?: string | null) => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (payload: PinWidgetPayload) => pinDashboardWidget(payload),
-    onSuccess: () => {
-      if (sessionId) {
-        queryClient.invalidateQueries({ queryKey: ['dashboard', sessionId] });
+    onSuccess: (_data, variables) => {
+      const targetSession = variables.session_id || sessionId;
+      if (targetSession) {
+        queryClient.invalidateQueries({ queryKey: ['dashboard', targetSession] });
       }
     },
   });

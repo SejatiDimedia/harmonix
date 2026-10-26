@@ -149,9 +149,9 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                   </div>
 
                   {/* Card Body: Chart or Table */}
-                  <div className="flex-1 min-h-[220px]">
+                  <div className="flex-1 min-h-[240px] flex items-center justify-center">
                     {isChart && (
-                      <DataChart charts={[w.chart_spec as ChartSpec]} />
+                      <DataChart charts={[w.chart_spec as ChartSpec]} hideHeader={true} />
                     )}
 
                     {isTable && (

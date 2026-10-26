@@ -8,6 +8,7 @@ ChartJS.register(...registerables);
 interface DataChartProps {
   charts: ChartSpec[];
   tables?: TableData[];
+  hideHeader?: boolean;
   onPinChart?: (spec: ChartSpec) => void;
 }
 
@@ -15,10 +16,17 @@ interface SingleChartProps {
   spec: ChartSpec;
   tables?: TableData[];
   index: number;
+  hideHeader?: boolean;
   onPinChart?: (spec: ChartSpec) => void;
 }
 
-const SingleChartCanvas: React.FC<SingleChartProps> = ({ spec, tables, index, onPinChart }) => {
+const SingleChartCanvas: React.FC<SingleChartProps> = ({
+  spec,
+  tables,
+  index,
+  hideHeader = false,
+  onPinChart,
+}) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const chartInstanceRef = useRef<ChartJS | null>(null);
 
@@ -159,50 +167,64 @@ const SingleChartCanvas: React.FC<SingleChartProps> = ({ spec, tables, index, on
   }, [spec, tables, index]);
 
   return (
-    <div className="rounded-xl border border-[#2e2c28] bg-[#161513] p-4 overflow-hidden shadow-sm">
-      <div className="flex items-center justify-between mb-3 pb-2.5 border-b border-[#262421]">
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-clay-500" />
-          <span className="text-xs font-medium text-[#dedcd5] font-sans">
-            {spec.title || 'Visualisasi Data'}
-          </span>
+    <div
+      className={
+        hideHeader
+          ? 'relative w-full h-64 md:h-72'
+          : 'rounded-xl border border-[#2e2c28] bg-[#161513] p-4 overflow-hidden shadow-sm'
+      }
+    >
+      {!hideHeader && (
+        <div className="flex items-center justify-between mb-3 pb-2.5 border-b border-[#262421]">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-clay-500" />
+            <span className="text-xs font-medium text-[#dedcd5] font-sans">
+              {spec.title || 'Visualisasi Data'}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-[#242320] text-clay-400 border border-[#383632]">
+              {spec.chart_type}
+            </span>
+            {onPinChart && (
+              <button
+                type="button"
+                onClick={() => onPinChart(spec)}
+                className="flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded bg-[#242320] hover:bg-clay-600/30 text-[#dedcd5] hover:text-clay-300 border border-[#383632] hover:border-clay-500/50 transition cursor-pointer"
+                title="Sematkan grafik ini ke Live Dashboard"
+              >
+                <Pin className="w-3 h-3 text-clay-400" />
+                <span>Pin</span>
+              </button>
+            )}
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-[#242320] text-clay-400 border border-[#383632]">
-            {spec.chart_type}
-          </span>
-          {onPinChart && (
-            <button
-              type="button"
-              onClick={() => onPinChart(spec)}
-              className="flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded bg-[#242320] hover:bg-clay-600/30 text-[#dedcd5] hover:text-clay-300 border border-[#383632] hover:border-clay-500/50 transition cursor-pointer"
-              title="Sematkan grafik ini ke Live Dashboard"
-            >
-              <Pin className="w-3 h-3 text-clay-400" />
-              <span>Pin</span>
-            </button>
-          )}
-        </div>
-      </div>
+      )}
 
-      <div className="relative w-full h-64 md:h-72">
+      <div className={hideHeader ? 'w-full h-full' : 'relative w-full h-64 md:h-72'}>
         <canvas ref={canvasRef} />
       </div>
     </div>
   );
 };
 
-export const DataChart: React.FC<DataChartProps> = ({ charts, tables, onPinChart }) => {
+export const DataChart: React.FC<DataChartProps> = ({
+  charts,
+  tables,
+  hideHeader = false,
+  onPinChart,
+}) => {
   if (!charts || charts.length === 0) return null;
 
   return (
-    <div className="space-y-4 mt-4">
+    <div className={hideHeader ? 'w-full' : 'space-y-4 mt-4'}>
       {charts.map((c, idx) => (
         <SingleChartCanvas
           key={idx}
           spec={c}
           tables={tables}
           index={idx}
+          hideHeader={hideHeader}
           onPinChart={onPinChart}
         />
       ))}
