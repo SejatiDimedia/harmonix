@@ -9,6 +9,8 @@ from src.agent.state import (
     get_task_record,
     get_session_history,
     get_task_by_approval_id,
+    get_session_active_model,
+    get_session_details,
 )
 
 
@@ -145,4 +147,50 @@ async def test_get_task_by_approval_id():
     assert record.task_id == t_id
     assert record.status == AgentTaskStatus.WAITING_APPROVAL
     assert record.pending_approval["approval_id"] == appr_id
+
+
+@pytest.mark.asyncio
+async def test_session_scoped_model_persistence():
+    """Verify provider and model choices persist across session tasks without cross-session pollution."""
+    await init_task_state_table()
+
+    sid_a = f"sess_model_a_{uuid.uuid4().hex[:6]}"
+    sid_b = f"sess_model_b_{uuid.uuid4().hex[:6]}"
+
+    # Session A uses Groq qwen
+    await save_task_checkpoint(
+        task_id=f"task_{uuid.uuid4().hex[:6]}",
+        status=AgentTaskStatus.COMPLETED,
+        current_step=1,
+        messages=[],
+        user_query="Query in session A",
+        session_id=sid_a,
+        analyst_provider="groq",
+        analyst_model="qwen/qwen3.8-27b",
+    )
+
+    # Session B uses Gemini flash
+    await save_task_checkpoint(
+        task_id=f"task_{uuid.uuid4().hex[:6]}",
+        status=AgentTaskStatus.COMPLETED,
+        current_step=1,
+        messages=[],
+        user_query="Query in session B",
+        session_id=sid_b,
+        analyst_provider="gemini",
+        analyst_model="gemini-2.5-flash",
+    )
+
+    prov_a, mod_a = await get_session_active_model(sid_a)
+    prov_b, mod_b = await get_session_active_model(sid_b)
+
+    assert prov_a == "groq"
+    assert mod_a == "qwen/qwen3.8-27b"
+    assert prov_b == "gemini"
+    assert mod_b == "gemini-2.5-flash"
+
+    details_a = await get_session_details(sid_a)
+    assert details_a is not None
+    assert details_a["active_provider"] == "groq"
+    assert details_a["active_model"] == "qwen/qwen3.8-27b"
 

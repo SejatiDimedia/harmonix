@@ -28,6 +28,7 @@ from src.agent.state import (
     list_chat_sessions,
     get_session_details,
     delete_session,
+    get_session_active_model,
 )
 from src.config import settings
 from src.db.connection import check_db_health
@@ -164,10 +165,18 @@ async def chat_stream(request: ChatRequest):
     - `manual`: Procedural ManualAgentLoop
     - `langgraph`: LangGraph StateGraph Agent
     """
+    req_provider = request.provider
+    req_model = request.model
+    if (not req_provider or not req_model) and request.session_id:
+        sess_prov, sess_model = await get_session_active_model(request.session_id)
+        if sess_prov and sess_model:
+            req_provider = req_provider or sess_prov
+            req_model = req_model or sess_model
+
     registry = ModelRegistry.get_instance()
     analyst_llm = registry.create_analyst_llm(
-        override_provider=request.provider,
-        override_model=request.model,
+        override_provider=req_provider,
+        override_model=req_model,
     )
     auditor_llm = registry.create_auditor_llm(
         override_provider=request.auditor_provider,

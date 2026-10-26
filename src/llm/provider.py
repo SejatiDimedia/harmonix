@@ -645,30 +645,38 @@ def create_single_provider(
     name = provider_name.lower().strip()
 
     if name == "mock":
-        return MockLLMProvider()
+        p = MockLLMProvider()
+        p.provider_name = "mock"
+        return p
 
     if name == "ollama":
-        return OpenAICompatibleProvider(
+        p = OpenAICompatibleProvider(
             base_url=settings.ollama_base_url,
             api_key=None,
             model=model_override or settings.ollama_model,
         )
+        p.provider_name = "ollama"
+        return p
 
     if name == "gemini":
         base_url = "https://generativelanguage.googleapis.com/v1beta/openai"
-        return OpenAICompatibleProvider(
+        p = OpenAICompatibleProvider(
             base_url=base_url,
             api_key=settings.gemini_api_key,
             model=model_override or settings.gemini_model,
         )
+        p.provider_name = "gemini"
+        return p
 
     if name == "groq":
         base_url = "https://api.groq.com/openai/v1"
-        return OpenAICompatibleProvider(
+        p = OpenAICompatibleProvider(
             base_url=base_url,
             api_key=settings.groq_api_key,
             model=model_override or settings.groq_model,
         )
+        p.provider_name = "groq"
+        return p
 
     if name == "openrouter":
         base_url = settings.openrouter_base_url
@@ -676,12 +684,14 @@ def create_single_provider(
             "HTTP-Referer": "https://github.com/SejatiDimedia/harnessly",
             "X-Title": "Harnessly AI Data Analyst",
         }
-        return OpenAICompatibleProvider(
+        p = OpenAICompatibleProvider(
             base_url=base_url,
             api_key=settings.openrouter_api_key,
             model=model_override or settings.openrouter_model,
             default_headers=headers,
         )
+        p.provider_name = "openrouter"
+        return p
 
     if name == "9router":
         key = settings.ninerouter_api_key
@@ -691,11 +701,13 @@ def create_single_provider(
                 key = get_local_9router_key()
             except Exception:
                 key = "sk-8abbefea34ddc0cc-npg38u-a6649356"
-        return OpenAICompatibleProvider(
+        p = OpenAICompatibleProvider(
             base_url=settings.ninerouter_base_url,
             api_key=key,
             model=model_override or settings.ninerouter_model,
         )
+        p.provider_name = "9router"
+        return p
 
     raise ValueError(f"Unsupported LLM provider: '{provider_name}'")
 

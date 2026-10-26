@@ -769,6 +769,8 @@ class LangGraphAgent:
                 user_query=user_query,
                 session_id=sid,
                 final_result=final_response.model_dump(),
+                analyst_provider=getattr(self.llm, "provider_name", getattr(self.llm, "provider", None)),
+                analyst_model=getattr(self.llm, "model", None),
             )
         except Exception as e:
             logger.warning("LangGraph completion save failed: %s", e)

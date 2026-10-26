@@ -466,6 +466,8 @@ class ManualAgentLoop:
                                 user_query=user_query,
                                 session_id=session_id,
                                 pending_approval=approval_payload,
+                                analyst_provider=getattr(self.llm, "provider_name", getattr(self.llm, "provider", None)),
+                                analyst_model=getattr(self.llm, "model", None),
                             )
                         except Exception as e:
                             logger.warning("Approval checkpoint save failed: %s", e)
@@ -653,6 +655,8 @@ class ManualAgentLoop:
                 user_query=user_query,
                 session_id=session_id,
                 final_result=final_response.model_dump(),
+                analyst_provider=getattr(self.llm, "provider_name", getattr(self.llm, "provider", None)),
+                analyst_model=getattr(self.llm, "model", None),
             )
         except Exception as e:
             logger.warning("Completion checkpoint save failed: %s", e)

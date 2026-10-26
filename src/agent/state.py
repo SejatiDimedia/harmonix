@@ -30,6 +30,8 @@ class TaskRecord(BaseModel):
     pending_approval: dict[str, Any] | None = None
     final_result: dict[str, Any] | None = None
     error_message: str | None = None
+    analyst_provider: str | None = None
+    analyst_model: str | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None
 
@@ -54,9 +56,18 @@ async def init_task_state_table() -> None:
                 pending_approval JSONB,
                 final_result JSONB,
                 error_message TEXT,
+                analyst_provider VARCHAR(50),
+                analyst_model VARCHAR(100),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
+        """))
+
+        # Migration: Ensure session-scoped model routing columns exist on older schemas
+        await session.execute(text("""
+            ALTER TABLE analytics.agent_tasks
+            ADD COLUMN IF NOT EXISTS analyst_provider VARCHAR(50),
+            ADD COLUMN IF NOT EXISTS analyst_model VARCHAR(100);
         """))
 
         # Table 2: Step-by-Step Checkpoints (Audit Trail & Time-Travel)
@@ -94,6 +105,8 @@ async def save_task_checkpoint(
     pending_approval: dict[str, Any] | None = None,
     final_result: dict[str, Any] | None = None,
     error_message: str | None = None,
+    analyst_provider: str | None = None,
+    analyst_model: str | None = None,
 ) -> None:
     """Save or update task execution state and append a step checkpoint."""
     await init_task_state_table()
@@ -106,8 +119,8 @@ async def save_task_checkpoint(
         # 1. Upsert into agent_tasks
         upsert_query = text("""
             INSERT INTO analytics.agent_tasks 
-            (task_id, session_id, status, current_step, user_query, messages, pending_approval, final_result, error_message, updated_at)
-            VALUES (:task_id, :session_id, :status, :current_step, :user_query, CAST(:messages AS JSONB), CAST(:pending_approval AS JSONB), CAST(:final_result AS JSONB), :error_message, CURRENT_TIMESTAMP)
+            (task_id, session_id, status, current_step, user_query, messages, pending_approval, final_result, error_message, analyst_provider, analyst_model, updated_at)
+            VALUES (:task_id, :session_id, :status, :current_step, :user_query, CAST(:messages AS JSONB), CAST(:pending_approval AS JSONB), CAST(:final_result AS JSONB), :error_message, :analyst_provider, :analyst_model, CURRENT_TIMESTAMP)
             ON CONFLICT (task_id) DO UPDATE SET
                 session_id = COALESCE(EXCLUDED.session_id, analytics.agent_tasks.session_id),
                 status = EXCLUDED.status,
@@ -116,6 +129,8 @@ async def save_task_checkpoint(
                 pending_approval = EXCLUDED.pending_approval,
                 final_result = EXCLUDED.final_result,
                 error_message = EXCLUDED.error_message,
+                analyst_provider = COALESCE(EXCLUDED.analyst_provider, analytics.agent_tasks.analyst_provider),
+                analyst_model = COALESCE(EXCLUDED.analyst_model, analytics.agent_tasks.analyst_model),
                 updated_at = CURRENT_TIMESTAMP;
         """)
 
@@ -131,6 +146,8 @@ async def save_task_checkpoint(
                 "pending_approval": pending_json,
                 "final_result": result_json,
                 "error_message": error_message,
+                "analyst_provider": analyst_provider,
+                "analyst_model": analyst_model,
             },
         )
 
@@ -163,7 +180,7 @@ async def get_task_record(task_id: str) -> TaskRecord | None:
     async with get_db_session() as session:
         query = text("""
             SELECT task_id, session_id, status, current_step, max_steps, user_query, 
-                   messages, pending_approval, final_result, error_message, created_at, updated_at
+                   messages, pending_approval, final_result, error_message, analyst_provider, analyst_model, created_at, updated_at
             FROM analytics.agent_tasks
             WHERE task_id = :task_id;
         """)
@@ -183,8 +200,10 @@ async def get_task_record(task_id: str) -> TaskRecord | None:
             pending_approval=row[7] if isinstance(row[7], dict) else (json.loads(row[7]) if row[7] else None),
             final_result=row[8] if isinstance(row[8], dict) else (json.loads(row[8]) if row[8] else None),
             error_message=row[9],
-            created_at=row[10],
-            updated_at=row[11],
+            analyst_provider=row[10],
+            analyst_model=row[11],
+            created_at=row[12],
+            updated_at=row[13],
         )
 
 
@@ -226,7 +245,7 @@ async def get_task_by_approval_id(approval_id: str) -> TaskRecord | None:
     async with get_db_session() as session:
         query = text("""
             SELECT task_id, session_id, status, current_step, max_steps, user_query, 
-                   messages, pending_approval, final_result, error_message, created_at, updated_at
+                   messages, pending_approval, final_result, error_message, analyst_provider, analyst_model, created_at, updated_at
             FROM analytics.agent_tasks
             WHERE pending_approval->>'approval_id' = :approval_id;
         """)
@@ -246,8 +265,10 @@ async def get_task_by_approval_id(approval_id: str) -> TaskRecord | None:
             pending_approval=row[7] if isinstance(row[7], dict) else (json.loads(row[7]) if row[7] else None),
             final_result=row[8] if isinstance(row[8], dict) else (json.loads(row[8]) if row[8] else None),
             error_message=row[9],
-            created_at=row[10],
-            updated_at=row[11],
+            analyst_provider=row[10],
+            analyst_model=row[11],
+            created_at=row[12],
+            updated_at=row[13],
         )
 
 
@@ -261,7 +282,9 @@ async def list_chat_sessions(limit: int = 50) -> list[dict[str, Any]]:
                 MIN(created_at) as created_at,
                 MAX(updated_at) as last_activity,
                 COUNT(task_id) as total_turns,
-                (ARRAY_AGG(user_query ORDER BY created_at ASC))[1] as title
+                (ARRAY_AGG(user_query ORDER BY created_at ASC))[1] as title,
+                (ARRAY_AGG(analyst_provider ORDER BY created_at DESC) FILTER (WHERE analyst_provider IS NOT NULL))[1] as last_provider,
+                (ARRAY_AGG(analyst_model ORDER BY created_at DESC) FILTER (WHERE analyst_model IS NOT NULL))[1] as last_model
             FROM analytics.agent_tasks
             WHERE session_id IS NOT NULL AND TRIM(session_id) != ''
             GROUP BY session_id
@@ -272,11 +295,13 @@ async def list_chat_sessions(limit: int = 50) -> list[dict[str, Any]]:
         rows = res.fetchall()
         sessions = []
         for r in rows:
-            sid, c_at, u_at, turns, title = r[0], r[1], r[2], r[3], r[4]
+            sid, c_at, u_at, turns, title, l_prov, l_mod = r[0], r[1], r[2], r[3], r[4], r[5], r[6]
             sessions.append({
                 "session_id": sid,
                 "title": (title or "Percakapan").strip()[:80],
                 "total_turns": turns,
+                "active_provider": l_prov,
+                "active_model": l_mod,
                 "created_at": c_at.isoformat() if c_at else None,
                 "last_activity": u_at.isoformat() if u_at else None,
             })
@@ -290,7 +315,7 @@ async def get_session_details(session_id: str) -> dict[str, Any] | None:
     await init_task_state_table()
     async with get_db_session() as session:
         query = text("""
-            SELECT task_id, status, user_query, final_result, created_at, updated_at
+            SELECT task_id, status, user_query, final_result, analyst_provider, analyst_model, created_at, updated_at
             FROM analytics.agent_tasks
             WHERE session_id = :session_id
             ORDER BY created_at ASC;
@@ -302,13 +327,22 @@ async def get_session_details(session_id: str) -> dict[str, Any] | None:
 
         turns = []
         title = rows[0][2] if rows else "Percakapan"
+        active_provider = None
+        active_model = None
+
         for r in rows:
-            tid, st, u_query, f_res, c_at, u_at = r
+            tid, st, u_query, f_res, a_prov, a_mod, c_at, u_at = r
+            if a_prov:
+                active_provider = a_prov
+            if a_mod:
+                active_model = a_mod
             f_dict = f_res if isinstance(f_res, dict) else (json.loads(f_res) if f_res else {})
             turns.append({
                 "task_id": tid,
                 "status": st,
                 "user_query": u_query,
+                "analyst_provider": a_prov,
+                "analyst_model": a_mod,
                 "answer_text": f_dict.get("answer_text", ""),
                 "sql_queries": f_dict.get("sql_queries", []),
                 "tables": f_dict.get("tables", []),
@@ -324,8 +358,30 @@ async def get_session_details(session_id: str) -> dict[str, Any] | None:
             "session_id": session_id,
             "title": title[:80],
             "total_turns": len(turns),
+            "active_provider": active_provider,
+            "active_model": active_model,
             "turns": turns,
         }
+
+
+async def get_session_active_model(session_id: str) -> tuple[str | None, str | None]:
+    """Retrieve the most recent provider and model used by a session."""
+    if not session_id:
+        return None, None
+    await init_task_state_table()
+    async with get_db_session() as session:
+        query = text("""
+            SELECT analyst_provider, analyst_model
+            FROM analytics.agent_tasks
+            WHERE session_id = :session_id AND analyst_model IS NOT NULL
+            ORDER BY created_at DESC
+            LIMIT 1;
+        """)
+        res = await session.execute(query, {"session_id": session_id})
+        row = res.fetchone()
+        if row:
+            return row[0], row[1]
+        return None, None
 
 
 async def delete_session(session_id: str) -> bool:
