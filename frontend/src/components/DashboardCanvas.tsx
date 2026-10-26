@@ -63,8 +63,8 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
   });
 
   return (
-    <div className="flex-1 overflow-y-auto px-4 py-6 scroll-smooth">
-      <div className="max-w-6xl mx-auto space-y-6">
+    <div className="flex-1 overflow-y-auto px-4 py-6 scroll-smooth print:p-0 print:overflow-visible print:bg-white">
+      <div className="max-w-6xl mx-auto space-y-6 print:max-w-none print:w-full print:space-y-6 print:p-0 print:bg-white">
         {/* Printable Executive Letterhead (Visible only when printing to PDF / Paper) */}
         <div className="print-only hidden pb-6 mb-6 border-b-2 border-gray-300 space-y-5">
           {/* Top Brand Bar */}
@@ -228,7 +228,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
               return (
                 <div
                   key={w.widget_id}
-                  className="print-widget-card rounded-2xl bg-[#1c1b18] border border-[#2e2c28] hover:border-[#383632] p-5 shadow-sm flex flex-col justify-between transition space-y-4"
+                  className="print-widget-card rounded-2xl bg-[#1c1b18] print:bg-white border border-[#2e2c28] print:border-gray-200 hover:border-[#383632] p-5 shadow-sm print:shadow-none flex flex-col justify-between transition space-y-4"
                 >
                   {/* Card Header */}
                   <div className="flex items-start justify-between gap-3 pb-3 border-b border-[#262421] print:border-gray-200">
@@ -301,9 +301,9 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                   </div>
 
                   {/* Card Body: Chart or Table */}
-                  <div className="flex-1 min-h-[240px] flex flex-col items-center justify-center">
+                  <div className="flex-1 min-h-[240px] flex flex-col items-center justify-center print:bg-white">
                     {isChart && (
-                      <div className="w-full flex-1 flex flex-col items-center justify-center">
+                      <div className="w-full flex-1 flex flex-col items-center justify-center print:bg-white">
                         <DataChart charts={[w.chart_spec as ChartSpec]} hideHeader={true} />
                         <div className="print-only hidden text-center text-[8pt] text-gray-500 font-sans mt-2">
                           Visualisasi diekstrak dari basis data PostgreSQL warehouse.
@@ -312,14 +312,14 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                     )}
 
                     {isTable && (
-                      <div className="overflow-x-auto rounded-xl border border-[#2e2c28] bg-[#161513] w-full print:border-none print:overflow-visible">
-                        <table className="w-full text-xs text-left border-collapse table-auto">
+                      <div className="overflow-x-auto rounded-xl border border-[#2e2c28] bg-[#161513] w-full print:bg-white print:border print:border-gray-200 print:overflow-visible">
+                        <table className="w-full text-xs text-left border-collapse table-auto print:bg-white">
                           <thead>
-                            <tr>
+                            <tr className="print:bg-gray-100">
                               {(w.table_data?.columns || []).map((col, cIdx) => (
                                 <th
                                   key={cIdx}
-                                  className="p-2 text-[10px] font-mono uppercase bg-[#201f1d] text-[#a3a097] border-b border-[#2e2c28]"
+                                  className="p-2 text-[10px] font-mono uppercase bg-[#201f1d] print:bg-gray-100 text-[#a3a097] print:text-gray-900 border-b border-[#2e2c28] print:border-gray-300"
                                 >
                                   {col}
                                 </th>
@@ -332,12 +332,12 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                                 key={rIdx}
                                 className={`${
                                   rIdx % 2 === 0 ? 'bg-[#161513]' : 'bg-[#1a1917]'
-                                } hover:bg-[#201f1d] transition`}
+                                } print:bg-white print:even:bg-gray-50 hover:bg-[#201f1d] transition`}
                               >
                                 {row.map((val, cellIdx) => (
                                   <td
                                     key={cellIdx}
-                                    className="p-2 border-b border-[#262421] text-[#dedcd5] font-mono text-[11px]"
+                                    className="p-2 border-b border-[#262421] print:border-gray-200 text-[#dedcd5] print:text-gray-800 font-mono text-[11px] print:bg-transparent"
                                   >
                                     {val !== null && val !== undefined ? String(val) : '-'}
                                   </td>

@@ -28,7 +28,7 @@ const SidebarComponent: React.FC<SidebarProps> = ({
     <>
       {/* Mobile backdrop */}
       <div
-        className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-30 transition-opacity duration-200 md:hidden ${
+        className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-30 transition-opacity duration-200 md:hidden no-print print:hidden ${
           isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         }`}
         onClick={onCloseMobile}
@@ -36,7 +36,7 @@ const SidebarComponent: React.FC<SidebarProps> = ({
 
       {/* Sidebar container */}
       <aside
-        className={`fixed md:static inset-y-0 left-0 z-40 w-72 bg-[#1b1a18] border-r border-[#2e2c28] flex flex-col transition-transform duration-200 ease-in-out shrink-0 ${
+        className={`fixed md:static inset-y-0 left-0 z-40 w-72 bg-[#1b1a18] border-r border-[#2e2c28] flex flex-col transition-transform duration-200 ease-in-out shrink-0 no-print print:hidden ${
           isOpen ? 'translate-x-0' : '-translate-x-full md:hidden'
         }`}
       >

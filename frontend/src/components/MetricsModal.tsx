@@ -16,7 +16,7 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in font-sans">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in font-sans no-print print:hidden">
       <div className="relative w-full max-w-lg bg-[#1b1a18] border border-[#2e2c28] rounded-2xl shadow-2xl overflow-hidden flex flex-col">
         {/* Header */}
         <div className="px-5 py-4 border-b border-[#2e2c28] flex items-center justify-between">

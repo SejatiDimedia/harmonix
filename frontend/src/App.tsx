@@ -511,7 +511,7 @@ export const App: React.FC = () => {
   const widgetCount = dashboardData?.total || 0;
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[#161513] text-[#dedcd5]">
+    <div className="flex h-screen w-screen overflow-hidden bg-[#161513] text-[#dedcd5] print:h-auto print:w-full print:bg-white print:overflow-visible print:text-gray-900">
       {/* Session History Sidebar */}
       <Sidebar
         isOpen={isSidebarOpen}
@@ -525,7 +525,7 @@ export const App: React.FC = () => {
       />
 
       {/* Main Workspace Area */}
-      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden print:h-auto print:w-full print:bg-white print:overflow-visible">
         {/* Navbar with Tab Switcher */}
         <Navbar
           health={healthData || null}

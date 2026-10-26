@@ -96,7 +96,7 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in font-sans">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in font-sans no-print print:hidden">
       <div className="relative w-full max-w-2xl bg-[#1b1a18] border border-[#2e2c28] rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
         {/* Header */}
         <div className="px-6 py-4 border-b border-[#2e2c28] flex items-center justify-between">

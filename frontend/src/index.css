@@ -115,27 +115,50 @@
   aside,
   form,
   button,
-  .no-print {
+  nav,
+  input,
+  textarea,
+  .no-print,
+  .print\:hidden {
     display: none !important;
   }
 
+  /* HARD HIDE all overlays, fixed backdrops, blur filters, dialogs, toasts */
+  .fixed,
+  [class*="fixed"],
+  [class*="backdrop-blur"],
+  [class*="bg-black"],
+  [class*="bg-opacity"],
+  div[role="dialog"],
+  div[aria-modal="true"] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    width: 0 !important;
+    height: 0 !important;
+    pointer-events: none !important;
+  }
+
   /* Show executive print letterhead & elements */
-  .print-only {
+  .print-only,
+  .print\:block {
     display: block !important;
   }
 
   #root,
+  #root > div,
   .app-container,
   main,
-  div[role="dialog"],
   .flex-1,
   .overflow-hidden,
   .overflow-y-auto {
     overflow: visible !important;
     height: auto !important;
+    min-height: auto !important;
     max-height: none !important;
     background-color: #ffffff !important;
     background: #ffffff !important;
+    position: static !important;
   }
 
   /* Container resets for print */
