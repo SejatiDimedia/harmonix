@@ -253,5 +253,5 @@ async def test_web_ui_endpoint():
         assert "text/html" in resp.headers.get("content-type", "")
         body = resp.text
         assert "Harnessly" in body
-        assert "marked.min.js" in body
+        assert "root" in body
         assert "Newsreader" in body

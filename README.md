@@ -185,6 +185,16 @@ uvicorn src.api.main:app --reload --port 8000
 ```
 Buka browser Anda di **[http://localhost:8000](http://localhost:8000)** untuk berinteraksi langsung melalui Web Chat UI & Live Metrics Dashboard!
 
+> **Pengembangan Frontend (Opsional):**
+> Frontend dibangun menggunakan **React 19 + TypeScript + Tailwind CSS (Vite)** di direktori `frontend/`.
+> ```bash
+> # Menjalankan Vite dev server dengan HMR (Hot Module Replacement):
+> cd frontend && npm run dev
+> 
+> # Melakukan build otomatis ke static asset FastAPI:
+> cd frontend && npm run build
+> ```
+
 ---
 
 ## 🧪 Menjalankan Pengujian (Testing)
@@ -217,6 +227,7 @@ harnessly/
 │   ├── failure_case_log.md            # Dokumentasi 3 kasus kegagalan nyata & perbaikannya
 │   ├── eval_report_summary.md         # Ringkasan metodologi & metrik benchmark evaluasi
 │   └── demo_script.md                 # Naskah video demo teknis 3-5 menit
+├── frontend/                      # Modern React 19 + TypeScript + Tailwind CSS UI (Vite)
 ├── src/
 │   ├── agent/
 │   │   ├── manual_loop.py         # Agent loop manual (procedural while-loop)

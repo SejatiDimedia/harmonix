@@ -30,6 +30,11 @@ htmlcov/
 .vscode/
 *.swp
 
+# Node / Frontend
+node_modules/
+dist/
+*.tsbuildinfo
+
 # Logs
 *.log
 logs/
