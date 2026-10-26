@@ -9,6 +9,7 @@ import {
   useMetricsQuery,
   useDashboardQuery,
   useDeleteSessionMutation,
+  useRenameSessionMutation,
   usePinWidgetMutation,
   useDeleteWidgetMutation,
   useRefreshDashboardMutation,
@@ -78,6 +79,7 @@ export const App: React.FC = () => {
 
   // Mutations via TanStack Query
   const deleteSessionMutation = useDeleteSessionMutation();
+  const renameSessionMutation = useRenameSessionMutation();
   const pinWidgetMutation = usePinWidgetMutation(currentSessionId);
   const deleteWidgetMutation = useDeleteWidgetMutation(currentSessionId);
   const refreshDashboardMutation = useRefreshDashboardMutation(currentSessionId);
@@ -176,6 +178,23 @@ export const App: React.FC = () => {
       },
     });
   }, [sessionToDelete, deleteSessionMutation, currentSessionId, handleNewChat, showToast]);
+
+  const handleRenameSession = useCallback(
+    (sessionId: string, newTitle: string) => {
+      renameSessionMutation.mutate(
+        { sessionId, title: newTitle },
+        {
+          onSuccess: (res) => {
+            showToast(`Nama sesi diubah: "${res.title}"`);
+          },
+          onError: (err: any) => {
+            showToast(`Gagal mengubah nama sesi: ${err.message}`);
+          },
+        }
+      );
+    },
+    [renameSessionMutation, showToast]
+  );
 
   // Model Selection Handlers
   const handleSelectModel = useCallback(
@@ -520,6 +539,7 @@ export const App: React.FC = () => {
         onSelectSession={handleSelectSession}
         onNewChat={handleNewChat}
         onRefreshSessions={refetchSessions}
+        onRenameSession={handleRenameSession}
         onDeleteSession={handleDeleteSessionClick}
         onCloseMobile={() => setIsSidebarOpen(false)}
       />

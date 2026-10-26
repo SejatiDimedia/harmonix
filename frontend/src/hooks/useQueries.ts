@@ -6,6 +6,7 @@ import {
   getSessions,
   getSessionDetails,
   deleteSession,
+  renameSession,
   getDashboardWidgets,
   pinDashboardWidget,
   deleteDashboardWidget,
@@ -65,6 +66,18 @@ export const useDeleteSessionMutation = () => {
     mutationFn: (sessionId: string) => deleteSession(sessionId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sessions'] });
+    },
+  });
+};
+
+export const useRenameSessionMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ sessionId, title }: { sessionId: string; title: string }) =>
+      renameSession(sessionId, title),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['sessions'] });
+      queryClient.invalidateQueries({ queryKey: ['session', variables.sessionId] });
     },
   });
 };

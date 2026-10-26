@@ -81,6 +81,16 @@ async def init_task_state_table() -> None:
             );
         """))
 
+        # Table 3: Session Metadata & Custom Titles (FR-33 & Session Renaming)
+        await session.execute(text("""
+            CREATE TABLE IF NOT EXISTS analytics.chat_sessions (
+                session_id VARCHAR(100) PRIMARY KEY,
+                title VARCHAR(255) NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """))
+
         # Index on session_id for multi-turn short-term memory lookup (FR-16)
         await session.execute(text("""
             CREATE INDEX IF NOT EXISTS idx_agent_tasks_session
@@ -273,22 +283,34 @@ async def get_task_by_approval_id(approval_id: str) -> TaskRecord | None:
 
 
 async def list_chat_sessions(limit: int = 50) -> list[dict[str, Any]]:
-    """Retrieve summarized list of all conversation sessions with their first query as title."""
+    """Retrieve summarized list of all conversation sessions with their custom or first query title."""
     await init_task_state_table()
     async with get_db_session() as session:
         query = text("""
             SELECT 
                 session_id,
-                MIN(created_at) as created_at,
-                MAX(updated_at) as last_activity,
-                COUNT(task_id) as total_turns,
-                (ARRAY_AGG(user_query ORDER BY created_at ASC))[1] as title,
-                (ARRAY_AGG(analyst_provider ORDER BY created_at DESC) FILTER (WHERE analyst_provider IS NOT NULL))[1] as last_provider,
-                (ARRAY_AGG(analyst_model ORDER BY created_at DESC) FILTER (WHERE analyst_model IS NOT NULL))[1] as last_model
-            FROM analytics.agent_tasks
-            WHERE session_id IS NOT NULL AND TRIM(session_id) != ''
-            GROUP BY session_id
-            ORDER BY MAX(updated_at) DESC
+                created_at,
+                last_activity,
+                total_turns,
+                COALESCE(custom_title, first_query, 'Percakapan') as title,
+                last_provider,
+                last_model
+            FROM (
+                SELECT 
+                    COALESCE(at.session_id, cs.session_id) as session_id,
+                    COALESCE(MIN(at.created_at), MIN(cs.created_at)) as created_at,
+                    COALESCE(MAX(at.updated_at), MAX(cs.updated_at)) as last_activity,
+                    COUNT(at.task_id) as total_turns,
+                    MAX(cs.title) as custom_title,
+                    (ARRAY_AGG(at.user_query ORDER BY at.created_at ASC))[1] as first_query,
+                    (ARRAY_AGG(at.analyst_provider ORDER BY at.created_at DESC) FILTER (WHERE at.analyst_provider IS NOT NULL))[1] as last_provider,
+                    (ARRAY_AGG(at.analyst_model ORDER BY at.created_at DESC) FILTER (WHERE at.analyst_model IS NOT NULL))[1] as last_model
+                FROM analytics.agent_tasks at
+                FULL OUTER JOIN analytics.chat_sessions cs ON cs.session_id = at.session_id
+                WHERE COALESCE(at.session_id, cs.session_id) IS NOT NULL AND TRIM(COALESCE(at.session_id, cs.session_id)) != ''
+                GROUP BY COALESCE(at.session_id, cs.session_id)
+            ) sub
+            ORDER BY last_activity DESC
             LIMIT :limit;
         """)
         res = await session.execute(query, {"limit": limit})
@@ -298,7 +320,7 @@ async def list_chat_sessions(limit: int = 50) -> list[dict[str, Any]]:
             sid, c_at, u_at, turns, title, l_prov, l_mod = r[0], r[1], r[2], r[3], r[4], r[5], r[6]
             sessions.append({
                 "session_id": sid,
-                "title": (title or "Percakapan").strip()[:80],
+                "title": (title or "Percakapan").strip()[:100],
                 "total_turns": turns,
                 "active_provider": l_prov,
                 "active_model": l_mod,
@@ -314,6 +336,14 @@ async def get_session_details(session_id: str) -> dict[str, Any] | None:
         return None
     await init_task_state_table()
     async with get_db_session() as session:
+        # Check custom title first
+        title_res = await session.execute(
+            text("SELECT title FROM analytics.chat_sessions WHERE session_id = :session_id;"),
+            {"session_id": session_id},
+        )
+        custom_row = title_res.fetchone()
+        custom_title = custom_row[0] if custom_row else None
+
         query = text("""
             SELECT task_id, status, user_query, final_result, analyst_provider, analyst_model, created_at, updated_at
             FROM analytics.agent_tasks
@@ -322,11 +352,12 @@ async def get_session_details(session_id: str) -> dict[str, Any] | None:
         """)
         res = await session.execute(query, {"session_id": session_id})
         rows = res.fetchall()
-        if not rows:
+        if not rows and not custom_title:
             return None
 
         turns = []
-        title = rows[0][2] if rows else "Percakapan"
+        fallback_title = rows[0][2] if rows else "Percakapan"
+        title = custom_title or fallback_title
         active_provider = None
         active_model = None
 
@@ -356,12 +387,30 @@ async def get_session_details(session_id: str) -> dict[str, Any] | None:
 
         return {
             "session_id": session_id,
-            "title": title[:80],
+            "title": title[:100],
             "total_turns": len(turns),
             "active_provider": active_provider,
             "active_model": active_model,
             "turns": turns,
         }
+
+
+async def rename_session(session_id: str, new_title: str) -> bool:
+    """Update or set the custom title for a conversation session."""
+    if not session_id or not new_title.strip():
+        return False
+    title = new_title.strip()[:150]
+    await init_task_state_table()
+    async with get_db_session() as session:
+        query = text("""
+            INSERT INTO analytics.chat_sessions (session_id, title, updated_at)
+            VALUES (:session_id, :title, CURRENT_TIMESTAMP)
+            ON CONFLICT (session_id)
+            DO UPDATE SET title = :title, updated_at = CURRENT_TIMESTAMP;
+        """)
+        await session.execute(query, {"session_id": session_id, "title": title})
+        await session.commit()
+        return True
 
 
 async def get_session_active_model(session_id: str) -> tuple[str | None, str | None]:
@@ -385,16 +434,27 @@ async def get_session_active_model(session_id: str) -> tuple[str | None, str | N
 
 
 async def delete_session(session_id: str) -> bool:
-    """Delete all tasks and checkpoints associated with a session."""
+    """Delete all tasks, checkpoints, custom session titles, and widgets associated with a session."""
     if not session_id:
         return False
     await init_task_state_table()
     async with get_db_session() as session:
+        del_cs = await session.execute(
+            text("DELETE FROM analytics.chat_sessions WHERE session_id = :session_id;"),
+            {"session_id": session_id},
+        )
         res = await session.execute(
             text("DELETE FROM analytics.agent_tasks WHERE session_id = :session_id;"),
             {"session_id": session_id},
         )
+        try:
+            await session.execute(
+                text("DELETE FROM analytics.dashboard_widgets WHERE session_id = :session_id;"),
+                {"session_id": session_id},
+            )
+        except Exception:
+            pass
         await session.commit()
-        return res.rowcount > 0
+        return res.rowcount > 0 or del_cs.rowcount > 0
 
 

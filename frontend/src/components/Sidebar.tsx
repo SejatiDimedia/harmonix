@@ -1,5 +1,5 @@
-import React from 'react';
-import { Plus, RefreshCw, MessageSquare, Trash2, X } from 'lucide-react';
+import React, { useState } from 'react';
+import { Plus, RefreshCw, MessageSquare, Trash2, Pencil, Check, X } from 'lucide-react';
 import { ChatSessionSummary } from '../types';
 import { formatSessionDate } from '../utils/formatters';
 
@@ -10,6 +10,7 @@ interface SidebarProps {
   onSelectSession: (sessionId: string) => void;
   onNewChat: () => void;
   onRefreshSessions: () => void;
+  onRenameSession: (sessionId: string, newTitle: string) => void;
   onDeleteSession: (sessionId: string, title: string) => void;
   onCloseMobile: () => void;
 }
@@ -21,9 +22,35 @@ const SidebarComponent: React.FC<SidebarProps> = ({
   onSelectSession,
   onNewChat,
   onRefreshSessions,
+  onRenameSession,
   onDeleteSession,
   onCloseMobile,
 }) => {
+  const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState<string>('');
+
+  const handleStartRename = (e: React.MouseEvent, sid: string, currentTitle: string) => {
+    e.stopPropagation();
+    setEditingSessionId(sid);
+    setEditTitle(currentTitle || 'Percakapan');
+  };
+
+  const handleCancelRename = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setEditingSessionId(null);
+    setEditTitle('');
+  };
+
+  const handleSaveRename = (e: React.FormEvent, sid: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const cleanTitle = editTitle.trim();
+    if (cleanTitle && onRenameSession) {
+      onRenameSession(sid, cleanTitle);
+    }
+    setEditingSessionId(null);
+    setEditTitle('');
+  };
   return (
     <>
       {/* Mobile backdrop */}
@@ -83,45 +110,98 @@ const SidebarComponent: React.FC<SidebarProps> = ({
           ) : (
             sessions.map((s) => {
               const isActive = s.session_id === currentSessionId;
+              const isEditing = s.session_id === editingSessionId;
+
               return (
                 <div
                   key={s.session_id}
-                  onClick={() => onSelectSession(s.session_id)}
+                  onClick={() => !isEditing && onSelectSession(s.session_id)}
                   className={`group relative flex items-center justify-between p-2.5 rounded-xl cursor-pointer transition text-xs border ${
                     isActive
                       ? 'bg-[#282622] text-[#f5f4ef] border-clay-500/40 shadow-sm'
                       : 'text-[#a3a097] hover:bg-[#201f1d] hover:text-[#e4e2d9] border-transparent'
                   }`}
                 >
-                  <div className="flex items-start gap-2.5 min-w-0 flex-1 pr-1">
-                    <MessageSquare
-                      className={`w-4 h-4 mt-0.5 shrink-0 ${
-                        isActive ? 'text-clay-400' : 'text-[#817e75] group-hover:text-clay-400'
-                      }`}
-                    />
-                    <div className="min-w-0 flex-1">
-                      <div className="font-medium truncate leading-tight">
-                        {s.title || 'Percakapan'}
+                  {isEditing ? (
+                    <form
+                      onSubmit={(e) => handleSaveRename(e, s.session_id)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="flex items-center gap-1.5 flex-1 min-w-0 py-0.5"
+                    >
+                      <input
+                        type="text"
+                        value={editTitle}
+                        onChange={(e) => setEditTitle(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Escape') {
+                            handleCancelRename();
+                          }
+                        }}
+                        autoFocus
+                        maxLength={100}
+                        placeholder="Nama sesi..."
+                        className="w-full bg-[#161513] border border-clay-500/60 rounded-lg px-2 py-1 text-xs text-[#f5f4ef] focus:outline-none focus:ring-1 focus:ring-clay-500 shadow-inner"
+                      />
+                      <button
+                        type="submit"
+                        disabled={!editTitle.trim()}
+                        className="p-1 rounded-md text-emerald-400 hover:text-emerald-300 hover:bg-emerald-950/50 disabled:opacity-30 transition cursor-pointer shrink-0"
+                        title="Simpan nama"
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleCancelRename}
+                        className="p-1 rounded-md text-[#817e75] hover:text-[#dedcd5] hover:bg-[#262421] transition cursor-pointer shrink-0"
+                        title="Batal"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </form>
+                  ) : (
+                    <>
+                      <div className="flex items-start gap-2.5 min-w-0 flex-1 pr-1">
+                        <MessageSquare
+                          className={`w-4 h-4 mt-0.5 shrink-0 ${
+                            isActive ? 'text-clay-400' : 'text-[#817e75] group-hover:text-clay-400'
+                          }`}
+                        />
+                        <div className="min-w-0 flex-1">
+                          <div className="font-medium truncate leading-tight">
+                            {s.title || 'Percakapan'}
+                          </div>
+                          <div className="text-[10px] text-[#78756d] mt-1 font-mono flex items-center gap-1.5">
+                            <span>{s.total_turns} pesan</span>
+                            <span>•</span>
+                            <span>{formatSessionDate(s.last_activity || s.created_at)}</span>
+                          </div>
+                        </div>
                       </div>
-                      <div className="text-[10px] text-[#78756d] mt-1 font-mono flex items-center gap-1.5">
-                        <span>{s.total_turns} pesan</span>
-                        <span>•</span>
-                        <span>{formatSessionDate(s.last_activity || s.created_at)}</span>
-                      </div>
-                    </div>
-                  </div>
 
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDeleteSession(s.session_id, s.title);
-                    }}
-                    className="opacity-0 group-hover:opacity-100 p-1 rounded-lg text-[#817e75] hover:text-rose-400 hover:bg-rose-950/40 transition shrink-0 cursor-pointer"
-                    title="Hapus sesi"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                      <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition shrink-0">
+                        <button
+                          type="button"
+                          onClick={(e) => handleStartRename(e, s.session_id, s.title)}
+                          className="p-1 rounded-lg text-[#817e75] hover:text-clay-300 hover:bg-[#2e2c28] transition cursor-pointer"
+                          title="Ubah nama sesi"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDeleteSession(s.session_id, s.title);
+                          }}
+                          className="p-1 rounded-lg text-[#817e75] hover:text-rose-400 hover:bg-rose-950/40 transition shrink-0 cursor-pointer"
+                          title="Hapus sesi"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </div>
               );
             })

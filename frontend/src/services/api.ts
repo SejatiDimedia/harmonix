@@ -63,6 +63,22 @@ export async function deleteSession(sessionId: string): Promise<boolean> {
   return res.ok;
 }
 
+export async function renameSession(
+  sessionId: string,
+  title: string
+): Promise<{ status: string; session_id: string; title: string }> {
+  const res = await fetch(`/v1/sessions/${sessionId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: 'Failed to rename session' }));
+    throw new Error(err.detail || 'Failed to rename session');
+  }
+  return res.json();
+}
+
 export async function submitApproval(approvalId: string, decision: 'approved' | 'rejected', reason?: string) {
   const res = await fetch(`/v1/approvals/${approvalId}`, {
     method: 'POST',

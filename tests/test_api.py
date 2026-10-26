@@ -226,20 +226,51 @@ async def test_sessions_lifecycle_endpoints():
         assert detail["turns"][1]["charts"][0]["chart_type"] == "pie"
         assert detail["turns"][1]["follow_up_suggestions"] == []
 
-        # 3. Non-existent session details returns 404
+        # 3. Rename session (FR-33 & Session Renaming)
+        rename_resp = await client.patch(
+            f"/v1/sessions/{test_sid}",
+            json={"title": "Analisis Performa Penjualan Q4"},
+        )
+        assert rename_resp.status_code == 200
+        assert rename_resp.json() == {
+            "status": "updated",
+            "session_id": test_sid,
+            "title": "Analisis Performa Penjualan Q4",
+        }
+
+        # Verify renamed title reflected in list_sessions
+        list_renamed = await client.get("/v1/sessions")
+        assert list_renamed.status_code == 200
+        matching_renamed = [s for s in list_renamed.json()["sessions"] if s["session_id"] == test_sid]
+        assert len(matching_renamed) == 1
+        assert matching_renamed[0]["title"] == "Analisis Performa Penjualan Q4"
+
+        # Verify renamed title reflected in session details
+        detail_renamed = await client.get(f"/v1/sessions/{test_sid}")
+        assert detail_renamed.status_code == 200
+        assert detail_renamed.json()["title"] == "Analisis Performa Penjualan Q4"
+
+        # Validation: empty title returns 422
+        invalid_rename = await client.patch(
+            f"/v1/sessions/{test_sid}",
+            json={"title": "   "},
+        )
+        assert invalid_rename.status_code == 422
+
+        # 4. Non-existent session details returns 404
         not_found_resp = await client.get("/v1/sessions/non_existent_session_xyz")
         assert not_found_resp.status_code == 404
 
-        # 4. Delete session
+        # 5. Delete session
         del_resp = await client.delete(f"/v1/sessions/{test_sid}")
         assert del_resp.status_code == 200
         assert del_resp.json() == {"status": "deleted", "session_id": test_sid}
 
-        # 5. Subsequent GET returns 404
+        # 6. Subsequent GET returns 404
         subsequent_get = await client.get(f"/v1/sessions/{test_sid}")
         assert subsequent_get.status_code == 404
 
-        # 6. Deleting already deleted session returns 404
+        # 7. Deleting already deleted session returns 404
         subsequent_del = await client.delete(f"/v1/sessions/{test_sid}")
         assert subsequent_del.status_code == 404
 

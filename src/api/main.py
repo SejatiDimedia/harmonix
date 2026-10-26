@@ -27,6 +27,7 @@ from src.agent.state import (
     init_task_state_table,
     list_chat_sessions,
     get_session_details,
+    rename_session,
     delete_session,
     get_session_active_model,
 )
@@ -403,6 +404,22 @@ async def remove_session(session_id: str):
     if not success:
         raise HTTPException(status_code=404, detail=f"Session '{session_id}' not found or could not be deleted.")
     return {"status": "deleted", "session_id": session_id}
+
+
+class RenameSessionInput(BaseModel):
+    title: str = Field(..., min_length=1, max_length=150, description="New title for the conversation session")
+
+
+@app.patch("/v1/sessions/{session_id}", tags=["Sessions"])
+async def update_session_title(session_id: str, payload: RenameSessionInput):
+    """Rename a conversation session title."""
+    clean_title = payload.title.strip()
+    if not clean_title:
+        raise HTTPException(status_code=422, detail="Title cannot be empty or whitespace.")
+    success = await rename_session(session_id=session_id, new_title=clean_title)
+    if not success:
+        raise HTTPException(status_code=400, detail=f"Could not rename session '{session_id}'.")
+    return {"status": "updated", "session_id": session_id, "title": clean_title[:150]}
 
 
 # ==============================================================================
