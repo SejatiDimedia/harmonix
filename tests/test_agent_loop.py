@@ -79,3 +79,32 @@ async def test_manual_agent_loop_token_budget_limit():
     error_events = [e for e in events if e["event"] == "error"]
     assert len(error_events) > 0
     assert "token budget" in error_events[0]["data"]["message"].lower()
+
+
+@pytest.mark.asyncio
+async def test_manual_agent_loop_meta_identity_query_does_not_force_sql():
+    """Verify that identity or meta queries (e.g. asking who the model is, context window)
+    do not trigger the premature finalization SQL nudge loop."""
+    from src.llm.provider import LLMResponse, LLMUsage
+
+    identity_response = LLMResponse(
+        content="Saya adalah Gemini 3.8 Flash yang diciptakan oleh Google dengan context window 1 juta token.",
+        tool_calls=[],
+        usage=LLMUsage(prompt_tokens=20, completion_tokens=30, total_tokens=50),
+    )
+
+    mock_llm = MockLLMProvider(canned_responses=[identity_response])
+    agent = ManualAgentLoop(llm=mock_llm, max_steps=5)
+
+    events = []
+    async for event in agent.run(
+        user_query="Sebutkan siapa kamu sebenarnya, siapa perusahaan yang menciptakanmu, dan berapa batas context window kamu?"
+    ):
+        events.append(event)
+
+    final_event = next(e for e in events if e["event"] == "final_result")
+    # Must finish cleanly in 1 step without nudging or forcing SQL
+    assert final_event["data"]["total_steps"] == 1
+    assert "Gemini 3.8 Flash" in final_event["data"]["answer_text"]
+    assert len(final_event["data"]["sql_queries"]) == 0
+

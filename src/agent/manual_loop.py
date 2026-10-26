@@ -570,21 +570,37 @@ class ManualAgentLoop:
                 # Proceed to next iteration to let LLM interpret observations
                 continue
 
-            # 5. Check if agent is attempting to finalize prematurely without running SQL on an analytical question
+            # 5. Check if agent is attempting to finalize prematurely without running SQL on an analytical database question
             if not executed_sqls and step < 3:
                 resp_text = llm_response.content or ""
                 has_unexecuted_sql = bool(re.search(r'```(?:sql)?\s*SELECT\b|\bSELECT\s+[a-zA-Z0-9_.*,\s]+\s+FROM\s+', resp_text, re.IGNORECASE))
                 q_lower = user_query.lower()
-                is_analytical = any(w in q_lower for w in [
-                    "berapa", "kategori", "siapa", "mana", "total", "rata", "pesanan",
-                    "produk", "customer", "pelanggan", "penjualan", "transaksi", "status",
-                    "data", "terbanyak", "terlaris", "termahal", "paling",
-                    "how", "what", "which", "who", "top", "sales", "average", "count"
-                ])
-                is_greeting = any(g in q_lower for g in ["halo", "hai", "hello", "hi", "siapa kamu"]) and not is_analytical
 
-                if (has_unexecuted_sql or is_analytical) and not is_greeting:
-                    logger.info("Agent concluded without running SQL. Nudging tool execution.")
+                # Meta, identity, conversational, or greeting questions should NOT be forced to run SQL
+                is_meta_or_greeting = any(phrase in q_lower for phrase in [
+                    "siapa kamu", "kamu siapa", "siapa anda", "identitas", "dibuat oleh",
+                    "menciptakanmu", "menciptakan kamu", "perusahaan yang", "context window",
+                    "konteks window", "model apa", "kamu model", "arsitektur", "halo",
+                    "hai", "hello", "hi", "hey", "selamat pagi", "selamat siang",
+                    "selamat sore", "selamat malam", "terima kasih", "makasih", "thanks",
+                    "who are you", "what model", "context length"
+                ])
+
+                # Analytical query specifically targeting the domain/database
+                domain_keywords = [
+                    "kategori", "pesanan", "produk", "customer", "pelanggan",
+                    "penjualan", "transaksi", "status", "terbanyak", "terlaris",
+                    "termahal", "paling", "omset", "revenue", "sales", "order",
+                    "barang", "toko", "diskon", "kupon", "pembayaran", "payment",
+                    "tabel", "kolom", "database", "skema"
+                ]
+                has_domain_keywords = any(kw in q_lower for kw in domain_keywords)
+                has_agg_request = any(w in q_lower for w in ["total", "rata-rata", "rata2", "rata", "jumlah", "count", "average", "sum", "top"])
+
+                is_db_analytical = (has_domain_keywords or (has_agg_request and not is_meta_or_greeting)) and not is_meta_or_greeting
+
+                if (has_unexecuted_sql or is_db_analytical) and not is_meta_or_greeting:
+                    logger.info("Agent concluded without running SQL on a database query. Nudging tool execution.")
                     messages.append({
                         "role": "assistant",
                         "content": llm_response.content or "",
