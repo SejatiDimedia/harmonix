@@ -187,6 +187,7 @@ const SingleChartCanvas: React.FC<SingleChartProps> = ({
           chart.options.scales.y.ticks.color = '#374151';
         }
       }
+      chart.resize();
       chart.update('none');
     };
 
@@ -219,6 +220,7 @@ const SingleChartCanvas: React.FC<SingleChartProps> = ({
           chart.options.scales.y.ticks.color = '#8e8b82';
         }
       }
+      chart.resize();
       chart.update('none');
     };
 
@@ -270,7 +272,7 @@ const SingleChartCanvas: React.FC<SingleChartProps> = ({
         </div>
       )}
 
-      <div className={hideHeader ? 'w-full h-full' : 'relative w-full h-64 md:h-72'}>
+      <div className={hideHeader ? 'chart-wrapper w-full h-full print:h-[250px] print:max-w-xl print:mx-auto' : 'chart-wrapper relative w-full h-64 md:h-72 print:h-[250px] print:max-w-xl print:mx-auto'}>
         <canvas ref={canvasRef} />
       </div>
     </div>

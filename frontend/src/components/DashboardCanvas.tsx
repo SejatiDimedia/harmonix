@@ -108,37 +108,47 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
 
           {/* Executive KPI & Governance Cards */}
           <div className="grid grid-cols-4 gap-3 text-xs">
-            <div className="p-3 rounded-xl bg-gray-50 border border-gray-200">
+            <div className="p-3.5 rounded-xl bg-gray-50 border border-gray-200 border-t-2 border-t-clay-600">
               <span className="text-[9px] text-gray-500 uppercase font-mono block">Topik Analisis</span>
               <span className="font-bold text-gray-900 text-[11px] truncate block mt-0.5">
                 {sessionTitle || 'Analisis Data Eksekutif'}
               </span>
             </div>
-            <div className="p-3 rounded-xl bg-gray-50 border border-gray-200">
+            <div className="p-3.5 rounded-xl bg-gray-50 border border-gray-200 border-t-2 border-t-clay-600">
               <span className="text-[9px] text-gray-500 uppercase font-mono block">AI Reasoning Engine</span>
               <span className="font-semibold text-gray-800 text-[11px] truncate block mt-0.5">
                 {activeModel || 'Llama 3.3 70B (Groq)'}
               </span>
             </div>
-            <div className="p-3 rounded-xl bg-gray-50 border border-gray-200">
+            <div className="p-3.5 rounded-xl bg-gray-50 border border-gray-200 border-t-2 border-t-clay-600">
               <span className="text-[9px] text-gray-500 uppercase font-mono block">Warehouse Database</span>
               <span className="font-semibold text-gray-800 text-[11px] truncate block mt-0.5">
                 PostgreSQL 16 Enterprise
               </span>
             </div>
-            <div className="p-3 rounded-xl bg-gray-50 border border-gray-200">
+            <div className="p-3.5 rounded-xl bg-gray-50 border border-gray-200 border-t-2 border-t-emerald-600">
               <span className="text-[9px] text-gray-500 uppercase font-mono block">Auditor Verification</span>
               <span className="font-semibold text-emerald-700 text-[11px] flex items-center gap-1 mt-0.5">
-                <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                <CheckCircle2 className="w-3.5 h-3.5 shrink-0 text-emerald-600" />
                 100% Read-Only Safety
               </span>
             </div>
           </div>
 
           {/* Executive Overview Narrative */}
-          <div className="p-3.5 rounded-xl bg-amber-50/60 border border-amber-200/80 text-[9.5pt] text-gray-700 leading-relaxed">
-            <strong className="text-gray-900 font-semibold">Ringkasan Eksekutif: </strong>
+          <div className="p-3.5 rounded-xl bg-amber-50/70 border border-amber-200/90 text-[9.5pt] text-gray-800 leading-relaxed">
+            <strong className="text-gray-950 font-bold">Ringkasan Eksekutif: </strong>
             Dokumen ini menyajikan wawasan analitik bisnis yang diekstraksi secara otonom dari data warehouse transaksional. Seluruh kueri SQL telah diverifikasi secara deterministik oleh sistem guardrail untuk menjamin integritas data dan kepatuhan read-only tanpa modifikasi manual.
+          </div>
+
+          {/* Section I Header for Print */}
+          <div className="flex items-center justify-between pt-2 border-t border-gray-200">
+            <h2 className="text-xs font-bold text-gray-900 uppercase tracking-wider font-sans">
+              I. Visualisasi & Komponen Analisis Kunci ({widgets.length} Komponen)
+            </h2>
+            <span className="text-[9px] font-mono text-gray-500">
+              Format Kertas: A4 Portrait
+            </span>
           </div>
         </div>
 
@@ -228,27 +238,31 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
               return (
                 <div
                   key={w.widget_id}
-                  className="print-widget-card rounded-2xl bg-[#1c1b18] print:bg-white border border-[#2e2c28] print:border-gray-200 hover:border-[#383632] p-5 shadow-sm print:shadow-none flex flex-col justify-between transition space-y-4"
+                  className="print-widget-card rounded-2xl bg-[#1c1b18] print:bg-white border border-[#2e2c28] print:border-gray-300 hover:border-[#383632] p-5 shadow-sm print:shadow-none flex flex-col justify-between transition space-y-4 print:space-y-3 print:rounded-xl print:p-0 print:overflow-hidden"
                 >
-                  {/* Card Header */}
-                  <div className="flex items-start justify-between gap-3 pb-3 border-b border-[#262421] print:border-gray-200">
+                  {/* Card Header (Corporate Styled on Print) */}
+                  <div className="flex items-start justify-between gap-3 pb-3 border-b border-[#262421] print:bg-gray-50/80 print:p-4 print:pb-3 print:border-b print:border-gray-200">
                     <div className="space-y-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="no-print w-2 h-2 rounded-full bg-clay-500 shrink-0" />
-                        <h2 className="text-sm font-semibold text-[#f5f4ef] truncate font-sans print:text-base print:text-gray-900">
-                          <span className="print-only hidden mr-1 text-clay-700 font-bold font-mono">
-                            Bagian {idx + 1}:
-                          </span>
+                        <span className="print-only hidden inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-900 text-white font-mono text-[10px] font-bold shrink-0">
+                          {idx + 1}
+                        </span>
+                        <h2 className="text-sm font-semibold text-[#f5f4ef] truncate font-sans print:text-sm print:font-bold print:text-gray-900">
                           {displayTitle}
                         </h2>
                       </div>
                       <div className="flex items-center gap-2 text-[10px] text-[#8e8b82] font-mono print:text-gray-500">
-                        <span className="uppercase px-2 py-0.5 rounded bg-[#242320] text-clay-400 border border-[#383632] print:bg-gray-100 print:text-gray-700 print:border-gray-200">
-                          {w.widget_type === 'chart' ? 'Visualisasi Grafik' : 'Tabel Data'}
+                        <span className="uppercase px-2 py-0.5 rounded bg-[#242320] text-clay-400 border border-[#383632] print:bg-white print:text-gray-700 print:border-gray-300 print:font-semibold print:text-[9px]">
+                          {w.widget_type === 'chart'
+                            ? w.chart_spec?.chart_type
+                              ? `Grafik ${w.chart_spec.chart_type.toUpperCase()}`
+                              : 'Grafik Visualisasi'
+                            : 'Tabel Data Analisis'}
                         </span>
                         {w.updated_at && (
                           <span className="flex items-center gap-1">
-                            <Calendar className="w-3 h-3" />
+                            <Calendar className="w-3 h-3 text-clay-400 print:text-gray-400" />
                             <span>
                               Sinkronisasi:{' '}
                               {new Date(w.updated_at).toLocaleTimeString('id-ID', {
@@ -301,25 +315,27 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                   </div>
 
                   {/* Card Body: Chart or Table */}
-                  <div className="flex-1 min-h-[240px] flex flex-col items-center justify-center print:bg-white">
+                  <div className="flex-1 min-h-[240px] flex flex-col items-center justify-center print:bg-white print:p-4 print:pt-1">
                     {isChart && (
                       <div className="w-full flex-1 flex flex-col items-center justify-center print:bg-white">
-                        <DataChart charts={[w.chart_spec as ChartSpec]} hideHeader={true} />
-                        <div className="print-only hidden text-center text-[8pt] text-gray-500 font-sans mt-2">
-                          Visualisasi diekstrak dari basis data PostgreSQL warehouse.
+                        <div className="chart-wrapper w-full flex-1 flex items-center justify-center print:h-[250px] print:max-w-xl print:mx-auto">
+                          <DataChart charts={[w.chart_spec as ChartSpec]} hideHeader={true} />
+                        </div>
+                        <div className="print-only hidden text-center text-[8.5pt] text-gray-500 font-sans mt-3 italic">
+                          * Gambar {idx + 1}: {displayTitle} (Sumber: PostgreSQL warehouse).
                         </div>
                       </div>
                     )}
 
                     {isTable && (
-                      <div className="overflow-x-auto rounded-xl border border-[#2e2c28] bg-[#161513] w-full print:bg-white print:border print:border-gray-200 print:overflow-visible">
+                      <div className="overflow-x-auto rounded-xl border border-[#2e2c28] bg-[#161513] w-full print:bg-white print:border print:border-gray-200 print:rounded-lg print:overflow-hidden">
                         <table className="w-full text-xs text-left border-collapse table-auto print:bg-white">
                           <thead>
                             <tr className="print:bg-gray-100">
                               {(w.table_data?.columns || []).map((col, cIdx) => (
                                 <th
                                   key={cIdx}
-                                  className="p-2 text-[10px] font-mono uppercase bg-[#201f1d] print:bg-gray-100 text-[#a3a097] print:text-gray-900 border-b border-[#2e2c28] print:border-gray-300"
+                                  className="p-2.5 text-[10px] font-mono uppercase bg-[#201f1d] print:bg-gray-100 text-[#a3a097] print:text-gray-900 border-b border-[#2e2c28] print:border-gray-300 print:font-bold"
                                 >
                                   {col}
                                 </th>
@@ -332,12 +348,12 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                                 key={rIdx}
                                 className={`${
                                   rIdx % 2 === 0 ? 'bg-[#161513]' : 'bg-[#1a1917]'
-                                } print:bg-white print:even:bg-gray-50 hover:bg-[#201f1d] transition`}
+                                } print:bg-white print:even:bg-gray-50/70 hover:bg-[#201f1d] transition`}
                               >
                                 {row.map((val, cellIdx) => (
                                   <td
                                     key={cellIdx}
-                                    className="p-2 border-b border-[#262421] print:border-gray-200 text-[#dedcd5] print:text-gray-800 font-mono text-[11px] print:bg-transparent"
+                                    className="p-2.5 border-b border-[#262421] print:border-gray-200 text-[#dedcd5] print:text-gray-800 font-mono text-[11px] print:bg-transparent"
                                   >
                                     {val !== null && val !== undefined ? String(val) : '-'}
                                   </td>
@@ -353,6 +369,12 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                         )}
                       </div>
                     )}
+                  </div>
+
+                  {/* Print-Only Subtle Card Footnote */}
+                  <div className="print-only hidden px-4 py-2 border-t border-gray-100 text-[8pt] text-gray-400 font-sans flex justify-between items-center bg-gray-50/50">
+                    <span>Harnessly Enterprise BI Platform • Read-Only Verified</span>
+                    <span className="font-mono">ID: {w.widget_id.slice(0, 8)}</span>
                   </div>
 
                   {/* Card Footer: Collapsible SQL on screen only */}

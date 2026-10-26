@@ -178,9 +178,11 @@
     box-shadow: none !important;
     break-inside: avoid !important;
     page-break-inside: avoid !important;
-    margin-bottom: 2rem !important;
-    padding: 1.5rem !important;
+    margin-bottom: 1.5rem !important;
+    padding: 1.25rem !important;
     border-radius: 0.75rem !important;
+    color: #111827 !important;
+    overflow: hidden !important;
   }
 
   /* Neutralize dark backgrounds on any element inside print cards */
@@ -203,6 +205,29 @@
     font-weight: 700 !important;
   }
 
+  /* Chart sizing and centering inside box */
+  .print-widget-card .chart-wrapper,
+  .print-widget-card .chart-container {
+    height: 250px !important;
+    max-height: 250px !important;
+    max-width: 540px !important;
+    width: 100% !important;
+    margin: 0 auto !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .print-widget-card canvas {
+    height: 240px !important;
+    max-height: 240px !important;
+    max-width: 520px !important;
+    width: auto !important;
+    margin: 0 auto !important;
+    display: block !important;
+    background-color: #ffffff !important;
+  }
+
   /* Professional Table Styling for Print */
   .print-widget-card table {
     width: 100% !important;
@@ -222,7 +247,7 @@
     color: #111827 !important;
     border: 1px solid #d1d5db !important;
     font-weight: 700 !important;
-    padding: 8px 10px !important;
+    padding: 7px 10px !important;
     text-transform: uppercase !important;
     font-size: 8pt !important;
     letter-spacing: 0.05em !important;
@@ -242,15 +267,9 @@
   .print-widget-card table td {
     border: 1px solid #e5e7eb !important;
     color: #1f2937 !important;
-    padding: 7px 10px !important;
+    padding: 6px 10px !important;
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
     font-size: 8.5pt !important;
-  }
-
-  .print-widget-card canvas {
-    max-height: 280px !important;
-    width: 100% !important;
-    margin: 0 auto !important;
   }
 }
 
