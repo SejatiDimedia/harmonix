@@ -48,7 +48,7 @@ class Settings(BaseSettings):
 
     # Option 3: Groq Cloud (Free Tier)
     groq_api_key: str | None = Field(default=None)
-    groq_model: str = Field(default="llama-3.3-70b-versatile")
+    groq_model: str = Field(default="openai/gpt-oss-120b")
 
     # Option 4: OpenRouter (Free Tier Models)
     openrouter_api_key: str | None = Field(default=None)

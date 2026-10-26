@@ -125,11 +125,10 @@ class ModelRegistry:
             ModelOption(id="deepseek-r1:7b", name="deepseek-r1:7b (Offline)", provider="ollama"),
         ]
 
-    def _get_groq_models(self) -> tuple[bool, str, list[ModelOption]]:
-        """Return supported Groq Cloud Free Tier models."""
+    async def _fetch_groq_models(self) -> tuple[bool, str, list[ModelOption]]:
+        """Return supported and dynamically discovered Groq Cloud Free Tier chat models."""
         is_ready = bool(settings.groq_api_key and len(settings.groq_api_key) > 5)
-        msg = "Groq API Key terkonfigurasi" if is_ready else "GROQ_API_KEY belum diisi di .env"
-        models = [
+        fallback_models = [
             ModelOption(
                 id="openai/gpt-oss-120b",
                 name="OpenAI GPT-OSS 120B (MoE)",
@@ -145,28 +144,60 @@ class ModelRegistry:
                 description="Fast agentic open-weight model OpenAI di Groq LPU (~1000 t/s)",
             ),
             ModelOption(
-                id="llama-3.3-70b-versatile",
-                name="Llama 3.3 70B Versatile",
+                id="qwen/qwen3.8-27b",
+                name="Qwen 3.8 27B",
                 provider="groq",
-                context_length=128000,
-                description="Model penalaran tinggi 70B, super cepat (~300 t/s via LPU)",
-            ),
-            ModelOption(
-                id="llama-3.1-8b-instant",
-                name="Llama 3.1 8B Instant",
-                provider="groq",
-                context_length=128000,
-                description="Model ringan latensi sangat rendah",
-            ),
-            ModelOption(
-                id="mixtral-8x7b-32768",
-                name="Mixtral 8x7B MoE",
-                provider="groq",
-                context_length=32768,
-                description="Model Mixture-of-Experts",
+                context_length=131072,
+                description="Model frontier generasi baru Alibaba Cloud di Groq LPU (~400 t/s)",
             ),
         ]
-        return is_ready, msg, models
+        if not is_ready:
+            return False, "GROQ_API_KEY belum diisi di .env", fallback_models
+
+        try:
+            async with httpx.AsyncClient(timeout=2.0) as client:
+                res = await client.get(
+                    "https://api.groq.com/openai/v1/models",
+                    headers={"Authorization": f"Bearer {settings.groq_api_key}"},
+                )
+                if res.status_code == 200:
+                    data = res.json()
+                    chat_models = []
+                    known_desc = {
+                        "openai/gpt-oss-120b": "Flagship open-weight reasoning model OpenAI di Groq LPU (~500 t/s)",
+                        "openai/gpt-oss-20b": "Fast agentic open-weight model OpenAI di Groq LPU (~1000 t/s)",
+                        "qwen/qwen3.8-27b": "Model frontier generasi baru Alibaba Cloud di Groq LPU (~400 t/s)",
+                        "allam-2-7b": "Model bahasa Allam dari SDAIA",
+                    }
+                    for m in data.get("data", []):
+                        m_id = m.get("id", "")
+                        # Filter out non-chat / guardrail-only / audio / decommissioned models
+                        if any(skip in m_id.lower() for skip in ["whisper", "prompt-guard", "safeguard", "mixtral"]):
+                            continue
+
+                        name_display = m_id
+                        if m_id == "openai/gpt-oss-120b":
+                            name_display = "OpenAI GPT-OSS 120B (MoE)"
+                        elif m_id == "openai/gpt-oss-20b":
+                            name_display = "OpenAI GPT-OSS 20B (MoE)"
+                        elif m_id == "qwen/qwen3.8-27b":
+                            name_display = "Qwen 3.8 27B"
+
+                        chat_models.append(
+                            ModelOption(
+                                id=m_id,
+                                name=name_display,
+                                provider="groq",
+                                context_length=131072,
+                                description=known_desc.get(m_id, f"Model {m_id} di Groq LPU"),
+                            )
+                        )
+                    if chat_models:
+                        return True, "Groq API Key aktif & terhubung", chat_models
+        except Exception:
+            pass
+
+        return True, "Groq API Key terkonfigurasi", fallback_models
 
     def _get_gemini_models(self) -> tuple[bool, str, list[ModelOption]]:
         """Return supported Google Gemini Free Tier models."""
@@ -286,7 +317,7 @@ class ModelRegistry:
     async def get_catalog(self) -> dict[str, Any]:
         """Compile complete catalog of all providers, statuses, and model options."""
         ollama_ready, ollama_msg, ollama_models = await self._fetch_ollama_models()
-        groq_ready, groq_msg, groq_models = self._get_groq_models()
+        groq_ready, groq_msg, groq_models = await self._fetch_groq_models()
         gemini_ready, gemini_msg, gemini_models = self._get_gemini_models()
         openrouter_ready, openrouter_msg, openrouter_models = self._get_openrouter_models()
         ninerouter_ready, ninerouter_msg, ninerouter_models = await self._fetch_ninerouter_models()
