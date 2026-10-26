@@ -8,6 +8,9 @@ import {
   DashboardListResponse,
   DashboardWidget,
   PinWidgetPayload,
+  APIKeysResponse,
+  APIKeyInfo,
+  UpdateAPIKeysPayload,
 } from '../types';
 
 export async function getHealth(): Promise<HealthStatus> {
@@ -42,6 +45,30 @@ export async function setActiveModels(payload: {
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: 'Failed to update active model' }));
     throw new Error(err.detail || 'Failed to update active model');
+  }
+  return res.json();
+}
+
+export async function getAPIKeys(): Promise<APIKeysResponse> {
+  const res = await fetch('/v1/models/keys');
+  if (!res.ok) throw new Error('Failed to fetch API keys status');
+  return res.json();
+}
+
+export async function updateAPIKeys(payload: UpdateAPIKeysPayload): Promise<{
+  status: string;
+  message: string;
+  keys: Record<string, APIKeyInfo>;
+  catalog: ModelCatalogResponse;
+}> {
+  const res = await fetch('/v1/models/keys', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: 'Failed to update API keys' }));
+    throw new Error(err.detail || 'Failed to update API keys');
   }
   return res.json();
 }

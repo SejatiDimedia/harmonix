@@ -34,6 +34,11 @@ from src.agent.state import (
 from src.config import settings
 from src.db.connection import check_db_health
 from src.llm.registry import ModelRegistry
+from src.llm.keys_manager import (
+    UpdateAPIKeysInput,
+    get_all_masked_keys,
+    save_keys_to_env,
+)
 from src.rag.glossary import seed_glossary_if_empty
 from src.tools.database import RunSQLTool
 
@@ -159,6 +164,33 @@ async def set_active_models(request: UpdateActiveModelRequest):
         auditor_model=request.auditor_model,
     )
     return {"status": "success", "active_config": updated.model_dump()}
+
+
+@app.get("/v1/models/keys", tags=["Models"])
+async def get_model_api_keys():
+    """Retrieve configuration status and masked API keys for all cloud providers (FR-36)."""
+    return {"keys": get_all_masked_keys()}
+
+
+@app.post("/v1/models/keys", tags=["Models"])
+async def update_model_api_keys(payload: UpdateAPIKeysInput):
+    """Configure custom API keys from UI or API, updating runtime settings and persisting to .env (FR-36)."""
+    updates = {}
+    if payload.groq_api_key is not None:
+        updates["GROQ_API_KEY"] = payload.groq_api_key
+    if payload.gemini_api_key is not None:
+        updates["GEMINI_API_KEY"] = payload.gemini_api_key
+    if payload.openrouter_api_key is not None:
+        updates["OPENROUTER_API_KEY"] = payload.openrouter_api_key
+
+    save_keys_to_env(updates)
+    catalog = await ModelRegistry.get_instance().get_catalog()
+    return {
+        "status": "updated",
+        "message": "Kunci API berhasil disimpan dan diterapkan.",
+        "keys": get_all_masked_keys(),
+        "catalog": catalog,
+    }
 
 
 @app.get("/v1/metrics", tags=["Observability"])

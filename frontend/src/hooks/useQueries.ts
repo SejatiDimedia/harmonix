@@ -3,6 +3,8 @@ import {
   getHealth,
   getMetrics,
   getModelCatalog,
+  getAPIKeys,
+  updateAPIKeys,
   getSessions,
   getSessionDetails,
   deleteSession,
@@ -12,7 +14,7 @@ import {
   deleteDashboardWidget,
   refreshDashboardWidgets,
 } from '../services/api';
-import { PinWidgetPayload } from '../types';
+import { PinWidgetPayload, UpdateAPIKeysPayload } from '../types';
 
 export const useHealthQuery = () => {
   return useQuery({
@@ -27,6 +29,25 @@ export const useCatalogQuery = () => {
     queryKey: ['models'],
     queryFn: getModelCatalog,
     staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+};
+
+export const useApiKeysQuery = () => {
+  return useQuery({
+    queryKey: ['api-keys'],
+    queryFn: getAPIKeys,
+  });
+};
+
+export const useUpdateApiKeysMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: UpdateAPIKeysPayload) => updateAPIKeys(payload),
+    onSuccess: (data) => {
+      queryClient.setQueryData(['models'], data.catalog);
+      queryClient.invalidateQueries({ queryKey: ['api-keys'] });
+      queryClient.invalidateQueries({ queryKey: ['models'] });
+    },
   });
 };
 

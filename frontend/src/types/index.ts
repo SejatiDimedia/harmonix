@@ -74,6 +74,25 @@ export interface ModelCatalogResponse {
   providers: ProviderCatalog[];
 }
 
+export interface APIKeyInfo {
+  provider: string;
+  display_name: string;
+  is_set: boolean;
+  masked_key: string | null;
+  env_var: string;
+  docs_url: string;
+}
+
+export interface APIKeysResponse {
+  keys: Record<string, APIKeyInfo>;
+}
+
+export interface UpdateAPIKeysPayload {
+  groq_api_key?: string | null;
+  gemini_api_key?: string | null;
+  openrouter_api_key?: string | null;
+}
+
 export interface ChatSessionSummary {
   session_id: string;
   title: string;

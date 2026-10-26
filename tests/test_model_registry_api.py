@@ -58,3 +58,44 @@ async def test_set_active_models():
         assert get_resp.status_code == 200
         get_active = get_resp.json()["active_config"]
         assert get_active["analyst_provider"] == "openrouter"
+
+
+@pytest.mark.asyncio
+async def test_get_and_update_model_api_keys():
+    """Verify GET and POST /v1/models/keys manage API keys and mask secrets (FR-36)."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        # 1. Retrieve current masked keys
+        get_resp = await client.get("/v1/models/keys")
+        assert get_resp.status_code == 200
+        data = get_resp.json()
+        assert "keys" in data
+        keys = data["keys"]
+        assert "groq" in keys
+        assert "gemini" in keys
+        assert "openrouter" in keys
+
+        # Verify secrets are masked (never full plain text)
+        for provider_key, info in keys.items():
+            if info["is_set"]:
+                assert "••••••••" in info["masked_key"]
+
+        # 2. Update custom Groq API key via UI endpoint
+        test_key = "gsk_abc123456789xyz987"
+        post_resp = await client.post(
+            "/v1/models/keys",
+            json={"groq_api_key": test_key},
+        )
+        assert post_resp.status_code == 200
+        post_data = post_resp.json()
+        assert post_data["status"] == "updated"
+        groq_info = post_data["keys"]["groq"]
+        assert groq_info["is_set"] is True
+        assert groq_info["masked_key"].startswith("gsk_")
+        assert "••••••••" in groq_info["masked_key"]
+        assert test_key not in groq_info["masked_key"]  # Full plain text not exposed
+
+        # Verify catalog was re-synchronized
+        assert "catalog" in post_data
+        providers = {p["provider"]: p for p in post_data["catalog"]["providers"]}
+        assert providers["groq"]["is_ready"] is True
