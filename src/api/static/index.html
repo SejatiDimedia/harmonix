@@ -159,16 +159,6 @@
                 </button>
             </div>
 
-            <!-- Manage Model Toggle Button (FR-36) -->
-            <button id="btnManageModel" type="button" class="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-medium text-[#cfccc4] bg-[#22211e] hover:bg-[#2b2a26] border border-[#36342f] hover:border-clay-500/50 transition shadow-sm group" title="Kelola Model AI (Local / Groq / Gemini / OpenRouter)">
-                <svg class="w-3.5 h-3.5 text-clay-400 group-hover:rotate-45 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                <span id="activeModelBadge" class="hidden sm:inline font-mono text-[11px] text-[#e5e3dc] max-w-[130px] lg:max-w-[180px] truncate">Model: Memuat...</span>
-                <span class="sm:hidden">Model</span>
-            </button>
-
             <!-- Connection Status -->
             <div id="healthBadge" class="flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-mono bg-[#22211e] text-[#a3a097] border border-[#312f2b]">
                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
@@ -396,13 +386,13 @@
         </aside>
 
         <!-- Main Content Container -->
-        <main class="flex-1 h-full max-w-3xl w-full mx-auto px-4 py-4 sm:py-6 flex flex-col justify-between overflow-hidden relative">
+        <main class="flex-1 h-full max-w-5xl lg:max-w-6xl xl:max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 flex flex-col justify-between overflow-hidden relative">
         
         <!-- Messages Flow -->
         <div id="messages" class="flex-1 space-y-6 overflow-y-auto pb-8">
             
             <!-- Welcome Hero (Claude Style) -->
-            <div id="welcomeHero" class="pt-8 pb-4 text-center max-w-xl mx-auto space-y-4">
+            <div id="welcomeHero" class="pt-8 pb-4 text-center max-w-2xl lg:max-w-3xl mx-auto space-y-4">
                 <div class="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-clay-500/10 border border-clay-500/20 text-clay-400 mb-2">
                     <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
@@ -974,7 +964,7 @@
             modelModal.classList.add('hidden');
         }
 
-        btnManageModel.addEventListener('click', openModelModal);
+        if (btnManageModel) btnManageModel.addEventListener('click', openModelModal);
         btnCloseModelModal.addEventListener('click', closeModelModal);
         btnCancelModelModal.addEventListener('click', closeModelModal);
         modelModal.addEventListener('click', (e) => {
