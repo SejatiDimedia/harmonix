@@ -25,7 +25,7 @@ from src.agent.auditor import DataAuditorAgent
 from src.agent.execution_logger import TerminalExecutionLogger
 from src.agent.guardrail_evaluator import GuardrailEvaluator
 from src.agent.observation_processor import ObservationProcessor
-from src.agent.prompts import BASE_ANALYST_SYSTEM_PROMPT
+from src.agent.prompts import BASE_ANALYST_SYSTEM_PROMPT, build_analyst_system_prompt
 from src.agent.state import get_session_history, save_task_checkpoint
 from src.agent.suggestions import get_smart_suggestions
 from src.config import settings
@@ -105,7 +105,8 @@ class ManualAgentLoop:
             messages = resume_messages
             logger.info("Resuming task %s from checkpoint with %d messages.", task_id, len(messages))
         else:
-            messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+            system_prompt = await build_analyst_system_prompt(session_id=session_id)
+            messages = [{"role": "system", "content": system_prompt}]
             # Load short-term conversation memory from session if available (FR-16)
             if session_id:
                 try:

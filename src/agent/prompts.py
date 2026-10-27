@@ -126,3 +126,47 @@ PEDOMAN PENILAIAN STATUS:
 - "WARNING": Ada sedikit catatan minor atau peringatan bisnis (misal data terbatas, tanpa filter status), tetapi angka faktual tetap benar. Badge: "Auditor Caveat: Data Limited".
 - "FLAGGED": Terdeteksi kesalahan logika SQL fatal (Cartesian join, rumus salah) ATAU halusinasi angka di narasi yang bertentangan dengan hasil query. Badge: "Auditor Flagged: Logic/Data Discrepancy". Severity: "high".
 """
+
+
+async def build_analyst_system_prompt(session_id: str | None = None) -> str:
+    """Construct dynamic system prompt, injecting uploaded session tables if available."""
+    base_prompt = BASE_ANALYST_SYSTEM_PROMPT
+
+    if not session_id:
+        return base_prompt
+
+    try:
+        from src.ingestion.excel_csv_parser import get_session_uploaded_tables
+        uploaded_tables = await get_session_uploaded_tables(session_id)
+        if not uploaded_tables:
+            return base_prompt
+
+        table_sections = []
+        for t in uploaded_tables:
+            cols_str = ", ".join(f"{c.name} ({c.data_type})" for c in t.columns)
+            samples_str = ""
+            sample_items = [f"{c.name}: {c.sample_values}" for c in t.columns if c.sample_values]
+            if sample_items:
+                samples_str = f"    Contoh Nilai: {'; '.join(sample_items[:4])}"
+
+            table_sections.append(
+                f"- `analytics.\"{t.table_name}\"`\n"
+                f"    Sumber: File '{t.original_filename}', Sheet: '{t.sheet_name}' ({t.row_count} baris)\n"
+                f"    Kolom: {cols_str}\n"
+                f"{samples_str}"
+            )
+
+        dynamic_section = (
+            "\n\nTABEL DATA EKSTERNAL DARI FILE PENGGUNA (SESSION UPLOADED TABLES):\n"
+            "Pengguna telah mengunggah file data spreadsheet (CSV/Excel) ke dalam sesi percakapan ini.\n"
+            "Tabel-tabel fisik dinamis berikut TELAH DIBUAT di skema `analytics` PostgreSQL dan SIAP DI-QUERY / DI-JOIN:\n"
+            + "\n".join(table_sections)
+            + "\n\nPANDUAN QUERY TABEL UPLOAD:\n"
+            "1. Anda DAPAT langsung melakukan `SELECT * FROM analytics.\"{table_name}\"` untuk mengekstrak data upload.\n"
+            "2. Anda DAPAT melakukan JOIN antara tabel upload ini dengan tabel master database (`orders`, `customers`, `products`, dll.) jika ada kolom kunci yang beririsan (misal category, id, date, dsb).\n"
+            "3. Tabel-tabel ini terdaftar secara resmi di database analitik sesi ini. Jawablah pertanyaan analitik pengguna terkait data upload secara akurat berbasis data nyata!"
+        )
+        return base_prompt + dynamic_section
+    except Exception:
+        return base_prompt
+

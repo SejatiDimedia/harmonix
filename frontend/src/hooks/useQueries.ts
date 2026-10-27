@@ -13,6 +13,8 @@ import {
   pinDashboardWidget,
   deleteDashboardWidget,
   refreshDashboardWidgets,
+  uploadSessionFiles,
+  getSessionUploadedTables,
 } from '../services/api';
 import { PinWidgetPayload, UpdateAPIKeysPayload } from '../types';
 
@@ -135,6 +137,26 @@ export const useRefreshDashboardMutation = (sessionId: string | null) => {
     onSuccess: (data) => {
       if (sessionId) {
         queryClient.setQueryData(['dashboard', sessionId], data);
+      }
+    },
+  });
+};
+
+export const useSessionUploadedTablesQuery = (sessionId: string | null) => {
+  return useQuery({
+    queryKey: ['session-uploaded-tables', sessionId],
+    queryFn: () => getSessionUploadedTables(sessionId!),
+    enabled: !!sessionId,
+  });
+};
+
+export const useUploadSessionFilesMutation = (sessionId: string | null) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (files: File[]) => uploadSessionFiles(sessionId!, files),
+    onSuccess: () => {
+      if (sessionId) {
+        queryClient.invalidateQueries({ queryKey: ['session-uploaded-tables', sessionId] });
       }
     },
   });

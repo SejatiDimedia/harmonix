@@ -25,7 +25,7 @@ from src.agent.models import (
     Citation,
     TableData,
 )
-from src.agent.prompts import BASE_ANALYST_SYSTEM_PROMPT
+from src.agent.prompts import BASE_ANALYST_SYSTEM_PROMPT, build_analyst_system_prompt
 from src.agent.state import save_task_checkpoint
 from src.agent.suggestions import get_smart_suggestions
 from src.config import settings
@@ -183,7 +183,8 @@ class LangGraphAgent:
                         pass
             return state
 
-        messages: list[dict[str, Any]] = [{"role": "system", "content": SYSTEM_PROMPT}]
+        system_prompt = await build_analyst_system_prompt(session_id=state.get("session_id"))
+        messages: list[dict[str, Any]] = [{"role": "system", "content": system_prompt}]
 
         # Inject multi-turn short-term memory
         chat_history = state.get("chat_history") or []

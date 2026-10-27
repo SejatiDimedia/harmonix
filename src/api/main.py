@@ -4,7 +4,7 @@ import json
 import logging
 from pathlib import Path
 from typing import Literal
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
@@ -67,7 +67,9 @@ async def lifespan(app: FastAPI):
             await init_task_state_table()
             await init_traces_table()
             await init_dashboard_table()
-            logger.info("Auto-seeded metric glossary and initialized state/trace/dashboard tables at startup.")
+            from src.ingestion.excel_csv_parser import init_uploaded_tables_registry
+            await init_uploaded_tables_registry()
+            logger.info("Auto-seeded metric glossary and initialized state/trace/dashboard/upload tables at startup.")
     except Exception as e:
         logger.warning("Startup initialization error: %s", e)
     yield
@@ -493,6 +495,70 @@ async def refresh_dashboard(session_id: str):
         "session_id": session_id,
         "widgets": [w.model_dump() for w in updated_widgets],
         "total": len(updated_widgets),
+    }
+
+
+# ==============================================================================
+# BYOD File Ingestion Endpoints (FR-39)
+# ==============================================================================
+
+@app.post("/v1/sessions/{session_id}/upload", tags=["Ingestion"])
+async def upload_files_to_session(
+    session_id: str,
+    files: list[UploadFile] = File(...),
+):
+    """Upload one or more CSV/Excel files and convert each sheet into dynamic PostgreSQL tables."""
+    from src.ingestion.excel_csv_parser import (
+        process_file_and_create_tables,
+        MAX_FILES_PER_BATCH,
+    )
+    if not files:
+        raise HTTPException(status_code=400, detail="Tidak ada berkas yang diunggah.")
+    if len(files) > MAX_FILES_PER_BATCH:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Maksimum {MAX_FILES_PER_BATCH} berkas dapat diunggah per batch.",
+        )
+
+    all_created_tables = []
+    errors = []
+
+    for f in files:
+        filename = f.filename or "uploaded_data.csv"
+        try:
+            content = await f.read()
+            created = await process_file_and_create_tables(
+                session_id=session_id,
+                filename=filename,
+                file_bytes=content,
+            )
+            all_created_tables.extend(created)
+        except Exception as e:
+            logger.error("Error processing file %s: %s", filename, e)
+            errors.append(f"{filename}: {str(e)}")
+
+    if errors and not all_created_tables:
+        raise HTTPException(status_code=400, detail="; ".join(errors))
+
+    return {
+        "status": "success",
+        "session_id": session_id,
+        "total_files": len(files),
+        "total_tables_created": len(all_created_tables),
+        "tables": [t.model_dump() for t in all_created_tables],
+        "warnings": errors if errors else None,
+    }
+
+
+@app.get("/v1/sessions/{session_id}/tables", tags=["Ingestion"])
+async def list_session_tables(session_id: str):
+    """List all dynamic tables created from uploaded files for a session."""
+    from src.ingestion.excel_csv_parser import get_session_uploaded_tables
+    tables = await get_session_uploaded_tables(session_id=session_id)
+    return {
+        "session_id": session_id,
+        "total_tables": len(tables),
+        "tables": [t.model_dump() for t in tables],
     }
 
 

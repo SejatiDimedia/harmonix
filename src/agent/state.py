@@ -434,10 +434,18 @@ async def get_session_active_model(session_id: str) -> tuple[str | None, str | N
 
 
 async def delete_session(session_id: str) -> bool:
-    """Delete all tasks, checkpoints, custom session titles, and widgets associated with a session."""
+    """Delete all tasks, checkpoints, custom session titles, widgets, and dynamic uploaded tables associated with a session."""
     if not session_id:
         return False
     await init_task_state_table()
+
+    # Drop session-scoped dynamic uploaded tables (FR-39)
+    try:
+        from src.ingestion.excel_csv_parser import cleanup_session_uploaded_tables
+        await cleanup_session_uploaded_tables(session_id)
+    except Exception as e:
+        logger.warning("Error cleaning up uploaded tables for session %s: %s", session_id, e)
+
     async with get_db_session() as session:
         del_cs = await session.execute(
             text("DELETE FROM analytics.chat_sessions WHERE session_id = :session_id;"),

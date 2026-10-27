@@ -607,6 +607,8 @@ export const App: React.FC = () => {
               catalog={catalogData || null}
               activeProvider={activeProvider}
               activeModel={activeModel}
+              sessionId={currentSessionId}
+              onEnsureSession={ensureSession}
               onSetEngine={(eng) => {
                 setEngine(eng);
                 showToast(`Orchestrator: ${eng === 'manual' ? 'Manual Loop' : 'LangGraph'}`);
@@ -614,6 +616,7 @@ export const App: React.FC = () => {
               onSelectModel={handleSelectModel}
               onOpenFullModelModal={() => setIsModelModalOpen(true)}
               onSubmit={handleSendMessage}
+              showToast={showToast}
             />
           </>
         ) : (

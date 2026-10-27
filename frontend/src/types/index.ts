@@ -179,3 +179,33 @@ export interface DashboardListResponse {
   total: number;
 }
 
+export interface UploadedColumnMeta {
+  name: string;
+  data_type: string;
+  sample_values?: any[];
+}
+
+export interface UploadedTableSummary {
+  table_name: string;
+  original_filename: string;
+  sheet_name: string;
+  row_count: number;
+  columns: UploadedColumnMeta[];
+}
+
+export interface UploadSessionTablesResponse {
+  session_id: string;
+  total_tables: number;
+  tables: UploadedTableSummary[];
+}
+
+export interface FileUploadResponse {
+  status: string;
+  session_id: string;
+  total_files: number;
+  total_tables_created: number;
+  tables: UploadedTableSummary[];
+  warnings?: string[] | null;
+}
+
+

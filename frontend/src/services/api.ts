@@ -11,6 +11,8 @@ import {
   APIKeysResponse,
   APIKeyInfo,
   UpdateAPIKeysPayload,
+  FileUploadResponse,
+  UploadSessionTablesResponse,
 } from '../types';
 
 export async function getHealth(): Promise<HealthStatus> {
@@ -228,6 +230,35 @@ export async function refreshDashboardWidgets(sessionId: string): Promise<Dashbo
     method: 'POST',
   });
   if (!res.ok) throw new Error('Failed to refresh dashboard widgets');
+  return res.json();
+}
+
+export async function uploadSessionFiles(
+  sessionId: string,
+  files: File[]
+): Promise<FileUploadResponse> {
+  const formData = new FormData();
+  for (const file of files) {
+    formData.append('files', file);
+  }
+  const res = await fetch(`/v1/sessions/${sessionId}/upload`, {
+    method: 'POST',
+    body: formData,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: 'Gagal mengunggah file' }));
+    throw new Error(err.detail || 'Gagal mengunggah file');
+  }
+  return res.json();
+}
+
+export async function getSessionUploadedTables(
+  sessionId: string
+): Promise<UploadSessionTablesResponse> {
+  const res = await fetch(`/v1/sessions/${sessionId}/tables`);
+  if (!res.ok) {
+    throw new Error('Gagal memuat tabel data sesi');
+  }
   return res.json();
 }
 
