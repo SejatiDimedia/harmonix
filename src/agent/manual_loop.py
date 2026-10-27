@@ -211,6 +211,18 @@ class ManualAgentLoop:
 
             # 2. Token Budget Check (FR-29)
             if total_tokens > self.max_token_budget:
+                if executed_sqls or captured_tables or captured_charts:
+                    logger.warning(
+                        "Task %s reached token budget (%d > %d) with available results (%d SQLs, %d tables, %d charts). Concluding gracefully.",
+                        task_id, total_tokens, self.max_token_budget, len(executed_sqls), len(captured_tables), len(captured_charts)
+                    )
+                    if not final_answer_text:
+                        final_answer_text = (
+                            f"Analisis data berhasil diperoleh ({len(executed_sqls)} kueri dieksekusi). "
+                            f"Batas anggaran token ({self.max_token_budget}) tercapai, berikut visualisasi dan ringkasan data yang telah diperoleh."
+                        )
+                    break
+
                 err_msg = f"Task exceeded token budget limit of {self.max_token_budget} tokens."
                 self.term_logger.log_task_failed(task_id=task_id, error=err_msg, step=step, elapsed_seconds=elapsed_time)
                 try:
@@ -557,13 +569,16 @@ class ManualAgentLoop:
             # No tool calls -> Agent has concluded reasoning!
             break
 
-        # Graceful degradation if max steps reached
-        if step >= self.max_steps:
+        # Graceful degradation if max steps or token budget reached
+        if step >= self.max_steps or total_tokens > self.max_token_budget:
             warning = f"Batas langkah ({self.max_steps}) tercapai sebelum analisis selesai penuh."
             if final_answer_text:
                 final_answer_text = f"{warning} {final_answer_text}"
             else:
-                final_answer_text = f"{warning} Berikut adalah data parsial yang berhasil diperoleh."
+                if captured_charts or captured_tables:
+                    final_answer_text = f"{warning} Berikut adalah visualisasi dan data yang berhasil diekstrak."
+                else:
+                    final_answer_text = f"{warning} Berikut adalah data parsial yang berhasil diperoleh."
 
         # Apply PII Masking on final output (FR-24)
         self.term_logger.log_synthesizing()
