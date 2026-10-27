@@ -166,9 +166,10 @@ async def build_analyst_system_prompt(session_id: str | None = None) -> str:
             "Tabel-tabel fisik dinamis berikut TELAH DIBUAT di skema `analytics` PostgreSQL dan SIAP DI-QUERY / DI-JOIN:\n"
             + "\n".join(table_sections)
             + "\n\nPANDUAN QUERY TABEL UPLOAD:\n"
-            "1. Anda DAPAT langsung melakukan `SELECT * FROM analytics.\"{table_name}\"` untuk mengekstrak data upload.\n"
-            "2. Anda DAPAT melakukan JOIN antara tabel upload ini dengan tabel master database (`orders`, `customers`, `products`, dll.) jika ada kolom kunci yang beririsan (misal category, id, date, dsb).\n"
-            "3. Tabel-tabel ini terdaftar secara resmi di database analitik sesi ini. Jawablah pertanyaan analitik pengguna terkait data upload secara akurat berbasis data nyata!"
+            "1. Anda DAPAT langsung melakukan `SELECT * FROM analytics.\"{table_name}\"` untuk mengekstrak dan menganalisis data upload.\n"
+            "2. JIKA data upload merupakan dataset mandiri/independen (misalnya: data HR/karyawan, data sensor IoT, survei, kesehatan, akademik, dsb. yang tidak terkait dengan e-commerce), Anda TIDAK PERLU melakukan JOIN ke tabel warehouse. Cukup analisis tabel upload tersebut secara langsung sesuai permintaan pengguna.\n"
+            "3. JIKA data upload memiliki relasi dengan domain e-commerce (misalnya: target kategori, KPI kota/wilayah, atau order_id), Anda DAPAT menggabungkannya (JOIN) dengan tabel master database (`orders`, `customers`, `products`, dll.).\n"
+            "4. Tabel-tabel ini terdaftar secara resmi di database analitik sesi ini. Jawablah pertanyaan analitik pengguna terkait data upload secara akurat berbasis data nyata!"
         )
         return base_prompt + dynamic_section
     except Exception:

@@ -1,0 +1,11 @@
+karyawan_id,nama_lengkap,departemen,jabatan,gaji_bulanan,skor_performa,lama_bekerja_tahun,status_karyawan
+E001,Budi Santoso,Engineering,Senior Backend Engineer,28000000,4.8,4,Tetap
+E002,Siti Aisyah,Marketing,Growth Marketing Lead,22000000,4.5,3,Tetap
+E003,Andi Wijaya,Finance,Financial Analyst,16000000,4.2,2,Tetap
+E004,Rina Permata,Human Resources,HR Specialist,14000000,4.0,2,Kontrak
+E005,Dedi Suryono,Engineering,Principal Architect,42000000,4.9,6,Tetap
+E006,Maya Anggraini,Product,Senior Product Manager,30000000,4.7,4,Tetap
+E007,Hendra Gunawan,Operations,Logistics Coordinator,11500000,3.8,1,Kontrak
+E008,Dian Kartika,Marketing,Content Creator,12000000,4.3,1,Kontrak
+E009,Faisal Basri,Engineering,DevOps Engineer,24000000,4.6,3,Tetap
+E010,Nina Zulaikha,Finance,Accounting Supervisor,19500000,4.4,3,Tetap
