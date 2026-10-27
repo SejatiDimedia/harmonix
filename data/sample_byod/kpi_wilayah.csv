@@ -1,0 +1,6 @@
+city,target_delivery_sla_days,target_satisfaction_score,courier_partner,hub_region
+Jakarta,1.5,4.8,JNE Express,DKI & Jabodetabek
+Surabaya,2.0,4.7,SiCepat,Jawa Timur
+Bandung,1.8,4.7,J&T Express,Jawa Barat
+Medan,3.0,4.5,JNE Express,Sumatera Utara
+Semarang,2.2,4.6,Ninja Xpress,Jawa Tengah

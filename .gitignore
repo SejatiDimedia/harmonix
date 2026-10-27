@@ -18,6 +18,8 @@ pgdata/
 data/*
 !data/eval_dataset.json
 !data/eval_report_latest.json
+!data/sample_byod/
+!data/sample_byod/**
 
 # Testing & Coverage
 .pytest_cache/
