@@ -87,8 +87,8 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
       if (!files || files.length === 0) return;
 
       const fileList = Array.from(files);
-      if (fileList.length > 5) {
-        showToast?.('Maksimal 5 file yang dapat diunggah sekaligus.');
+      if (fileList.length > 10) {
+        showToast?.('Maksimal 10 file yang dapat diunggah sekaligus.');
         e.target.value = '';
         return;
       }

@@ -23,7 +23,7 @@ from src.db.connection import get_db_session
 logger = logging.getLogger("harnessly.ingestion")
 
 MAX_FILE_SIZE_BYTES = 15 * 1024 * 1024  # 15 MB
-MAX_FILES_PER_BATCH = 5
+MAX_FILES_PER_BATCH = 10
 SUPPORTED_EXTENSIONS = {".csv", ".xlsx", ".xls"}
 
 POSTGRES_RESERVED_WORDS = {

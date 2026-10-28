@@ -171,3 +171,34 @@ async def test_cross_join_warehouse_and_uploaded_table():
         assert "Fashion" in cats
 
     await cleanup_session_uploaded_tables(test_session)
+
+
+@pytest.mark.asyncio
+async def test_upload_batch_limit():
+    """Verify that batch uploads support up to 10 files and reject more than 10."""
+    test_session = "test_byod_batch_limit_sess"
+    
+    # Test with 11 files (should fail with HTTP 400)
+    files_11 = [
+        ("files", (f"file_{i}.csv", b"col_a,col_b\n1,2\n", "text/csv"))
+        for i in range(11)
+    ]
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        res = await client.post(f"/v1/sessions/{test_session}/upload", files=files_11)
+        assert res.status_code == 400
+        assert "Maksimum 10 berkas" in res.json()["detail"]
+
+    # Test with 7 files (user's scenario, should succeed with HTTP 200)
+    files_7 = [
+        ("files", (f"file_{i}.csv", b"col_a,col_b\n1,2\n", "text/csv"))
+        for i in range(7)
+    ]
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        res = await client.post(f"/v1/sessions/{test_session}/upload", files=files_7)
+        assert res.status_code == 200
+        data = res.json()
+        assert data["total_files"] == 7
+        assert data["total_tables_created"] == 7
+
+    await cleanup_session_uploaded_tables(test_session)
