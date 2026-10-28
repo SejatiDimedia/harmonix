@@ -1,4 +1,4 @@
-# Harnessly: Production-Grade AI Data Analyst Agent
+# Harmonix: Production-Grade AI Data Analyst Agent
 
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg)](https://fastapi.tiangolo.com/)
@@ -9,7 +9,7 @@
 [![Safety Rate](https://img.shields.io/badge/Safety%20Rate-100%25-success.svg)](#-evaluasi-benchmark--observabilitas)
 [![Cost](https://img.shields.io/badge/Cost-%240.00%20(Zero--Cost)-brightgreen.svg)](#-zero-cost-stack-architecture)
 
-> **Harnessly** adalah proyek referensi produksi untuk posisi **AI Agent Engineer / Senior AI Backend Developer**. Mengubah bahasa alami menjadi query analitik PostgreSQL (*Text-to-SQL*) dengan sabuk pengaman (*agent harness*) produksi lengkap: AST guardrails, human-in-the-loop approval gate, local RAG metric glossary, state persistence di PostgreSQL, observabilitas granular, suite evaluasi benchmark, perbandingan LangGraph, dan Model Context Protocol (MCP) server.
+> **Harmonix** adalah proyek referensi produksi untuk posisi **AI Agent Engineer / Senior AI Backend Developer**. Mengubah bahasa alami menjadi query analitik PostgreSQL (*Text-to-SQL*) dengan sabuk pengaman (*agent harness*) produksi lengkap: AST guardrails, human-in-the-loop approval gate, local RAG metric glossary, state persistence di PostgreSQL, observabilitas granular, suite evaluasi benchmark, perbandingan LangGraph, dan Model Context Protocol (MCP) server.
 
 ---
 
@@ -21,13 +21,13 @@ Menyuruh LLM langsung mengeksekusi SQL mentah ke database analitik tanpa pengama
 * ❌ **Beban Biaya Komputasi:** Query *unbounded full-table scan* tanpa batas baris dapat merontokkan database.
 * ❌ **Kebocoran Data Pribadi:** Data sensitif pelanggan (email, nomor telepon) terekspos tanpa sensor.
 
-**Harnessly memecahkan seluruh risiko di atas** dengan membangun 5 lapisan perlindungan harness di sekeliling model bahasa:
+**Harmonix memecahkan seluruh risiko di atas** dengan membangun 5 lapisan perlindungan harness di sekeliling model bahasa:
 
 ```mermaid
 flowchart TD
     User([Pengguna / Web UI]) --> API[FastAPI Server: /v1/chat & /v1/metrics]
     
-    subgraph Harness["Harnessly Production Agent Harness"]
+    subgraph Harness["Harmonix Production Agent Harness"]
         direction TB
         
         subgraph Layer1["1. Context & Grounding"]
@@ -133,7 +133,7 @@ flowchart TD
 
 ## ⚡ Zero-Cost Stack Architecture
 
-Harnessly beroperasi **100% Gratis (USD 0,00)** tanpa biaya kartu kredit:
+Harmonix beroperasi **100% Gratis (USD 0,00)** tanpa biaya kartu kredit:
 - **Language & API:** Python 3.12, FastAPI (async), Pydantic v2.
 - **Database & Vektor:** PostgreSQL 16 + pgvector (via Docker Compose lokal port `5433`).
 - **AST Parsing:** `sqlglot`.

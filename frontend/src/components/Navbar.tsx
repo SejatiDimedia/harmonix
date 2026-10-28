@@ -36,12 +36,12 @@ const NavbarComponent: React.FC<NavbarProps> = ({
         <div className="flex items-center gap-2.5 select-none">
           <img
             src="/static/favicon.png"
-            alt="Harnessly Logo"
+            alt="Harmonix Logo"
             className="w-8 h-8 rounded-lg object-cover shadow-sm border border-clay-500/30 shrink-0"
           />
           <div className="flex flex-col hidden sm:flex">
             <span className="text-sm font-semibold tracking-tight text-[#f5f4ef] leading-tight font-sans">
-              Harnessly
+              Harmonix
             </span>
             <span className="text-[10px] text-[#8e8b82] font-mono leading-none">
               Data Analyst Agent

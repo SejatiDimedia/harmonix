@@ -18,7 +18,7 @@ const WelcomeHeroComponent: React.FC<WelcomeHeroProps> = ({ onSelectPrompt }) =>
       <div className="inline-block">
         <img
           src="/static/favicon.png"
-          alt="Harnessly Logo"
+          alt="Harmonix Logo"
           className="w-16 h-16 rounded-2xl mx-auto shadow-xl border border-[#2e2c28] p-0.5 object-cover"
         />
       </div>

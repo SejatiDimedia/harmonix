@@ -1,5 +1,5 @@
 [project]
-name = "harnessly"
+name = "harmonix"
 version = "0.1.0"
 description = "Production-grade text-to-SQL AI Data Analyst Agent with complete harness"
 readme = "README.md"

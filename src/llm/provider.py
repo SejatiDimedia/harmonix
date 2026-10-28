@@ -681,8 +681,8 @@ def create_single_provider(
     if name == "openrouter":
         base_url = settings.openrouter_base_url
         headers = {
-            "HTTP-Referer": "https://github.com/SejatiDimedia/harnessly",
-            "X-Title": "Harnessly AI Data Analyst",
+            "HTTP-Referer": "https://github.com/SejatiDimedia/harmonix",
+            "X-Title": "Harmonix AI Data Analyst",
         }
         p = OpenAICompatibleProvider(
             base_url=base_url,

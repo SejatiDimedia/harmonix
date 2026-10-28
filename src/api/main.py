@@ -76,7 +76,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Harnessly Data Analyst Agent API",
+    title="Harmonix Data Analyst Agent API",
     description="Production-grade text-to-SQL agent with full harness, guardrails, state persistence, and SSE streaming.",
     version="0.1.0",
     lifespan=lifespan,

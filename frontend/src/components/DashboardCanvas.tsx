@@ -72,13 +72,13 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
             <div className="flex items-center gap-3">
               <img
                 src="/static/favicon.png"
-                alt="Harnessly Logo"
+                alt="Harmonix Logo"
                 className="w-11 h-11 rounded-xl object-contain border border-gray-200 shadow-sm"
               />
               <div className="space-y-0.5">
                 <div className="flex items-center gap-2">
                   <span className="text-xl font-bold tracking-tight text-gray-900 font-sans">
-                    HARNESSLY ENTERPRISE
+                    HARMONIX ENTERPRISE
                   </span>
                   <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-clay-100 text-clay-900 border border-clay-200 uppercase font-semibold">
                     Executive BI
@@ -379,7 +379,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
 
                   {/* Print-Only Subtle Card Footnote */}
                   <div className="print-only hidden px-4 py-2 border-t border-gray-100 text-[8pt] text-gray-400 font-sans flex justify-between items-center bg-gray-50/50">
-                    <span>Harnessly Enterprise BI Platform • Read-Only Verified</span>
+                    <span>Harmonix Enterprise BI Platform • Read-Only Verified</span>
                     <span className="font-mono">ID: {w.widget_id.slice(0, 8)}</span>
                   </div>
 
@@ -454,7 +454,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
 
         {/* Print-Only Document Footer & Sign-off */}
         <div className="print-only hidden mt-8 pt-4 border-t border-gray-200 text-center text-[9px] text-gray-400 font-mono">
-          Harnessly Autonomous Business Intelligence Platform • Dokumen Resmi Tanpa Tanda Tangan Basah • Tanggal Ekspor: {formattedPrintDate}
+          Harmonix Autonomous Business Intelligence Platform • Dokumen Resmi Tanpa Tanda Tangan Basah • Tanggal Ekspor: {formattedPrintDate}
         </div>
       </div>
     </div>

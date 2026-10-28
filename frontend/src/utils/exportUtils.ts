@@ -4,7 +4,7 @@ import { TableData } from '../types';
  * Exports a TableData structure to a standard RFC 4180 CSV file
  * with UTF-8 BOM to ensure flawless opening in Microsoft Excel and Google Sheets.
  */
-export function exportTableToCSV(table: TableData, filename = 'harnessly_data'): void {
+export function exportTableToCSV(table: TableData, filename = 'harmonix_data'): void {
   if (!table || !table.columns || table.columns.length === 0) {
     console.warn('Cannot export empty table to CSV.');
     return;
@@ -39,7 +39,7 @@ export function exportTableToCSV(table: TableData, filename = 'harnessly_data'):
 
   const link = document.createElement('a');
   link.setAttribute('href', url);
-  link.setAttribute('download', `${cleanFilename || 'harnessly_export'}_${Date.now()}.csv`);
+  link.setAttribute('download', `${cleanFilename || 'harmonix_export'}_${Date.now()}.csv`);
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);

@@ -79,11 +79,15 @@ export const useAppStore = create<AppState>((set) => ({
     }),
 
   // Session & Turns
-  currentSessionId: localStorage.getItem('harnessly_session_id') || null,
+  currentSessionId:
+    localStorage.getItem('harmonix_session_id') ||
+    localStorage.getItem('harnessly_session_id') ||
+    null,
   setCurrentSessionId: (sid) => {
     if (sid) {
-      localStorage.setItem('harnessly_session_id', sid);
+      localStorage.setItem('harmonix_session_id', sid);
     } else {
+      localStorage.removeItem('harmonix_session_id');
       localStorage.removeItem('harnessly_session_id');
     }
     set({ currentSessionId: sid });

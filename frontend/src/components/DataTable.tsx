@@ -26,7 +26,7 @@ export const DataTable: React.FC<DataTableProps> = ({ tables, onPinTable }) => {
             <div className="flex items-center gap-1.5">
               <button
                 type="button"
-                onClick={() => exportTableToCSV(t, `harnessly_tabel_${tIdx + 1}`)}
+                onClick={() => exportTableToCSV(t, `harmonix_tabel_${tIdx + 1}`)}
                 aria-label={`Unduh data tabel ${tIdx + 1} sebagai file CSV`}
                 className="flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded bg-[#242320] hover:bg-[#2c2a26] text-[#dedcd5] hover:text-[#f5f4ef] border border-[#383632] hover:border-[#48453f] transition cursor-pointer"
                 title="Unduh data tabel sebagai file CSV untuk Excel / Google Sheets"

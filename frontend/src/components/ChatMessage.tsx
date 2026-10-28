@@ -49,7 +49,7 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
       <div className="flex gap-3 text-sm text-[#ecebe6]">
         <img
           src="/static/favicon.png"
-          alt="Harnessly"
+          alt="Harmonix"
           className="w-7 h-7 rounded-lg object-cover border border-clay-500/30 shrink-0 mt-0.5 select-none shadow-sm"
         />
 

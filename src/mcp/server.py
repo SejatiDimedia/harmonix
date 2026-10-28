@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 # Initialize MCP server instance
 mcp_server = MCPServer(
-    name="harnessly-database",
+    name="harmonix-database",
     description="Production-grade PostgreSQL Database MCP Server with AST guardrails and PII masking",
 )
 

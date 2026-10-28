@@ -296,7 +296,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
         </form>
 
         <div className="text-center text-[10px] text-[#9c9990] pt-2 font-mono select-none">
-          Harnessly Enterprise Analytics — AI Data Analyst with Multi-Model Intelligence &amp; Privacy Guardrails
+          Harmonix Enterprise Analytics — AI Data Analyst with Multi-Model Intelligence &amp; Privacy Guardrails
         </div>
       </div>
 
