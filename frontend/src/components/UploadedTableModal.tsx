@@ -13,9 +13,10 @@ import {
   Sparkles,
   RefreshCw,
   FileSpreadsheet,
+  Trash2,
 } from 'lucide-react';
 import { UploadedTableSummary } from '../types';
-import { useTableHealthQuery } from '../hooks/useQueries';
+import { useTableHealthQuery, useDeleteUploadedTableMutation } from '../hooks/useQueries';
 
 interface UploadedTableModalProps {
   isOpen: boolean;
@@ -34,6 +35,10 @@ export const UploadedTableModal: React.FC<UploadedTableModalProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'health' | 'schema'>('health');
   const [copied, setCopied] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const deleteTableMutation = useDeleteUploadedTableMutation(sessionId || null);
 
   const {
     data: healthProfile,
@@ -41,6 +46,27 @@ export const UploadedTableModal: React.FC<UploadedTableModalProps> = ({
     isError: isHealthError,
     refetch: refetchHealth,
   } = useTableHealthQuery(sessionId || null, isOpen && table ? table.table_name : null);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setConfirmDelete(false);
+      setIsDeleting(false);
+    }
+  }, [isOpen]);
+
+  const handleDeleteTable = async () => {
+    if (!table) return;
+    try {
+      setIsDeleting(true);
+      await deleteTableMutation.mutateAsync(table.table_name);
+      onClose();
+    } catch {
+      // handled
+    } finally {
+      setIsDeleting(false);
+      setConfirmDelete(false);
+    }
+  };
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -543,19 +569,51 @@ export const UploadedTableModal: React.FC<UploadedTableModalProps> = ({
         </div>
 
         {/* Modal Footer */}
-        <div className="flex items-center justify-between p-4 border-t border-[#1e3557] bg-[#0b1526]">
-          <div className="text-xs font-mono text-[#94a3b8]">
-            <strong className="text-[#f8fafc]">{table.row_count.toLocaleString()}</strong> baris •{' '}
-            <strong className="text-[#f8fafc]">{table.columns.length}</strong> kolom
-          </div>
+        <div className="flex flex-wrap items-center justify-between gap-3 p-4 border-t border-[#1e3557] bg-[#0b1526]">
+          {confirmDelete ? (
+            <div className="flex items-center gap-2 bg-rose-950/40 border border-rose-800/50 px-3 py-1.5 rounded-xl">
+              <span className="text-xs text-rose-300 font-sans font-medium">Hapus dataset ini dari sesi?</span>
+              <button
+                type="button"
+                onClick={handleDeleteTable}
+                disabled={isDeleting}
+                className="px-2.5 py-1 rounded-lg text-xs font-semibold text-white bg-rose-600 hover:bg-rose-500 transition cursor-pointer disabled:opacity-50"
+              >
+                {isDeleting ? 'Menghapus...' : 'Ya, Hapus'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmDelete(false)}
+                className="px-2 py-1 rounded-lg text-xs text-[#94a3b8] hover:text-[#f8fafc] transition cursor-pointer"
+              >
+                Batal
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setConfirmDelete(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium text-rose-300 hover:text-rose-200 bg-rose-950/30 hover:bg-rose-900/40 border border-rose-800/40 transition cursor-pointer"
+              title="Hapus dataset ini dari database sesi"
+            >
+              <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+              <span>Hapus Dataset</span>
+            </button>
+          )}
 
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 rounded-xl text-xs font-medium text-[#94a3b8] bg-[#14223b] hover:bg-[#182a47] border border-[#1e3557] hover:text-[#f8fafc] transition cursor-pointer"
-          >
-            Tutup
-          </button>
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-mono text-[#94a3b8] hidden sm:inline">
+              <strong className="text-[#f8fafc]">{table.row_count.toLocaleString()}</strong> baris •{' '}
+              <strong className="text-[#f8fafc]">{table.columns.length}</strong> kolom
+            </span>
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 rounded-xl text-xs font-medium text-[#94a3b8] bg-[#14223b] hover:bg-[#182a47] border border-[#1e3557] hover:text-[#f8fafc] transition cursor-pointer"
+            >
+              Tutup
+            </button>
+          </div>
         </div>
       </div>
     </div>

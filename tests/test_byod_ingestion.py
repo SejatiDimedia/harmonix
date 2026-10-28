@@ -202,3 +202,43 @@ async def test_upload_batch_limit():
         assert data["total_tables_created"] == 7
 
     await cleanup_session_uploaded_tables(test_session)
+
+
+@pytest.mark.asyncio
+async def test_delete_single_uploaded_table():
+    """Verify deleting a single uploaded table drops the table and updates metadata."""
+    transport = ASGITransport(app=app)
+    test_session = "sess_del_single_test"
+    csv_bytes = b"id,val\n1,100\n2,200\n"
+
+    # 1. Upload CSV
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        upload_res = await client.post(
+            f"/v1/sessions/{test_session}/upload",
+            files=[("files", ("test_delete.csv", csv_bytes, "text/csv"))],
+        )
+        assert upload_res.status_code == 200
+        tables = upload_res.json()["tables"]
+        assert len(tables) == 1
+        tname = tables[0]["table_name"]
+
+        # 2. Verify table exists in list
+        list_res = await client.get(f"/v1/sessions/{test_session}/tables")
+        assert list_res.status_code == 200
+        assert any(t["table_name"] == tname for t in list_res.json()["tables"])
+
+        # 3. Delete the table
+        del_res = await client.delete(f"/v1/sessions/{test_session}/tables/{tname}")
+        assert del_res.status_code == 200
+        assert del_res.json()["status"] == "success"
+
+        # 4. Verify table is gone from list
+        list_res2 = await client.get(f"/v1/sessions/{test_session}/tables")
+        assert list_res2.status_code == 200
+        assert not any(t["table_name"] == tname for t in list_res2.json()["tables"])
+
+        # 5. Subsequent delete returns 404
+        del_res2 = await client.delete(f"/v1/sessions/{test_session}/tables/{tname}")
+        assert del_res2.status_code == 404
+
+    await cleanup_session_uploaded_tables(test_session)

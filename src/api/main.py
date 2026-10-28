@@ -576,6 +576,24 @@ async def get_table_health(session_id: str, table_name: str):
         raise HTTPException(status_code=500, detail=f"Gagal memproses profil kesehatan data: {e}")
 
 
+@app.delete("/v1/sessions/{session_id}/tables/{table_name}", tags=["Ingestion"])
+async def delete_session_table(session_id: str, table_name: str):
+    """Delete a single uploaded table and drop its physical table from PostgreSQL."""
+    from src.ingestion.excel_csv_parser import delete_session_uploaded_table
+    success = await delete_session_uploaded_table(session_id=session_id, table_name=table_name)
+    if not success:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Tabel '{table_name}' tidak ditemukan pada sesi '{session_id}'."
+        )
+    return {
+        "status": "success",
+        "message": f"Tabel '{table_name}' berhasil dihapus dari sesi.",
+        "table_name": table_name,
+        "session_id": session_id,
+    }
+
+
 @app.get("/", response_class=HTMLResponse, tags=["UI"])
 async def web_ui():
     """Claude AI-inspired warm aesthetic UI for Harnessly with live streaming, HITL gate, and observability."""

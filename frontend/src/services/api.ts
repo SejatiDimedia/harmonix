@@ -275,3 +275,17 @@ export async function getTableHealth(
   return res.json();
 }
 
+export async function deleteUploadedTable(
+  sessionId: string,
+  tableName: string
+): Promise<boolean> {
+  const res = await fetch(`/v1/sessions/${sessionId}/tables/${tableName}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: 'Gagal menghapus tabel data' }));
+    throw new Error(err.detail || 'Gagal menghapus tabel data');
+  }
+  return true;
+}
+

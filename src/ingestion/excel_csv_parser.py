@@ -432,3 +432,45 @@ async def cleanup_session_uploaded_tables(session_id: str) -> int:
 
     logger.info("Dropped %d uploaded tables for session %s.", dropped_count, session_id)
     return dropped_count
+
+
+async def delete_session_uploaded_table(session_id: str, table_name: str) -> bool:
+    """Drop a single physical table and delete its metadata for a given session."""
+    if not session_id or not table_name:
+        return False
+    await init_uploaded_tables_registry()
+
+    safe_name = re.sub(r"[^a-zA-Z0-9_]", "", table_name)
+    if not safe_name:
+        return False
+
+    async with get_db_session() as session:
+        # Verify table belongs to session
+        result = await session.execute(
+            text("""
+                SELECT table_name FROM analytics.session_uploaded_tables
+                WHERE session_id = :session_id AND table_name = :table_name;
+            """),
+            {"session_id": session_id, "table_name": safe_name},
+        )
+        if not result.fetchone():
+            return False
+
+        # Drop physical table
+        try:
+            await session.execute(text(f'DROP TABLE IF EXISTS analytics."{safe_name}" CASCADE;'))
+        except Exception as e:
+            logger.warning("Error dropping table analytics.%s: %s", safe_name, e)
+
+        # Delete metadata registry entry
+        await session.execute(
+            text("""
+                DELETE FROM analytics.session_uploaded_tables
+                WHERE session_id = :session_id AND table_name = :table_name;
+            """),
+            {"session_id": session_id, "table_name": safe_name},
+        )
+        await session.commit()
+
+    logger.info("Deleted uploaded table analytics.%s for session %s.", safe_name, session_id)
+    return True

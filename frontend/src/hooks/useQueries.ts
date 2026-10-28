@@ -16,6 +16,7 @@ import {
   uploadSessionFiles,
   getSessionUploadedTables,
   getTableHealth,
+  deleteUploadedTable,
 } from '../services/api';
 import { PinWidgetPayload, UpdateAPIKeysPayload } from '../types';
 
@@ -169,5 +170,17 @@ export const useTableHealthQuery = (sessionId: string | null, tableName: string 
     queryFn: () => getTableHealth(sessionId || 'default', tableName!),
     enabled: !!tableName,
     staleTime: 1000 * 60 * 5,
+  });
+};
+
+export const useDeleteUploadedTableMutation = (sessionId: string | null) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (tableName: string) => deleteUploadedTable(sessionId || 'default', tableName),
+    onSuccess: () => {
+      if (sessionId) {
+        queryClient.invalidateQueries({ queryKey: ['session-uploaded-tables', sessionId] });
+      }
+    },
   });
 };

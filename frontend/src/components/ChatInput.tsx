@@ -1,11 +1,11 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { ArrowUp, ChevronDown, Paperclip, FileSpreadsheet, Loader2 } from 'lucide-react';
+import { ArrowUp, ChevronDown, Paperclip, FileSpreadsheet, Loader2, X } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { EngineType, ModelCatalogResponse, UploadedTableSummary } from '../types';
 import { formatModelNameShort } from '../utils/formatters';
 import { ModelPickerPopover } from './ModelPickerPopover';
 import { UploadedTableModal } from './UploadedTableModal';
-import { useSessionUploadedTablesQuery } from '../hooks/useQueries';
+import { useSessionUploadedTablesQuery, useDeleteUploadedTableMutation } from '../hooks/useQueries';
 import { uploadSessionFiles } from '../services/api';
 
 interface ChatInputProps {
@@ -49,6 +49,17 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
   // Load active session-scoped uploaded tables
   const { data: uploadedData } = useSessionUploadedTablesQuery(sessionId);
   const uploadedTables = uploadedData?.tables || [];
+  const deleteTableMutation = useDeleteUploadedTableMutation(sessionId);
+
+  const handleDeleteSingleTable = async (tableName: string, displayName: string) => {
+    try {
+      await deleteTableMutation.mutateAsync(tableName);
+      showToast?.(`Dataset "${displayName}" berhasil dihapus.`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Gagal menghapus dataset';
+      showToast?.(msg);
+    }
+  };
 
   const adjustTextareaHeight = () => {
     if (textareaRef.current) {
@@ -150,21 +161,37 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
                     : tbl.original_filename;
 
                 return (
-                  <button
+                  <div
                     key={tbl.table_name}
-                    type="button"
-                    onClick={() => setSelectedTableForModal(tbl)}
-                    className="group inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#14223b] hover:bg-[#182a47] border border-[#1e3557] hover:border-clay-500/60 text-[#f8fafc] transition cursor-pointer shrink-0"
-                    title={`Klik untuk melihat detail skema kolom (${tbl.columns.length} kolom)`}
+                    className="group inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-lg bg-[#14223b] hover:bg-[#182a47] border border-[#1e3557] hover:border-[#008cd0]/60 text-[#f8fafc] transition shrink-0"
                   >
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
-                    <span className="text-[#f8fafc] font-medium font-sans truncate max-w-[130px] sm:max-w-[200px]">
-                      {displayName}
-                    </span>
-                    <span className="text-[10px] text-[#94a3b8] font-mono">
-                      {tbl.row_count.toLocaleString()} baris
-                    </span>
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedTableForModal(tbl)}
+                      className="flex items-center gap-1.5 cursor-pointer text-left focus:outline-none"
+                      title={`Klik untuk melihat detail kesehatan data & skema kolom (${tbl.columns.length} kolom)`}
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                      <span className="text-[#f8fafc] font-medium font-sans truncate max-w-[120px] sm:max-w-[180px]">
+                        {displayName}
+                      </span>
+                      <span className="text-[10px] text-[#94a3b8] font-mono">
+                        {tbl.row_count.toLocaleString()} baris
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteSingleTable(tbl.table_name, displayName);
+                      }}
+                      className="p-1 rounded hover:bg-rose-500/20 text-[#94a3b8] hover:text-rose-400 transition cursor-pointer"
+                      title={`Hapus dataset "${displayName}"`}
+                      aria-label={`Hapus dataset "${displayName}"`}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
                 );
               })}
             </div>
