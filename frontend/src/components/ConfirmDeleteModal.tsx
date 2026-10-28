@@ -55,7 +55,7 @@ export const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
 
         {/* Header with Danger Icon */}
         <div className="flex items-start gap-3.5">
-          <div className="p-2.5 rounded-xl bg-rose-950/60 border border-rose-800/40 text-rose-400 shrink-0">
+          <div className="p-2.5 rounded-xl bg-[#1a1222] border border-rose-500/30 text-rose-400 shrink-0">
             <AlertTriangle className="w-5 h-5" />
           </div>
           <div className="space-y-1 pr-6">

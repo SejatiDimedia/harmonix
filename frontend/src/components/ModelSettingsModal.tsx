@@ -249,15 +249,15 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
         {/* Body Content */}
         <div className="p-6 overflow-y-auto space-y-6">
           {errorFeedback && (
-            <div className="p-3 rounded-xl bg-rose-950/40 border border-rose-800 text-xs text-rose-300 flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0" />
+            <div className="p-3 rounded-xl bg-[#1a1222] border border-rose-500/30 text-xs text-rose-200 flex items-center gap-2 shadow-sm">
+              <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
               <span>{errorFeedback}</span>
             </div>
           )}
 
           {successFeedback && (
-            <div className="p-3 rounded-xl bg-emerald-950/40 border border-emerald-800 text-xs text-emerald-300 flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 shrink-0" />
+            <div className="p-3 rounded-xl bg-[#0c1e33] border border-cyan-500/30 text-xs text-cyan-200 flex items-center gap-2 shadow-sm">
+              <CheckCircle2 className="w-4 h-4 text-[#00d2ee] shrink-0" />
               <span>{successFeedback}</span>
             </div>
           )}
@@ -266,30 +266,33 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
             <>
               {/* Provider status badges */}
               <div>
-                <label className="block text-xs font-mono uppercase tracking-wider text-[#94a3b8] mb-2 select-none">
+                <label className="block text-xs font-mono uppercase tracking-wider text-[#94a3b8] mb-2.5 select-none">
                   Status Provider Terhubung
                 </label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                   {catalog.providers.map((p) => (
                     <div
                       key={p.provider}
-                      className={`p-2.5 rounded-xl border flex flex-col justify-between gap-1 ${
+                      className={`p-3 rounded-xl border flex flex-col justify-between gap-1.5 transition-all shadow-sm ${
                         p.is_ready
-                          ? 'bg-[#18231c] border-emerald-900/60 text-emerald-300'
-                          : 'bg-[#141b2b] border-[#1e3557] text-[#94a3b8]'
+                          ? 'bg-[#14223b] border-[#1e3557] hover:border-cyan-500/40'
+                          : 'bg-[#101b2e]/80 border-[#1a2d47] opacity-60'
                       }`}
                     >
                       <div className="flex items-center justify-between">
-                        <span className="font-medium text-[#f8fafc] text-xs">
+                        <span className="font-semibold text-[#f8fafc] text-xs font-sans tracking-wide">
                           {p.provider.toUpperCase()}
                         </span>
-                        <span
-                          className={`w-1.5 h-1.5 rounded-full ${
-                            p.is_ready ? 'bg-emerald-400' : 'bg-amber-500'
-                          }`}
-                        />
+                        {p.is_ready ? (
+                          <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-60" />
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-[#00d2ee]" />
+                          </span>
+                        ) : (
+                          <span className="w-2 h-2 rounded-full bg-slate-500" />
+                        )}
                       </div>
-                      <span className="text-[10px] truncate text-[#94a3b8]">
+                      <span className={`text-[11px] truncate font-mono ${p.is_ready ? 'text-cyan-300/80' : 'text-[#64748b]'}`}>
                         {p.status_message}
                       </span>
                     </div>
@@ -431,13 +434,14 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
                     <span className="text-[10px] font-mono text-[#94a3b8]">GROQ_API_KEY</span>
                   </div>
                   <span
-                    className={`text-[10px] px-2 py-0.5 rounded-full border font-mono ${
+                    className={`text-[10px] px-2.5 py-0.5 rounded-full border font-mono flex items-center gap-1.5 ${
                       groqInfo?.is_set
-                        ? 'bg-emerald-950/60 border-emerald-800 text-emerald-300'
-                        : 'bg-amber-950/60 border-amber-800 text-amber-300'
+                        ? 'bg-cyan-950/50 border-cyan-800/40 text-cyan-300'
+                        : 'bg-[#14223b] border-[#1e3557] text-[#94a3b8]'
                     }`}
                   >
-                    {groqInfo?.is_set ? `Aktif (${groqInfo.masked_key})` : 'Belum Diisi'}
+                    <span className={`w-1.5 h-1.5 rounded-full ${groqInfo?.is_set ? 'bg-[#00d2ee]' : 'bg-slate-500'}`} />
+                    <span>{groqInfo?.is_set ? `Aktif (${groqInfo.masked_key})` : 'Belum Diisi'}</span>
                   </span>
                 </div>
 
@@ -482,13 +486,14 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
                     <span className="text-[10px] font-mono text-[#94a3b8]">GEMINI_API_KEY</span>
                   </div>
                   <span
-                    className={`text-[10px] px-2 py-0.5 rounded-full border font-mono ${
+                    className={`text-[10px] px-2.5 py-0.5 rounded-full border font-mono flex items-center gap-1.5 ${
                       geminiInfo?.is_set
-                        ? 'bg-emerald-950/60 border-emerald-800 text-emerald-300'
-                        : 'bg-amber-950/60 border-amber-800 text-amber-300'
+                        ? 'bg-cyan-950/50 border-cyan-800/40 text-cyan-300'
+                        : 'bg-[#14223b] border-[#1e3557] text-[#94a3b8]'
                     }`}
                   >
-                    {geminiInfo?.is_set ? `Aktif (${geminiInfo.masked_key})` : 'Belum Diisi'}
+                    <span className={`w-1.5 h-1.5 rounded-full ${geminiInfo?.is_set ? 'bg-[#00d2ee]' : 'bg-slate-500'}`} />
+                    <span>{geminiInfo?.is_set ? `Aktif (${geminiInfo.masked_key})` : 'Belum Diisi'}</span>
                   </span>
                 </div>
 
@@ -533,13 +538,14 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
                     <span className="text-[10px] font-mono text-[#94a3b8]">OPENROUTER_API_KEY</span>
                   </div>
                   <span
-                    className={`text-[10px] px-2 py-0.5 rounded-full border font-mono ${
+                    className={`text-[10px] px-2.5 py-0.5 rounded-full border font-mono flex items-center gap-1.5 ${
                       openrouterInfo?.is_set
-                        ? 'bg-emerald-950/60 border-emerald-800 text-emerald-300'
-                        : 'bg-amber-950/60 border-amber-800 text-amber-300'
+                        ? 'bg-cyan-950/50 border-cyan-800/40 text-cyan-300'
+                        : 'bg-[#14223b] border-[#1e3557] text-[#94a3b8]'
                     }`}
                   >
-                    {openrouterInfo?.is_set ? `Aktif (${openrouterInfo.masked_key})` : 'Belum Diisi'}
+                    <span className={`w-1.5 h-1.5 rounded-full ${openrouterInfo?.is_set ? 'bg-[#00d2ee]' : 'bg-slate-500'}`} />
+                    <span>{openrouterInfo?.is_set ? `Aktif (${openrouterInfo.masked_key})` : 'Belum Diisi'}</span>
                   </span>
                 </div>
 

@@ -65,11 +65,11 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({
         {/* Content */}
         <div className="p-5 space-y-4">
           {metrics?.drift_detected && (metrics.drift_reasons || []).length > 0 && (
-            <div className="p-3 rounded-xl bg-amber-950/40 border border-amber-800 text-xs text-amber-300 flex items-start gap-2">
+            <div className="p-3.5 rounded-xl bg-[#1a161f] border border-amber-500/30 text-xs text-amber-200 flex items-start gap-2.5 shadow-sm">
               <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
               <div>
                 <span className="font-semibold font-mono">Peringatan Anomali Drift:</span>
-                <p className="mt-0.5">{metrics.drift_reasons?.join('; ')}</p>
+                <p className="mt-0.5 text-xs text-[#94a3b8] leading-relaxed">{metrics.drift_reasons?.join('; ')}</p>
               </div>
             </div>
           )}
