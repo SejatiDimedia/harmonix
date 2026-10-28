@@ -61,6 +61,16 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
   const updateApiKeysMutation = useUpdateApiKeysMutation();
 
   useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen && !isSaving) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, isSaving, onClose]);
+
+  useEffect(() => {
     if (isOpen) {
       setAnalystProv(activeAnalystProvider);
       setAnalystMod(activeAnalystModel);
@@ -160,8 +170,17 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
   const openrouterInfo = apiKeysData?.keys?.openrouter;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in font-sans no-print print:hidden">
-      <div className="relative w-full max-w-2xl bg-[#1b1a18] border border-[#2e2c28] rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="model-modal-title"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in font-sans no-print print:hidden"
+      onClick={onClose}
+    >
+      <div
+        className="relative w-full max-w-2xl bg-[#1b1a18] border border-[#2e2c28] rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="px-6 py-4 border-b border-[#2e2c28] flex items-center justify-between">
           <div className="flex items-center gap-2.5">
@@ -169,7 +188,7 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
               <Sliders className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-semibold text-[#f5f4ef]">
+              <h3 id="model-modal-title" className="text-base font-semibold text-[#f5f4ef]">
                 Kelola Model LLM & Kunci API
               </h3>
               <p className="text-xs text-[#9c9990]">
@@ -180,6 +199,7 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
           <button
             type="button"
             onClick={onClose}
+            aria-label="Tutup modal pengaturan model (Esc)"
             className="p-1.5 rounded-lg text-[#9c9990] hover:text-[#f5f4ef] hover:bg-[#282623] transition cursor-pointer"
           >
             <X className="w-5 h-5" />
@@ -187,9 +207,11 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
         </div>
 
         {/* Tab Switcher */}
-        <div className="flex items-center px-6 border-b border-[#2e2c28] bg-[#161513]">
+        <div role="tablist" aria-label="Navigasi Pengaturan Model" className="flex items-center px-6 border-b border-[#2e2c28] bg-[#161513]">
           <button
             type="button"
+            role="tab"
+            aria-selected={modalTab === 'models'}
             onClick={() => {
               setModalTab('models');
               setErrorFeedback(null);
@@ -206,6 +228,8 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
           </button>
           <button
             type="button"
+            role="tab"
+            aria-selected={modalTab === 'keys'}
             onClick={() => {
               setModalTab('keys');
               setErrorFeedback(null);
@@ -404,7 +428,7 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-xs text-[#f5f4ef]">1. Groq Cloud (LPU Ultra-Fast)</span>
-                    <span className="text-[10px] font-mono text-[#78756d]">GROQ_API_KEY</span>
+                    <span className="text-[10px] font-mono text-[#9c9990]">GROQ_API_KEY</span>
                   </div>
                   <span
                     className={`text-[10px] px-2 py-0.5 rounded-full border font-mono ${
@@ -422,19 +446,21 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
                     type={showGroq ? 'text' : 'password'}
                     value={groqKey}
                     onChange={(e) => setGroqKey(e.target.value)}
+                    aria-label="Kunci API Groq (gsk_...)"
                     placeholder={groqInfo?.is_set ? 'Ketik kunci baru untuk mengganti...' : 'gsk_...'}
                     className="w-full bg-[#1b1a18] border border-[#383632] rounded-xl px-3 py-2 pr-10 text-xs text-[#f5f4ef] focus:outline-none focus:border-clay-500 font-mono"
                   />
                   <button
                     type="button"
                     onClick={() => setShowGroq(!showGroq)}
-                    className="absolute right-3 text-[#78756d] hover:text-[#dedcd5] transition cursor-pointer"
+                    aria-label={showGroq ? 'Sembunyikan kunci API Groq' : 'Tampilkan kunci API Groq'}
+                    className="absolute right-3 text-[#9c9990] hover:text-[#dedcd5] transition cursor-pointer"
                   >
                     {showGroq ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
 
-                <div className="flex items-center justify-between text-[11px] text-[#78756d]">
+                <div className="flex items-center justify-between text-[11px] text-[#9c9990]">
                   <span>Model OpenAI GPT-OSS 120B &amp; Qwen 3.8 di LPU (~500 t/s)</span>
                   <a
                     href="https://console.groq.com/keys"
@@ -453,7 +479,7 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-xs text-[#f5f4ef]">2. Google AI Studio (Gemini)</span>
-                    <span className="text-[10px] font-mono text-[#78756d]">GEMINI_API_KEY</span>
+                    <span className="text-[10px] font-mono text-[#9c9990]">GEMINI_API_KEY</span>
                   </div>
                   <span
                     className={`text-[10px] px-2 py-0.5 rounded-full border font-mono ${
@@ -471,19 +497,21 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
                     type={showGemini ? 'text' : 'password'}
                     value={geminiKey}
                     onChange={(e) => setGeminiKey(e.target.value)}
+                    aria-label="Kunci API Google Gemini (AIzaSy...)"
                     placeholder={geminiInfo?.is_set ? 'Ketik kunci baru untuk mengganti...' : 'AIzaSy...'}
                     className="w-full bg-[#1b1a18] border border-[#383632] rounded-xl px-3 py-2 pr-10 text-xs text-[#f5f4ef] focus:outline-none focus:border-clay-500 font-mono"
                   />
                   <button
                     type="button"
                     onClick={() => setShowGemini(!showGemini)}
-                    className="absolute right-3 text-[#78756d] hover:text-[#dedcd5] transition cursor-pointer"
+                    aria-label={showGemini ? 'Sembunyikan kunci API Gemini' : 'Tampilkan kunci API Gemini'}
+                    className="absolute right-3 text-[#9c9990] hover:text-[#dedcd5] transition cursor-pointer"
                   >
                     {showGemini ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
 
-                <div className="flex items-center justify-between text-[11px] text-[#78756d]">
+                <div className="flex items-center justify-between text-[11px] text-[#9c9990]">
                   <span>Gemini 2.0 Flash &amp; Gemini 1.5 Flash (Google AI Cloud)</span>
                   <a
                     href="https://aistudio.google.com/apikey"
@@ -502,7 +530,7 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-xs text-[#f5f4ef]">3. OpenRouter AI Gateway</span>
-                    <span className="text-[10px] font-mono text-[#78756d]">OPENROUTER_API_KEY</span>
+                    <span className="text-[10px] font-mono text-[#9c9990]">OPENROUTER_API_KEY</span>
                   </div>
                   <span
                     className={`text-[10px] px-2 py-0.5 rounded-full border font-mono ${
@@ -520,19 +548,21 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
                     type={showOpenRouter ? 'text' : 'password'}
                     value={openrouterKey}
                     onChange={(e) => setOpenrouterKey(e.target.value)}
+                    aria-label="Kunci API OpenRouter (sk-or-v1-...)"
                     placeholder={openrouterInfo?.is_set ? 'Ketik kunci baru untuk mengganti...' : 'sk-or-v1-...'}
                     className="w-full bg-[#1b1a18] border border-[#383632] rounded-xl px-3 py-2 pr-10 text-xs text-[#f5f4ef] focus:outline-none focus:border-clay-500 font-mono"
                   />
                   <button
                     type="button"
                     onClick={() => setShowOpenRouter(!showOpenRouter)}
-                    className="absolute right-3 text-[#78756d] hover:text-[#dedcd5] transition cursor-pointer"
+                    aria-label={showOpenRouter ? 'Sembunyikan kunci API OpenRouter' : 'Tampilkan kunci API OpenRouter'}
+                    className="absolute right-3 text-[#9c9990] hover:text-[#dedcd5] transition cursor-pointer"
                   >
                     {showOpenRouter ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
 
-                <div className="flex items-center justify-between text-[11px] text-[#78756d]">
+                <div className="flex items-center justify-between text-[11px] text-[#9c9990]">
                   <span>Akses model Llama 3, Gemma 4, Nvidia Nemotron via OpenRouter</span>
                   <a
                     href="https://openrouter.ai/keys"

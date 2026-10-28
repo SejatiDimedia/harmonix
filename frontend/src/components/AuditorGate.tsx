@@ -33,9 +33,12 @@ export const AuditorGate: React.FC<AuditorGateProps> = ({ verdict }) => {
   return (
     <div className="mt-3 pt-2.5 border-t border-[#2e2c28]/80 text-xs">
       <div className={`rounded-xl p-3 border transition-all ${badgeBg}`}>
-        <div
+        <button
+          type="button"
+          aria-expanded={isExpanded}
+          aria-label={`Detail verifikasi auditor: ${badgeText} (${confidence}%). Klik untuk buka atau tutup.`}
           onClick={() => setIsExpanded(!isExpanded)}
-          className="flex items-center justify-between cursor-pointer select-none"
+          className="w-full flex items-center justify-between cursor-pointer select-none text-left"
         >
           <div className="flex items-center gap-2 font-mono font-medium text-xs">
             <Icon className={`w-3.5 h-3.5 ${iconColor} shrink-0`} />
@@ -51,7 +54,7 @@ export const AuditorGate: React.FC<AuditorGateProps> = ({ verdict }) => {
               }`}
             />
           </div>
-        </div>
+        </button>
 
         {isExpanded && (
           <div className="mt-2 pt-2 border-t border-current/15 text-[11px] leading-relaxed space-y-2">

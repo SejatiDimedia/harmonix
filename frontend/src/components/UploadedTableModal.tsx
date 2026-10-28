@@ -50,6 +50,7 @@ export const UploadedTableModal: React.FC<UploadedTableModalProps> = ({
       onClick={onClose}
       role="dialog"
       aria-modal="true"
+      aria-labelledby="uploaded-table-title"
     >
       <div
         className="relative w-full max-w-2xl max-h-[85vh] flex flex-col rounded-2xl bg-[#1c1b18] border border-[#2e2c28] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150"
@@ -63,7 +64,7 @@ export const UploadedTableModal: React.FC<UploadedTableModalProps> = ({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-base font-semibold text-[#f5f4ef] font-sans">
+                <h3 id="uploaded-table-title" className="text-base font-semibold text-[#f5f4ef] font-sans">
                   {table.original_filename}
                 </h3>
                 {table.sheet_name && (
@@ -82,6 +83,7 @@ export const UploadedTableModal: React.FC<UploadedTableModalProps> = ({
             type="button"
             onClick={onClose}
             className="p-1.5 rounded-lg text-[#8e8b82] hover:text-[#f5f4ef] hover:bg-[#262421] transition cursor-pointer"
+            aria-label="Tutup pratinjau tabel (Esc)"
             title="Tutup (Esc)"
           >
             <X className="w-4 h-4" />
@@ -100,6 +102,7 @@ export const UploadedTableModal: React.FC<UploadedTableModalProps> = ({
               type="button"
               onClick={handleCopyName}
               className="p-1 rounded hover:bg-[#262421] text-[#8e8b82] hover:text-white transition cursor-pointer"
+              aria-label="Salin nama tabel SQL"
               title="Salin nama tabel"
             >
               {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
@@ -127,9 +130,9 @@ export const UploadedTableModal: React.FC<UploadedTableModalProps> = ({
               <table className="w-full text-left text-xs font-mono">
                 <thead>
                   <tr className="border-b border-[#262421] bg-[#1a1917] text-[#8e8b82]">
-                    <th className="py-2.5 px-3.5 font-medium">Nama Kolom</th>
-                    <th className="py-2.5 px-3.5 font-medium">Tipe PostgreSQL</th>
-                    <th className="py-2.5 px-3.5 font-medium">Contoh Nilai</th>
+                    <th scope="col" className="py-2.5 px-3.5 font-medium">Nama Kolom</th>
+                    <th scope="col" className="py-2.5 px-3.5 font-medium">Tipe PostgreSQL</th>
+                    <th scope="col" className="py-2.5 px-3.5 font-medium">Contoh Nilai</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#22211e]">
@@ -171,7 +174,7 @@ export const UploadedTableModal: React.FC<UploadedTableModalProps> = ({
                 <span className="text-xs text-[#b8b5ab] group-hover:text-white font-sans">
                   Lihat 5 sampel data pertama
                 </span>
-                <ArrowRight className="w-3.5 h-3.5 text-[#5c5a53] group-hover:text-clay-400 shrink-0 ml-2 transition" />
+                <ArrowRight className="w-3.5 h-3.5 text-[#8e8b82] group-hover:text-clay-400 shrink-0 ml-2 transition" />
               </button>
 
               <button
@@ -184,7 +187,7 @@ export const UploadedTableModal: React.FC<UploadedTableModalProps> = ({
                 <span className="text-xs text-[#b8b5ab] group-hover:text-white font-sans">
                   Hitung ringkasan statistik kolom
                 </span>
-                <ArrowRight className="w-3.5 h-3.5 text-[#5c5a53] group-hover:text-clay-400 shrink-0 ml-2 transition" />
+                <ArrowRight className="w-3.5 h-3.5 text-[#8e8b82] group-hover:text-clay-400 shrink-0 ml-2 transition" />
               </button>
 
               <button
@@ -197,7 +200,7 @@ export const UploadedTableModal: React.FC<UploadedTableModalProps> = ({
                 <span className="text-xs text-[#b8b5ab] group-hover:text-white font-sans">
                   Cross-Join: Gabungkan data ini dengan data transaksi pesanan (orders)
                 </span>
-                <ArrowRight className="w-3.5 h-3.5 text-[#5c5a53] group-hover:text-clay-400 shrink-0 ml-2 transition" />
+                <ArrowRight className="w-3.5 h-3.5 text-[#8e8b82] group-hover:text-clay-400 shrink-0 ml-2 transition" />
               </button>
             </div>
           </div>

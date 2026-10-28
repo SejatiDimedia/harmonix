@@ -174,6 +174,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
               onClick={triggerExecutivePDFPrint}
               disabled={widgets.length === 0}
               className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#242320] hover:bg-[#2c2a26] disabled:opacity-40 disabled:hover:bg-[#242320] text-[#dedcd5] hover:text-[#f5f4ef] border border-[#383632] hover:border-[#48453f] text-xs font-medium transition shadow-sm cursor-pointer disabled:cursor-not-allowed"
+              aria-label="Ekspor dashboard sebagai dokumen laporan PDF"
               title="Cetak atau simpan dashboard sebagai dokumen laporan PDF"
             >
               <FileDown className="w-3.5 h-3.5 text-clay-400" />
@@ -185,6 +186,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
               onClick={onRefresh}
               disabled={isRefreshing || widgets.length === 0}
               className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-clay-600 hover:bg-clay-500 disabled:opacity-40 disabled:hover:bg-clay-600 text-white text-xs font-medium transition shadow-sm cursor-pointer disabled:cursor-not-allowed"
+              aria-label="Segarkan data semua widget di dashboard"
               title="Segarkan data semua widget"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
@@ -283,6 +285,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                           type="button"
                           onClick={() => exportTableToCSV(w.table_data!, displayTitle)}
                           className="flex items-center gap-1 text-[11px] font-mono px-2 py-1 rounded bg-[#242320] hover:bg-[#2c2a26] text-[#dedcd5] hover:text-[#f5f4ef] border border-[#383632] hover:border-[#48453f] transition cursor-pointer"
+                          aria-label={`Unduh data ${displayTitle} sebagai CSV`}
                           title="Unduh data tabel sebagai CSV"
                         >
                           <Download className="w-3 h-3 text-clay-400" />
@@ -296,6 +299,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                           type="button"
                           onClick={() => handleExportChartData(w.chart_spec!, displayTitle)}
                           className="flex items-center gap-1 text-[11px] font-mono px-2 py-1 rounded bg-[#242320] hover:bg-[#2c2a26] text-[#dedcd5] hover:text-[#f5f4ef] border border-[#383632] hover:border-[#48453f] transition cursor-pointer"
+                          aria-label={`Unduh data ${displayTitle} sebagai CSV`}
                           title="Unduh data grafik sebagai CSV"
                         >
                           <Download className="w-3 h-3 text-clay-400" />
@@ -307,6 +311,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                         type="button"
                         onClick={() => onDeleteWidget(w.widget_id)}
                         className="p-1.5 rounded-lg text-[#8e8b82] hover:text-rose-400 hover:bg-rose-950/30 transition shrink-0 cursor-pointer"
+                        aria-label={`Lepas widget ${displayTitle} dari dashboard`}
                         title="Lepas widget dari dashboard"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -335,6 +340,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                               {(w.table_data?.columns || []).map((col, cIdx) => (
                                 <th
                                   key={cIdx}
+                                  scope="col"
                                   className="p-2.5 text-[10px] font-mono uppercase bg-[#201f1d] print:bg-gray-100 text-[#a3a097] print:text-gray-900 border-b border-[#2e2c28] print:border-gray-300 print:font-bold"
                                 >
                                   {col}
@@ -383,6 +389,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                       <button
                         type="button"
                         onClick={() => toggleSql(w.widget_id)}
+                        aria-expanded={isSqlExpanded}
                         className="flex items-center gap-1.5 text-[11px] font-mono text-[#8e8b82] hover:text-clay-400 transition cursor-pointer"
                       >
                         <Code className="w-3.5 h-3.5" />

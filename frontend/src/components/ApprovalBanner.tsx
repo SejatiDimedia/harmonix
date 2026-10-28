@@ -17,7 +17,7 @@ export const ApprovalBanner: React.FC<ApprovalBannerProps> = ({
   if (!payload) return null;
 
   return (
-    <div className="bg-[#241c19] border-t border-b border-amber-500/40 px-4 py-3 shadow-lg z-10 shrink-0 no-print print:hidden">
+    <div role="alert" aria-live="assertive" className="bg-[#241c19] border-t border-b border-amber-500/40 px-4 py-3 shadow-lg z-10 shrink-0 no-print print:hidden">
       <div className="max-w-4xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
         <div className="flex items-start gap-3">
           <div className="p-2 rounded-lg bg-amber-500/20 text-amber-400 shrink-0 mt-0.5">

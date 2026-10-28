@@ -27,6 +27,7 @@ export const DataTable: React.FC<DataTableProps> = ({ tables, onPinTable }) => {
               <button
                 type="button"
                 onClick={() => exportTableToCSV(t, `harnessly_tabel_${tIdx + 1}`)}
+                aria-label={`Unduh data tabel ${tIdx + 1} sebagai file CSV`}
                 className="flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded bg-[#242320] hover:bg-[#2c2a26] text-[#dedcd5] hover:text-[#f5f4ef] border border-[#383632] hover:border-[#48453f] transition cursor-pointer"
                 title="Unduh data tabel sebagai file CSV untuk Excel / Google Sheets"
               >
@@ -38,6 +39,7 @@ export const DataTable: React.FC<DataTableProps> = ({ tables, onPinTable }) => {
                 <button
                   type="button"
                   onClick={() => onPinTable(t, `Tabel Hasil Analisis #${tIdx + 1}`)}
+                  aria-label={`Sematkan tabel ${tIdx + 1} ke Live Dashboard`}
                   className="flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded bg-[#242320] hover:bg-clay-600/30 text-[#dedcd5] hover:text-clay-300 border border-[#383632] hover:border-clay-500/50 transition cursor-pointer"
                   title="Sematkan tabel ini ke Live Dashboard"
                 >
@@ -48,12 +50,13 @@ export const DataTable: React.FC<DataTableProps> = ({ tables, onPinTable }) => {
             </div>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-xs text-left border-collapse table-auto">
+            <table className="w-full text-xs text-left border-collapse table-auto" aria-label={`Tabel data hasil analitik nomor ${tIdx + 1}`}>
               <thead>
                 <tr>
                   {(t.columns || []).map((col, cIdx) => (
                     <th
                       key={cIdx}
+                      scope="col"
                       className="p-2.5 text-[11px] font-mono uppercase bg-[#242320] text-[#a3a097] border-b border-[#2e2c28] whitespace-normal break-words"
                     >
                       {col}
@@ -77,7 +80,7 @@ export const DataTable: React.FC<DataTableProps> = ({ tables, onPinTable }) => {
                         {val !== null && val !== undefined ? (
                           String(val)
                         ) : (
-                          <span className="text-stone-600">NULL</span>
+                          <span className="text-[#9c9990] italic font-sans text-[10px]">NULL</span>
                         )}
                       </td>
                     ))}

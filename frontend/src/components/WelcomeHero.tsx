@@ -43,7 +43,7 @@ const WelcomeHeroComponent: React.FC<WelcomeHeroProps> = ({ onSelectPrompt }) =>
             <span className="text-xs text-[#a3a097] group-hover:text-[#f5f4ef] leading-relaxed font-sans transition">
               {prompt}
             </span>
-            <ArrowUpRight className="w-3.5 h-3.5 text-[#5c5a53] group-hover:text-clay-400 shrink-0 mt-0.5 transition" />
+            <ArrowUpRight className="w-3.5 h-3.5 text-[#8e8b82] group-hover:text-clay-400 shrink-0 mt-0.5 transition" />
           </button>
         ))}
       </div>

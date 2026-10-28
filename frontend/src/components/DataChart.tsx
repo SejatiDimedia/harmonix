@@ -273,7 +273,7 @@ const SingleChartCanvas: React.FC<SingleChartProps> = ({
       )}
 
       <div className={hideHeader ? 'chart-wrapper w-full h-full print:h-[250px] print:max-w-xl print:mx-auto' : 'chart-wrapper relative w-full h-64 md:h-72 print:h-[250px] print:max-w-xl print:mx-auto'}>
-        <canvas ref={canvasRef} />
+        <canvas ref={canvasRef} role="img" aria-label={spec.title || `Grafik visualisasi ${spec.chart_type || 'data'}`} />
       </div>
     </div>
   );

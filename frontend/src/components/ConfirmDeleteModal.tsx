@@ -34,6 +34,8 @@ export const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
       onClick={isDeleting ? undefined : onCancel}
       role="dialog"
       aria-modal="true"
+      aria-labelledby="delete-modal-title"
+      aria-describedby="delete-modal-desc"
     >
       <div
         className="relative w-full max-w-md rounded-2xl bg-[#1c1b18] border border-[#2e2c28] p-6 shadow-2xl space-y-5 animate-in zoom-in-95 duration-150"
@@ -45,6 +47,7 @@ export const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
           onClick={onCancel}
           disabled={isDeleting}
           className="absolute top-4 right-4 p-1.5 rounded-lg text-[#8e8b82] hover:text-[#f5f4ef] hover:bg-[#262421] transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+          aria-label="Tutup dialog konfirmasi hapus (Esc)"
           title="Tutup (Esc)"
         >
           <X className="w-4 h-4" />
@@ -56,10 +59,10 @@ export const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
             <AlertTriangle className="w-5 h-5" />
           </div>
           <div className="space-y-1 pr-6">
-            <h3 className="text-base font-semibold text-[#f5f4ef] font-sans">
+            <h3 id="delete-modal-title" className="text-base font-semibold text-[#f5f4ef] font-sans">
               Hapus Riwayat Percakapan?
             </h3>
-            <p className="text-xs text-[#9c9990] leading-relaxed">
+            <p id="delete-modal-desc" className="text-xs text-[#9c9990] leading-relaxed">
               Tindakan ini tidak dapat dibatalkan. Seluruh riwayat analisis, kueri SQL, dan widget dashboard terkait akan dihapus secara permanen.
             </p>
           </div>

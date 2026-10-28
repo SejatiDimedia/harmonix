@@ -177,12 +177,13 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
+            aria-label="Pertanyaan analisis data"
             placeholder={
               uploadedTables.length > 0
                 ? "Tanyakan analisis dataset Anda atau gabungkan dengan data warehouse..."
                 : "Tanyakan analisis data... (contoh: 'Tampilkan tren penjualan bulanan dalam grafik bar')"
             }
-            className="w-full bg-transparent px-4 pt-3.5 pb-2 text-sm text-[#f5f4ef] placeholder-[#78756d] focus:outline-none resize-none leading-relaxed font-sans max-h-44"
+            className="w-full bg-transparent px-4 pt-3.5 pb-2 text-sm text-[#f5f4ef] placeholder-[#9c9990] focus:outline-none resize-none leading-relaxed font-sans max-h-44"
           />
 
           {/* Toolbar */}
@@ -196,6 +197,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
                 multiple
                 accept=".csv, .xlsx, .xls"
                 onChange={handleFileChange}
+                aria-label="Pilih file spreadsheet CSV atau Excel untuk diunggah"
                 className="hidden"
               />
 
@@ -204,6 +206,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
                 type="button"
                 disabled={isUploading || isLoading}
                 onClick={() => fileInputRef.current?.click()}
+                aria-label="Unggah file data CSV atau Excel"
                 className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-mono bg-[#22211e] hover:bg-[#282623] border border-[#383632] text-[#d6d4cb] hover:text-white transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                 title="Unggah CSV atau Excel (.xlsx, .xls) untuk dianalisis bersama database warehouse (Maks 5 file, 15MB/file)"
               >
@@ -221,6 +224,9 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
               <button
                 type="button"
                 onClick={() => setIsPopoverOpen(!isPopoverOpen)}
+                aria-label={`Pilih model analitik. Model saat ini: ${activeProvider.toUpperCase()} (${activeModel})`}
+                aria-haspopup="dialog"
+                aria-expanded={isPopoverOpen}
                 className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-mono bg-[#22211e] hover:bg-[#282623] border border-[#383632] text-[#d6d4cb] hover:text-white transition cursor-pointer"
                 title={`Model Aktif: ${activeProvider.toUpperCase()} (${activeModel})`}
               >
@@ -248,7 +254,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
               />
 
               {/* Engine Toggle */}
-              <div className="hidden md:flex items-center bg-[#22211e] border border-[#383632] rounded-xl p-0.5 text-xs font-mono select-none">
+              <div role="group" aria-label="Pilihan Engine Orchestrator" className="hidden md:flex items-center bg-[#22211e] border border-[#383632] rounded-xl p-0.5 text-xs font-mono select-none">
                 <button
                   type="button"
                   onClick={() => onSetEngine('manual')}
@@ -280,6 +286,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
             <button
               type="submit"
               disabled={isLoading || isUploading || !query.trim()}
+              aria-label="Kirim pertanyaan (Enter)"
               className="p-2 rounded-xl bg-clay-600 hover:bg-clay-500 disabled:opacity-30 disabled:hover:bg-clay-600 text-white transition shadow-sm cursor-pointer disabled:cursor-not-allowed"
               title="Kirim (Enter)"
             >
@@ -288,7 +295,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
           </div>
         </form>
 
-        <div className="text-center text-[10px] text-[#7a7770] pt-2 font-mono select-none">
+        <div className="text-center text-[10px] text-[#9c9990] pt-2 font-mono select-none">
           Harnessly Enterprise Analytics — AI Data Analyst with Multi-Model Intelligence &amp; Privacy Guardrails
         </div>
       </div>

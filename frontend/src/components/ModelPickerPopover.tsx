@@ -30,11 +30,18 @@ export const ModelPickerPopover: React.FC<ModelPickerPopoverProps> = ({
         onClose();
       }
     }
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    }
     if (isOpen) {
       document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleKeyDown);
     }
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
     };
   }, [isOpen, onClose]);
 
@@ -43,6 +50,8 @@ export const ModelPickerPopover: React.FC<ModelPickerPopoverProps> = ({
   return (
     <div
       ref={popoverRef}
+      role="dialog"
+      aria-label="Pilih Model Analisis"
       className="absolute bottom-full left-0 mb-2 w-80 max-h-96 bg-[#1e1d1a] border border-[#383632] rounded-2xl shadow-2xl p-2 z-50 overflow-hidden flex flex-col font-sans"
     >
       <div className="px-3 py-2 border-b border-[#2d2b27] flex items-center justify-between text-xs font-medium text-[#f5f4ef] select-none">

@@ -26,6 +26,7 @@ const NavbarComponent: React.FC<NavbarProps> = ({
         <button
           type="button"
           onClick={onToggleSidebar}
+          aria-label="Buka atau tutup riwayat percakapan"
           className="p-1.5 rounded-lg text-[#9c9990] hover:text-[#f5f4ef] hover:bg-[#201f1d] transition cursor-pointer"
           title="Buka / Tutup Riwayat"
         >
@@ -50,9 +51,11 @@ const NavbarComponent: React.FC<NavbarProps> = ({
       </div>
 
       {/* Center: Navigation Tabs (Chat vs Live BI Dashboard) */}
-      <div className="flex items-center rounded-xl bg-[#1c1b18] p-1 border border-[#2e2c28]">
+      <div role="tablist" aria-label="Tampilan Utama" className="flex items-center rounded-xl bg-[#1c1b18] p-1 border border-[#2e2c28]">
         <button
           type="button"
+          role="tab"
+          aria-selected={activeTab === 'chat'}
           onClick={() => onSelectTab('chat')}
           className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition cursor-pointer ${
             activeTab === 'chat'
@@ -65,6 +68,8 @@ const NavbarComponent: React.FC<NavbarProps> = ({
         </button>
         <button
           type="button"
+          role="tab"
+          aria-selected={activeTab === 'dashboard'}
           onClick={() => onSelectTab('dashboard')}
           className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition cursor-pointer ${
             activeTab === 'dashboard'
@@ -111,6 +116,7 @@ const NavbarComponent: React.FC<NavbarProps> = ({
         <button
           type="button"
           onClick={onOpenMetrics}
+          aria-label="Buka observabilitas dan metrik sistem"
           className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-mono text-[#9c9990] hover:text-[#f5f4ef] hover:bg-[#201f1d] border border-transparent hover:border-[#2e2c28] transition cursor-pointer"
           title="Observabilitas & Metrik"
         >

@@ -17,6 +17,12 @@
   --color-clay-900: #6d3324;
 }
 
+/* WCAG 2.1 AA Focus Visible Indicator (SC 2.4.7) */
+:focus-visible {
+  outline: 2px solid #d97757 !important;
+  outline-offset: 2px !important;
+}
+
 /* Custom scrollbars */
 ::-webkit-scrollbar {
   width: 6px;

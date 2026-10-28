@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { X, Activity, AlertTriangle } from 'lucide-react';
 import { MetricSummary } from '../types';
 
@@ -13,11 +13,30 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({
   metrics,
   onClose,
 }) => {
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in font-sans no-print print:hidden">
-      <div className="relative w-full max-w-lg bg-[#1b1a18] border border-[#2e2c28] rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="metrics-modal-title"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in font-sans no-print print:hidden"
+      onClick={onClose}
+    >
+      <div
+        className="relative w-full max-w-lg bg-[#1b1a18] border border-[#2e2c28] rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="px-5 py-4 border-b border-[#2e2c28] flex items-center justify-between">
           <div className="flex items-center gap-2.5">
@@ -25,7 +44,7 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({
               <Activity className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-semibold text-[#f5f4ef]">
+              <h3 id="metrics-modal-title" className="text-base font-semibold text-[#f5f4ef]">
                 Observabilitas Sistem
               </h3>
               <p className="text-xs text-[#9c9990]">
@@ -36,6 +55,7 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({
           <button
             type="button"
             onClick={onClose}
+            aria-label="Tutup modal observabilitas (Esc)"
             className="p-1.5 rounded-lg text-[#9c9990] hover:text-[#f5f4ef] hover:bg-[#282623] transition cursor-pointer"
           >
             <X className="w-5 h-5" />
