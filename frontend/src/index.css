@@ -94,6 +94,57 @@
   font-style: italic;
 }
 
+/* Markdown Tables (GFM) */
+.markdown-body table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 1.25rem 0;
+  font-size: 0.8125rem;
+  background-color: #161513;
+  border: 1px solid #2e2c28;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+.markdown-body thead {
+  background-color: #201f1d;
+}
+
+.markdown-body th {
+  padding: 0.625rem 0.875rem;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #dedcd5;
+  text-align: left;
+  border-bottom: 1px solid #2e2c28;
+}
+
+.markdown-body td {
+  padding: 0.625rem 0.875rem;
+  border-bottom: 1px solid #24221e;
+  color: #f5f4ef;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.markdown-body tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.markdown-body tbody tr:nth-child(even) {
+  background-color: #1a1917;
+}
+
+.markdown-body tbody tr:hover {
+  background-color: #22211e;
+  transition: background-color 0.15s ease;
+}
+
 /* ==============================================================================
  * Executive PDF & Print Stylesheet (FR-38)
  * Transforms dark theme UI into a crisp, corporate executive report for PDF/print

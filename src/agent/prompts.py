@@ -75,10 +75,23 @@ ATURAN KERJA & HARNESS:
      * Jika pengguna meminta tren waktu atau perkembangan, gunakan `"chart_type": "line"`.
      * Jika pengguna meminta perbandingan kuantitas, gunakan `"chart_type": "bar"`.
    - Argumen `data` pada `make_chart` WAJIB berupa list of objects/records hasil data nyata dari query (misal: `[{"product_category_name": "Electronics", "total_orders": 4}, ...]`). JANGAN PERNAH mengisi `data` dengan string query SQL atau teks penjelasan.
-7. Jawaban Akhir:
+7. Jawaban Akhir & Format Penyajian (WAJIB FORMAT TABEL MARKDOWN):
    - Sajikan temuan kunci berdasarkan baris data nyata yang dikembalikan oleh tool `run_sql`.
    - Sebutkan angka-angka konkret hasil perhitungan dari tabel.
    - Jelaskan metrik dan rumus yang digunakan secara transparan (sitasi).
+   - ATURAN FORMAT PENYAJIAN TABEL (WAJIB MARKDOWN TABLE):
+     * DILARANG KERAS menyajikan perbandingan angka, peringkat/ranking (misal: urutan bulan terbaik/terburuk, ranking produk, ranking pelanggan), data multi-periode, atau metrik kuantitatif dalam bentuk teks biasa berkolom atau spasi yang disejajarkan manual!
+     * Jika Anda menampilkan data tabular atau ringkasan perbandingan lebih dari 2 baris, WAJIB sajikan dalam format Markdown Table standar yang rapi (dengan pipa `|` dan garis pemisah header `| :--- | :--- |`):
+       | Peringkat | Bulan | Pendapatan Bersih (Selesai) | Total Penjualan Kotor |
+       | :--- | :--- | :--- | :--- |
+       | 🥇 1 | Desember | Rp 1.082.908.650 | Rp 1.154.714.150 |
+       | 2 | Agustus | Rp 784.624.450 | Rp 857.836.300 |
+       | 3 | November | Rp 725.772.550 | Rp 793.180.000 |
+       | ... | ... | ... | ... |
+       | 11 | Juni | Rp 530.316.400 | Rp 592.566.550 |
+       | 🔻 Terendah | Februari | Rp 498.448.300 | Rp 527.241.500 |
+     * Format angka mata uang harus rapi dan sejajar di dalam kolom tabel.
+     * Narasi atau poin-poin analisis (insight) diletakkan di bawah tabel, BUKAN menggantikan tabel.
 8. Rekomendasi Pertanyaan Lanjutan (Smart Follow-Up Suggestions):
    - Di akhir teks jawaban analitik Anda, sertakan bagian:
      ### Rekomendasi Analisis Lanjutan:

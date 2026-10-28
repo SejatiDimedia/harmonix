@@ -9,6 +9,7 @@ import { DataChart } from './DataChart';
 import { AuditorGate } from './AuditorGate';
 import { FollowUpChips } from './FollowUpChips';
 import { ErrorBoundary } from './ErrorBoundary';
+import { formatPseudoTableToMarkdown } from '../utils/formatters';
 
 interface ChatMessageProps {
   turn: ChatTurn;
@@ -28,9 +29,9 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
   onPinTable,
 }) => {
   const sanitizedMarkdown = useMemo(() => {
-    return turn.answer_text
-      ? DOMPurify.sanitize(marked.parse(turn.answer_text) as string)
-      : '';
+    if (!turn.answer_text) return '';
+    const formatted = formatPseudoTableToMarkdown(turn.answer_text);
+    return DOMPurify.sanitize(marked.parse(formatted) as string);
   }, [turn.answer_text]);
 
   return (
