@@ -19,8 +19,8 @@ export const SQLBox: React.FC<SQLBoxProps> = ({ queries }) => {
   };
 
   return (
-    <div className="mt-3 rounded-xl bg-[#141413] border border-[#2d2b27] overflow-hidden">
-      <div className="px-3 py-1.5 bg-[#1b1a18] border-b border-[#2d2b27] text-[10px] font-mono text-[#9c9990] flex justify-between items-center select-none">
+    <div className="mt-3 rounded-xl bg-[#0b1322] border border-[#1e3557] overflow-hidden">
+      <div className="px-3 py-1.5 bg-[#0f1a2e] border-b border-[#1e3557] text-[10px] font-mono text-[#94a3b8] flex justify-between items-center select-none">
         <span className="tracking-wider">POSTGRESQL (SANITIZED & LIMIT 100)</span>
         <button
           type="button"

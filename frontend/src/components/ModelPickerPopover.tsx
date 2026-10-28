@@ -52,9 +52,9 @@ export const ModelPickerPopover: React.FC<ModelPickerPopoverProps> = ({
       ref={popoverRef}
       role="dialog"
       aria-label="Pilih Model Analisis"
-      className="absolute bottom-full left-0 mb-2 w-80 max-h-96 bg-[#1e1d1a] border border-[#383632] rounded-2xl shadow-2xl p-2 z-50 overflow-hidden flex flex-col font-sans"
+      className="absolute bottom-full left-0 mb-2 w-80 max-h-96 bg-[#0f1a2e] border border-[#1e3557] rounded-2xl shadow-2xl p-2 z-50 overflow-hidden flex flex-col font-sans"
     >
-      <div className="px-3 py-2 border-b border-[#2d2b27] flex items-center justify-between text-xs font-medium text-[#f5f4ef] select-none">
+      <div className="px-3 py-2 border-b border-[#1e3557] flex items-center justify-between text-xs font-medium text-[#f8fafc] select-none">
         <span className="font-sans font-semibold">Pilih Model Analisis</span>
         <button
           type="button"
@@ -70,8 +70,8 @@ export const ModelPickerPopover: React.FC<ModelPickerPopoverProps> = ({
         {catalog.providers.map((p) => {
           if (!p.available_models || p.available_models.length === 0) return null;
           return (
-            <div key={p.provider} className="border-b border-[#2d2b27] pb-2 last:border-b-0 last:pb-0">
-              <div className="px-3 py-1 flex items-center justify-between text-[10px] font-mono font-medium text-[#9c9990] uppercase tracking-wider select-none">
+            <div key={p.provider} className="border-b border-[#1e3557] pb-2 last:border-b-0 last:pb-0">
+              <div className="px-3 py-1 flex items-center justify-between text-[10px] font-mono font-medium text-[#94a3b8] uppercase tracking-wider select-none">
                 <span>{p.display_name}</span>
                 <span
                   className={`w-1.5 h-1.5 rounded-full ${
@@ -93,13 +93,13 @@ export const ModelPickerPopover: React.FC<ModelPickerPopoverProps> = ({
                       onClick={() => onSelectModel(p.provider, m.id)}
                       className={`w-full text-left px-3 py-1.5 rounded-xl text-xs flex items-center justify-between transition cursor-pointer ${
                         isSelected
-                          ? 'bg-clay-600/20 text-[#f5f4ef] font-medium border border-clay-500/40 shadow-sm'
-                          : 'text-[#d6d4cb] hover:bg-[#282623] hover:text-white border border-transparent'
+                          ? 'bg-clay-600/20 text-[#f8fafc] font-medium border border-clay-500/40 shadow-sm'
+                          : 'text-[#94a3b8] hover:bg-[#14223b] hover:text-[#f8fafc] border border-transparent'
                       }`}
                     >
                       <div className="flex flex-col min-w-0 pr-2">
                         <span className="truncate font-sans">{shortName}</span>
-                        <span className="text-[10px] text-[#8e8b82] font-mono truncate">
+                        <span className="text-[10px] text-[#94a3b8] font-mono truncate">
                           {m.id}
                         </span>
                       </div>

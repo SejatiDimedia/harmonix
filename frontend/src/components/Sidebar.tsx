@@ -63,12 +63,12 @@ const SidebarComponent: React.FC<SidebarProps> = ({
 
       {/* Sidebar container */}
       <aside
-        className={`fixed md:static inset-y-0 left-0 z-40 w-72 bg-[#1b1a18] border-r border-[#2e2c28] flex flex-col transition-transform duration-200 ease-in-out shrink-0 no-print print:hidden ${
+        className={`fixed md:static inset-y-0 left-0 z-40 w-72 bg-[#0f1a2e] border-r border-[#1e3557] flex flex-col transition-transform duration-200 ease-in-out shrink-0 no-print print:hidden ${
           isOpen ? 'translate-x-0' : '-translate-x-full md:hidden'
         }`}
       >
         {/* Header Action */}
-        <div className="p-3 border-b border-[#2e2c28] flex items-center gap-2">
+        <div className="p-3 border-b border-[#1e3557] flex items-center gap-2">
           <button
             type="button"
             onClick={onNewChat}
@@ -81,7 +81,7 @@ const SidebarComponent: React.FC<SidebarProps> = ({
             type="button"
             onClick={onRefreshSessions}
             aria-label="Muat ulang riwayat sesi percakapan"
-            className="p-2 rounded-xl text-[#9c9990] hover:text-[#f5f4ef] hover:bg-[#262421] transition cursor-pointer"
+            className="p-2 rounded-xl text-[#94a3b8] hover:text-[#f8fafc] hover:bg-[#182a47] transition cursor-pointer"
             title="Muat Ulang Riwayat"
           >
             <RefreshCw className="w-4 h-4" />
@@ -90,14 +90,14 @@ const SidebarComponent: React.FC<SidebarProps> = ({
             type="button"
             onClick={onCloseMobile}
             aria-label="Tutup menu riwayat"
-            className="p-2 rounded-xl text-[#9c9990] hover:text-[#f5f4ef] hover:bg-[#262421] md:hidden transition cursor-pointer"
+            className="p-2 rounded-xl text-[#94a3b8] hover:text-[#f8fafc] hover:bg-[#182a47] md:hidden transition cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Sessions list count */}
-        <div className="px-3.5 py-2 text-[10px] font-mono text-[#9c9990] uppercase tracking-wider flex items-center justify-between">
+        <div className="px-3.5 py-2 text-[10px] font-mono text-[#94a3b8] uppercase tracking-wider flex items-center justify-between">
           <span>Riwayat Analisis</span>
           <span>{sessions.length} sesi</span>
         </div>
@@ -105,8 +105,8 @@ const SidebarComponent: React.FC<SidebarProps> = ({
         {/* Sessions scrollable area */}
         <div className="flex-1 overflow-y-auto px-2 py-1 space-y-1">
           {sessions.length === 0 ? (
-            <div className="p-6 text-center text-xs text-[#9c9990]">
-              <p className="font-serif italic text-sm text-[#dedcd5]">Belum ada riwayat</p>
+            <div className="p-6 text-center text-xs text-[#94a3b8]">
+              <p className="font-serif italic text-sm text-[#f8fafc]">Belum ada riwayat</p>
               <p className="text-[11px] mt-1">Mulai ajukan pertanyaan data analitik pertama Anda.</p>
             </div>
           ) : (
@@ -120,8 +120,8 @@ const SidebarComponent: React.FC<SidebarProps> = ({
                   onClick={() => !isEditing && onSelectSession(s.session_id)}
                   className={`group relative flex items-center justify-between p-2.5 rounded-xl cursor-pointer transition text-xs border ${
                     isActive
-                      ? 'bg-[#282622] text-[#f5f4ef] border-clay-500/40 shadow-sm'
-                      : 'text-[#a3a097] hover:bg-[#201f1d] hover:text-[#e4e2d9] border-transparent'
+                      ? 'bg-[#14223b] text-[#f8fafc] border-clay-500/40 shadow-sm'
+                      : 'text-[#94a3b8] hover:bg-[#14223b]/60 hover:text-[#f8fafc] border-transparent'
                   }`}
                 >
                   {isEditing ? (
@@ -143,7 +143,7 @@ const SidebarComponent: React.FC<SidebarProps> = ({
                         maxLength={100}
                         aria-label="Nama sesi percakapan"
                         placeholder="Nama sesi..."
-                        className="w-full bg-[#161513] border border-clay-500/60 rounded-lg px-2 py-1 text-xs text-[#f5f4ef] focus:outline-none focus:ring-1 focus:ring-clay-500 shadow-inner"
+                        className="w-full bg-[#080f1d] border border-clay-500/60 rounded-lg px-2 py-1 text-xs text-[#f8fafc] focus:outline-none focus:ring-1 focus:ring-clay-500 shadow-inner"
                       />
                       <button
                         type="submit"
@@ -158,7 +158,7 @@ const SidebarComponent: React.FC<SidebarProps> = ({
                         type="button"
                         onClick={handleCancelRename}
                         aria-label="Batal ubah nama sesi"
-                        className="p-1 rounded-md text-[#9c9990] hover:text-[#dedcd5] hover:bg-[#262421] transition cursor-pointer shrink-0"
+                        className="p-1 rounded-md text-[#94a3b8] hover:text-[#f8fafc] hover:bg-[#182a47] transition cursor-pointer shrink-0"
                         title="Batal"
                       >
                         <X className="w-3.5 h-3.5" />
@@ -169,14 +169,14 @@ const SidebarComponent: React.FC<SidebarProps> = ({
                       <div className="flex items-start gap-2.5 min-w-0 flex-1 pr-1">
                         <MessageSquare
                           className={`w-4 h-4 mt-0.5 shrink-0 ${
-                            isActive ? 'text-clay-400' : 'text-[#9c9990] group-hover:text-clay-400'
+                            isActive ? 'text-clay-400' : 'text-[#94a3b8] group-hover:text-clay-400'
                           }`}
                         />
                         <div className="min-w-0 flex-1">
                           <div className="font-medium truncate leading-tight">
                             {s.title || 'Percakapan'}
                           </div>
-                          <div className="text-[10px] text-[#9c9990] mt-1 font-mono flex items-center gap-1.5">
+                          <div className="text-[10px] text-[#94a3b8] mt-1 font-mono flex items-center gap-1.5">
                             <span>{s.total_turns} pesan</span>
                             <span>•</span>
                             <span>{formatSessionDate(s.last_activity || s.created_at)}</span>
@@ -189,7 +189,7 @@ const SidebarComponent: React.FC<SidebarProps> = ({
                           type="button"
                           onClick={(e) => handleStartRename(e, s.session_id, s.title)}
                           aria-label={`Ubah nama sesi ${s.title || 'percakapan'}`}
-                          className="p-1 rounded-lg text-[#9c9990] hover:text-clay-300 hover:bg-[#2e2c28] transition cursor-pointer"
+                          className="p-1 rounded-lg text-[#94a3b8] hover:text-clay-300 hover:bg-[#1e3557] transition cursor-pointer"
                           title="Ubah nama sesi"
                         >
                           <Pencil className="w-3.5 h-3.5" />
@@ -201,7 +201,7 @@ const SidebarComponent: React.FC<SidebarProps> = ({
                             onDeleteSession(s.session_id, s.title);
                           }}
                           aria-label={`Hapus sesi ${s.title || 'percakapan'}`}
-                          className="p-1 rounded-lg text-[#9c9990] hover:text-rose-400 hover:bg-rose-950/40 transition shrink-0 cursor-pointer"
+                          className="p-1 rounded-lg text-[#94a3b8] hover:text-rose-400 hover:bg-rose-950/40 transition shrink-0 cursor-pointer"
                           title="Hapus sesi"
                         >
                           <Trash2 className="w-3.5 h-3.5" />

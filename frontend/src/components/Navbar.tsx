@@ -20,14 +20,14 @@ const NavbarComponent: React.FC<NavbarProps> = ({
   onOpenMetrics,
 }) => {
   return (
-    <header className="h-14 border-b border-[#2e2c28] bg-[#161513]/90 backdrop-blur-md px-4 flex items-center justify-between z-20 shrink-0 gap-2">
+    <header className="h-14 border-b border-[#1e3557] bg-[#0b1526]/90 backdrop-blur-md px-4 flex items-center justify-between z-20 shrink-0 gap-2">
       {/* Left: Brand & Sidebar Toggle */}
       <div className="flex items-center gap-3">
         <button
           type="button"
           onClick={onToggleSidebar}
           aria-label="Buka atau tutup riwayat percakapan"
-          className="p-1.5 rounded-lg text-[#9c9990] hover:text-[#f5f4ef] hover:bg-[#201f1d] transition cursor-pointer"
+          className="p-1.5 rounded-lg text-[#94a3b8] hover:text-[#f8fafc] hover:bg-[#14223b] transition cursor-pointer"
           title="Buka / Tutup Riwayat"
         >
           <PanelLeft className="w-5 h-5" />
@@ -40,10 +40,10 @@ const NavbarComponent: React.FC<NavbarProps> = ({
             className="w-8 h-8 rounded-lg object-cover shadow-sm border border-clay-500/30 shrink-0"
           />
           <div className="flex flex-col hidden sm:flex">
-            <span className="text-sm font-semibold tracking-tight text-[#f5f4ef] leading-tight font-sans">
+            <span className="text-sm font-semibold tracking-tight text-[#f8fafc] leading-tight font-sans">
               Harmonix
             </span>
-            <span className="text-[10px] text-[#8e8b82] font-mono leading-none">
+            <span className="text-[10px] text-[#94a3b8] font-mono leading-none">
               Data Analyst Agent
             </span>
           </div>
@@ -51,7 +51,7 @@ const NavbarComponent: React.FC<NavbarProps> = ({
       </div>
 
       {/* Center: Navigation Tabs (Chat vs Live BI Dashboard) */}
-      <div role="tablist" aria-label="Tampilan Utama" className="flex items-center rounded-xl bg-[#1c1b18] p-1 border border-[#2e2c28]">
+      <div role="tablist" aria-label="Tampilan Utama" className="flex items-center rounded-xl bg-[#0f1a2e] p-1 border border-[#1e3557]">
         <button
           type="button"
           role="tab"
@@ -60,7 +60,7 @@ const NavbarComponent: React.FC<NavbarProps> = ({
           className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition cursor-pointer ${
             activeTab === 'chat'
               ? 'bg-clay-600 text-white shadow-sm'
-              : 'text-[#9c9990] hover:text-[#f5f4ef]'
+              : 'text-[#94a3b8] hover:text-[#f8fafc]'
           }`}
         >
           <MessageSquare className="w-3.5 h-3.5" />
@@ -74,7 +74,7 @@ const NavbarComponent: React.FC<NavbarProps> = ({
           className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition cursor-pointer ${
             activeTab === 'dashboard'
               ? 'bg-clay-600 text-white shadow-sm'
-              : 'text-[#9c9990] hover:text-[#f5f4ef]'
+              : 'text-[#94a3b8] hover:text-[#f8fafc]'
           }`}
         >
           <LayoutDashboard className="w-3.5 h-3.5" />
@@ -90,7 +90,7 @@ const NavbarComponent: React.FC<NavbarProps> = ({
       {/* Right: Health Badge & Observability Trigger */}
       <div className="flex items-center gap-2">
         <div
-          className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono bg-[#1b1a18] border border-[#2e2c28] text-[#9c9990] select-none"
+          className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono bg-[#0f1a2e] border border-[#1e3557] text-[#94a3b8] select-none"
           title={
             health
               ? `Provider: ${health.llm_provider} | Database: ${
@@ -117,7 +117,7 @@ const NavbarComponent: React.FC<NavbarProps> = ({
           type="button"
           onClick={onOpenMetrics}
           aria-label="Buka observabilitas dan metrik sistem"
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-mono text-[#9c9990] hover:text-[#f5f4ef] hover:bg-[#201f1d] border border-transparent hover:border-[#2e2c28] transition cursor-pointer"
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-mono text-[#94a3b8] hover:text-[#f8fafc] hover:bg-[#14223b] border border-transparent hover:border-[#1e3557] transition cursor-pointer"
           title="Observabilitas & Metrik"
         >
           <Activity className="w-3.5 h-3.5 text-clay-400" />

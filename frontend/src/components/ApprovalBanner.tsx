@@ -17,7 +17,7 @@ export const ApprovalBanner: React.FC<ApprovalBannerProps> = ({
   if (!payload) return null;
 
   return (
-    <div role="alert" aria-live="assertive" className="bg-[#241c19] border-t border-b border-amber-500/40 px-4 py-3 shadow-lg z-10 shrink-0 no-print print:hidden">
+    <div role="alert" aria-live="assertive" className="bg-[#141b2b] border-t border-b border-amber-500/40 px-4 py-3 shadow-lg z-10 shrink-0 no-print print:hidden">
       <div className="max-w-4xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
         <div className="flex items-start gap-3">
           <div className="p-2 rounded-lg bg-amber-500/20 text-amber-400 shrink-0 mt-0.5">
@@ -28,11 +28,11 @@ export const ApprovalBanner: React.FC<ApprovalBannerProps> = ({
               <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
               <span>PERSETUJUAN MANUAL DIPERLUKAN (GUARDRAIL VERIFICATION)</span>
             </div>
-            <p className="text-xs text-[#d6d4cb] mt-0.5">
+            <p className="text-xs text-[#f8fafc] mt-0.5">
               Alasan: <span className="font-medium text-amber-200">{(payload.risk_reasons || []).join(', ')}</span>
             </p>
             {payload.sanitized_query && (
-              <pre className="text-[10px] font-mono text-clay-300 bg-[#161513] p-2 rounded-lg border border-[#383632] mt-1.5 max-h-24 overflow-y-auto whitespace-pre-wrap">
+              <pre className="text-[10px] font-mono text-clay-300 bg-[#0b1322] p-2 rounded-lg border border-[#1e3557] mt-1.5 max-h-24 overflow-y-auto whitespace-pre-wrap">
                 {formatSQL(payload.sanitized_query)}
               </pre>
             )}

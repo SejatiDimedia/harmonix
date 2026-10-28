@@ -31,7 +31,7 @@ export const AuditorGate: React.FC<AuditorGateProps> = ({ verdict }) => {
   }
 
   return (
-    <div className="mt-3 pt-2.5 border-t border-[#2e2c28]/80 text-xs">
+    <div className="mt-3 pt-2.5 border-t border-[#1e3557] text-xs">
       <div className={`rounded-xl p-3 border transition-all ${badgeBg}`}>
         <button
           type="button"

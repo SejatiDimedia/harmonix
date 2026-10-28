@@ -16,10 +16,10 @@ export const DataTable: React.FC<DataTableProps> = ({ tables, onPinTable }) => {
       {tables.map((t, tIdx) => (
         <div
           key={tIdx}
-          className="rounded-xl border border-[#2e2c28] overflow-hidden bg-[#1b1a18] shadow-sm"
+          className="rounded-xl border border-[#1e3557] overflow-hidden bg-[#0f1a2e] shadow-sm"
         >
-          <div className="flex items-center justify-between px-3 py-2 bg-[#201f1d] border-b border-[#2e2c28] gap-2">
-            <span className="text-[11px] font-mono text-[#a3a097]">
+          <div className="flex items-center justify-between px-3 py-2 bg-[#14223b] border-b border-[#1e3557] gap-2">
+            <span className="text-[11px] font-mono text-[#94a3b8]">
               Tabel Data ({t.rows?.length || 0} baris)
             </span>
 
@@ -28,7 +28,7 @@ export const DataTable: React.FC<DataTableProps> = ({ tables, onPinTable }) => {
                 type="button"
                 onClick={() => exportTableToCSV(t, `harmonix_tabel_${tIdx + 1}`)}
                 aria-label={`Unduh data tabel ${tIdx + 1} sebagai file CSV`}
-                className="flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded bg-[#242320] hover:bg-[#2c2a26] text-[#dedcd5] hover:text-[#f5f4ef] border border-[#383632] hover:border-[#48453f] transition cursor-pointer"
+                className="flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded bg-[#162742] hover:bg-[#1a2f4d] text-[#f8fafc] hover:text-white border border-[#1e3557] hover:border-[#25416c] transition cursor-pointer"
                 title="Unduh data tabel sebagai file CSV untuk Excel / Google Sheets"
               >
                 <Download className="w-3 h-3 text-clay-400" />
@@ -40,7 +40,7 @@ export const DataTable: React.FC<DataTableProps> = ({ tables, onPinTable }) => {
                   type="button"
                   onClick={() => onPinTable(t, `Tabel Hasil Analisis #${tIdx + 1}`)}
                   aria-label={`Sematkan tabel ${tIdx + 1} ke Live Dashboard`}
-                  className="flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded bg-[#242320] hover:bg-clay-600/30 text-[#dedcd5] hover:text-clay-300 border border-[#383632] hover:border-clay-500/50 transition cursor-pointer"
+                  className="flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded bg-[#162742] hover:bg-clay-600/30 text-[#f8fafc] hover:text-clay-300 border border-[#1e3557] hover:border-clay-500/50 transition cursor-pointer"
                   title="Sematkan tabel ini ke Live Dashboard"
                 >
                   <Pin className="w-3 h-3 text-clay-400" />
@@ -57,7 +57,7 @@ export const DataTable: React.FC<DataTableProps> = ({ tables, onPinTable }) => {
                     <th
                       key={cIdx}
                       scope="col"
-                      className="p-2.5 text-[11px] font-mono uppercase bg-[#242320] text-[#a3a097] border-b border-[#2e2c28] whitespace-normal break-words"
+                      className="p-2.5 text-[11px] font-mono uppercase bg-[#14223b] text-[#94a3b8] border-b border-[#1e3557] whitespace-normal break-words"
                     >
                       {col}
                     </th>
@@ -69,18 +69,18 @@ export const DataTable: React.FC<DataTableProps> = ({ tables, onPinTable }) => {
                   <tr
                     key={rIdx}
                     className={`${
-                      rIdx % 2 === 0 ? 'bg-[#1b1a18]' : 'bg-[#1e1d1b]'
-                    } hover:bg-[#262522] transition`}
+                      rIdx % 2 === 0 ? 'bg-[#0f1a2e]' : 'bg-[#111e33]'
+                    } hover:bg-[#162742] transition`}
                   >
                     {row.map((val, cellIdx) => (
                       <td
                         key={cellIdx}
-                        className="p-2.5 border-b border-[#262421] text-[#dedcd5] font-mono text-[11px] tabular-nums whitespace-normal break-words max-w-xs leading-relaxed"
+                        className="p-2.5 border-b border-[#162742] text-[#f8fafc] font-mono text-[11px] tabular-nums whitespace-normal break-words max-w-xs leading-relaxed"
                       >
                         {val !== null && val !== undefined ? (
                           String(val)
                         ) : (
-                          <span className="text-[#9c9990] italic font-sans text-[10px]">NULL</span>
+                          <span className="text-[#94a3b8] italic font-sans text-[10px]">NULL</span>
                         )}
                       </td>
                     ))}

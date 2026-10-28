@@ -19,15 +19,15 @@ const WelcomeHeroComponent: React.FC<WelcomeHeroProps> = ({ onSelectPrompt }) =>
         <img
           src="/static/favicon.png"
           alt="Harmonix Logo"
-          className="w-16 h-16 rounded-2xl mx-auto shadow-xl border border-[#2e2c28] p-0.5 object-cover"
+          className="w-16 h-16 rounded-2xl mx-auto shadow-xl border border-[#1e3557] p-0.5 object-cover"
         />
       </div>
 
       <div className="space-y-2.5">
-        <h2 className="text-2xl md:text-3xl font-serif italic text-[#f5f4ef] tracking-tight">
+        <h2 className="text-2xl md:text-3xl font-serif italic text-[#f8fafc] tracking-tight">
           Asisten Analitik Data Enterprise
         </h2>
-        <p className="text-xs md:text-sm text-[#9c9990] leading-relaxed max-w-lg mx-auto font-sans">
+        <p className="text-xs md:text-sm text-[#94a3b8] leading-relaxed max-w-lg mx-auto font-sans">
           Ajukan pertanyaan bisnis dalam bahasa alami. Sistem mengeksekusi Text-to-SQL dengan proteksi privasi ketat, verifikasi akurasi data otomatis, dan visualisasi interaktif.
         </p>
       </div>
@@ -38,12 +38,12 @@ const WelcomeHeroComponent: React.FC<WelcomeHeroProps> = ({ onSelectPrompt }) =>
             key={idx}
             type="button"
             onClick={() => onSelectPrompt(prompt)}
-            className="group flex items-start justify-between gap-3 p-3.5 rounded-xl bg-[#1a1917] hover:bg-[#22211e] border border-[#2b2926] hover:border-[#3d3a35] transition shadow-sm cursor-pointer"
+            className="group flex items-start justify-between gap-3 p-3.5 rounded-xl bg-[#0f1a2e] hover:bg-[#14223b] border border-[#1e3557] hover:border-[#25416c] transition shadow-sm cursor-pointer"
           >
-            <span className="text-xs text-[#a3a097] group-hover:text-[#f5f4ef] leading-relaxed font-sans transition">
+            <span className="text-xs text-[#94a3b8] group-hover:text-[#f8fafc] leading-relaxed font-sans transition">
               {prompt}
             </span>
-            <ArrowUpRight className="w-3.5 h-3.5 text-[#8e8b82] group-hover:text-clay-400 shrink-0 mt-0.5 transition" />
+            <ArrowUpRight className="w-3.5 h-3.5 text-[#94a3b8] group-hover:text-clay-400 shrink-0 mt-0.5 transition" />
           </button>
         ))}
       </div>

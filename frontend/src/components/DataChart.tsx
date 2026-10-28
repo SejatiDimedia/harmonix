@@ -71,12 +71,12 @@ const SingleChartCanvas: React.FC<SingleChartProps> = ({
     });
 
     const palette = [
-      'rgba(217, 119, 87, 0.85)',
+      'rgba(0, 140, 208, 0.85)',
+      'rgba(0, 210, 238, 0.85)',
       'rgba(52, 211, 153, 0.85)',
-      'rgba(224, 168, 46, 0.85)',
       'rgba(129, 140, 248, 0.85)',
       'rgba(244, 114, 182, 0.85)',
-      'rgba(56, 189, 248, 0.85)',
+      'rgba(251, 191, 36, 0.85)',
     ];
 
     let cType = (spec.chart_type || 'bar').toLowerCase();
@@ -84,8 +84,8 @@ const SingleChartCanvas: React.FC<SingleChartProps> = ({
     if (cType === 'scatter') cType = 'line';
 
     const isPieOrDoughnut = cType === 'pie' || cType === 'doughnut';
-    const bgColors = isPieOrDoughnut ? palette : 'rgba(217, 119, 87, 0.75)';
-    const borderColors = isPieOrDoughnut ? '#161513' : 'rgb(217, 119, 87)';
+    const bgColors = isPieOrDoughnut ? palette : 'rgba(0, 140, 208, 0.75)';
+    const borderColors = isPieOrDoughnut ? '#080f1d' : 'rgb(0, 140, 208)';
 
     if (chartInstanceRef.current) {
       chartInstanceRef.current.destroy();
@@ -109,10 +109,10 @@ const SingleChartCanvas: React.FC<SingleChartProps> = ({
             tension: cType === 'line' ? 0.35 : 0,
             fill:
               cType === 'line'
-                ? { target: 'origin', above: 'rgba(217, 119, 87, 0.15)' }
+                ? { target: 'origin', above: 'rgba(0, 140, 208, 0.15)' }
                 : false,
-            pointBackgroundColor: 'rgb(217, 119, 87)',
-            pointBorderColor: '#161513',
+            pointBackgroundColor: 'rgb(0, 140, 208)',
+            pointBorderColor: '#080f1d',
             pointRadius: 4,
           },
         ],
@@ -126,17 +126,17 @@ const SingleChartCanvas: React.FC<SingleChartProps> = ({
             display: isPieOrDoughnut,
             position: 'bottom',
             labels: {
-              color: '#a3a097',
+              color: '#94a3b8',
               font: { family: 'Plus Jakarta Sans', size: 11 },
               boxWidth: 12,
               padding: 12,
             },
           },
           tooltip: {
-            backgroundColor: '#242320',
-            titleColor: '#f5f4ef',
-            bodyColor: '#dedcd5',
-            borderColor: '#383632',
+            backgroundColor: '#0f1a2e',
+            titleColor: '#f8fafc',
+            bodyColor: '#f8fafc',
+            borderColor: '#1e3557',
             borderWidth: 1,
             padding: 10,
             bodyFont: { family: 'JetBrains Mono', size: 11 },
@@ -147,12 +147,12 @@ const SingleChartCanvas: React.FC<SingleChartProps> = ({
           ? undefined
           : {
               x: {
-                grid: { color: 'rgba(46, 44, 40, 0.6)' },
-                ticks: { color: '#8e8b82', font: { family: 'JetBrains Mono', size: 10 } },
+                grid: { color: 'rgba(30, 53, 87, 0.5)' },
+                ticks: { color: '#94a3b8', font: { family: 'JetBrains Mono', size: 10 } },
               },
               y: {
-                grid: { color: 'rgba(46, 44, 40, 0.6)' },
-                ticks: { color: '#8e8b82', font: { family: 'JetBrains Mono', size: 10 } },
+                grid: { color: 'rgba(30, 53, 87, 0.5)' },
+                ticks: { color: '#94a3b8', font: { family: 'JetBrains Mono', size: 10 } },
               },
             },
       },
@@ -197,27 +197,27 @@ const SingleChartCanvas: React.FC<SingleChartProps> = ({
 
       chart.data.datasets.forEach((ds) => {
         if (isPieOrDoughnut) {
-          ds.borderColor = '#161513';
+          ds.borderColor = '#080f1d';
           ds.borderWidth = 2;
         } else {
-          ds.borderColor = 'rgb(217, 119, 87)';
-          (ds as any).pointBorderColor = '#161513';
+          ds.borderColor = 'rgb(0, 140, 208)';
+          (ds as any).pointBorderColor = '#080f1d';
         }
       });
 
       if (chart.options.plugins?.legend?.labels) {
-        chart.options.plugins.legend.labels.color = '#a3a097';
+        chart.options.plugins.legend.labels.color = '#94a3b8';
       }
       if (chart.options.scales?.x) {
-        chart.options.scales.x.grid = { color: 'rgba(46, 44, 40, 0.6)' };
+        chart.options.scales.x.grid = { color: 'rgba(30, 53, 87, 0.5)' };
         if (chart.options.scales.x.ticks) {
-          chart.options.scales.x.ticks.color = '#8e8b82';
+          chart.options.scales.x.ticks.color = '#94a3b8';
         }
       }
       if (chart.options.scales?.y) {
-        chart.options.scales.y.grid = { color: 'rgba(46, 44, 40, 0.6)' };
+        chart.options.scales.y.grid = { color: 'rgba(30, 53, 87, 0.5)' };
         if (chart.options.scales.y.ticks) {
-          chart.options.scales.y.ticks.color = '#8e8b82';
+          chart.options.scales.y.ticks.color = '#94a3b8';
         }
       }
       chart.resize();
@@ -242,26 +242,26 @@ const SingleChartCanvas: React.FC<SingleChartProps> = ({
       className={
         hideHeader
           ? 'relative w-full h-64 md:h-72'
-          : 'rounded-xl border border-[#2e2c28] bg-[#161513] p-4 overflow-hidden shadow-sm'
+          : 'rounded-xl border border-[#1e3557] bg-[#0f1a2e] p-4 overflow-hidden shadow-sm'
       }
     >
       {!hideHeader && (
-        <div className="flex items-center justify-between mb-3 pb-2.5 border-b border-[#262421]">
+        <div className="flex items-center justify-between mb-3 pb-2.5 border-b border-[#1e3557]">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-clay-500" />
-            <span className="text-xs font-medium text-[#dedcd5] font-sans">
+            <span className="text-xs font-medium text-[#f8fafc] font-sans">
               {spec.title || 'Visualisasi Data'}
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-[#242320] text-clay-400 border border-[#383632]">
+            <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-[#14223b] text-clay-400 border border-[#1e3557]">
               {spec.chart_type}
             </span>
             {onPinChart && (
               <button
                 type="button"
                 onClick={() => onPinChart(spec)}
-                className="flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded bg-[#242320] hover:bg-clay-600/30 text-[#dedcd5] hover:text-clay-300 border border-[#383632] hover:border-clay-500/50 transition cursor-pointer"
+                className="flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded bg-[#14223b] hover:bg-clay-600/30 text-[#f8fafc] hover:text-clay-300 border border-[#1e3557] hover:border-clay-500/50 transition cursor-pointer"
                 title="Sematkan grafik ini ke Live Dashboard"
               >
                 <Pin className="w-3 h-3 text-clay-400" />

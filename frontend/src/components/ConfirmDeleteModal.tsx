@@ -38,7 +38,7 @@ export const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
       aria-describedby="delete-modal-desc"
     >
       <div
-        className="relative w-full max-w-md rounded-2xl bg-[#1c1b18] border border-[#2e2c28] p-6 shadow-2xl space-y-5 animate-in zoom-in-95 duration-150"
+        className="relative w-full max-w-md rounded-2xl bg-[#0f1a2e] border border-[#1e3557] p-6 shadow-2xl space-y-5 animate-in zoom-in-95 duration-150"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close Button */}
@@ -46,7 +46,7 @@ export const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
           type="button"
           onClick={onCancel}
           disabled={isDeleting}
-          className="absolute top-4 right-4 p-1.5 rounded-lg text-[#8e8b82] hover:text-[#f5f4ef] hover:bg-[#262421] transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+          className="absolute top-4 right-4 p-1.5 rounded-lg text-[#94a3b8] hover:text-[#f8fafc] hover:bg-[#14223b] transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
           aria-label="Tutup dialog konfirmasi hapus (Esc)"
           title="Tutup (Esc)"
         >
@@ -59,30 +59,30 @@ export const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
             <AlertTriangle className="w-5 h-5" />
           </div>
           <div className="space-y-1 pr-6">
-            <h3 id="delete-modal-title" className="text-base font-semibold text-[#f5f4ef] font-sans">
+            <h3 id="delete-modal-title" className="text-base font-semibold text-[#f8fafc] font-sans">
               Hapus Riwayat Percakapan?
             </h3>
-            <p id="delete-modal-desc" className="text-xs text-[#9c9990] leading-relaxed">
+            <p id="delete-modal-desc" className="text-xs text-[#94a3b8] leading-relaxed">
               Tindakan ini tidak dapat dibatalkan. Seluruh riwayat analisis, kueri SQL, dan widget dashboard terkait akan dihapus secara permanen.
             </p>
           </div>
         </div>
 
         {/* Selected Session Highlight Box */}
-        <div className="rounded-xl bg-[#141311] border border-[#262421] p-3 text-xs font-mono text-clay-300 flex items-center gap-2.5">
+        <div className="rounded-xl bg-[#0b1322] border border-[#1e3557] p-3 text-xs font-mono text-clay-300 flex items-center gap-2.5">
           <Trash2 className="w-4 h-4 text-rose-400 shrink-0" />
-          <span className="truncate font-sans font-medium text-[#dedcd5]">
+          <span className="truncate font-sans font-medium text-[#f8fafc]">
             "{sessionTitle || 'Percakapan ini'}"
           </span>
         </div>
 
         {/* Actions Footer */}
-        <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-[#262421]">
+        <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-[#1e3557]">
           <button
             type="button"
             onClick={onCancel}
             disabled={isDeleting}
-            className="px-4 py-2 rounded-xl text-xs font-medium text-[#dedcd5] bg-[#201f1d] hover:bg-[#282623] border border-[#383632] hover:border-[#48453f] transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+            className="px-4 py-2 rounded-xl text-xs font-medium text-[#94a3b8] bg-[#14223b] hover:bg-[#182a47] border border-[#1e3557] hover:border-[#25416c] hover:text-[#f8fafc] transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
           >
             Batal
           </button>

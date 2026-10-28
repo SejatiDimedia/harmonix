@@ -39,14 +39,14 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
       {/* User Bubble */}
       {turn.user_query && (
         <div className="flex justify-end">
-          <div className="max-w-[85%] rounded-2xl bg-[#262522] border border-[#383632] px-4 py-3 text-sm text-[#f5f4ef] leading-relaxed shadow-sm font-sans">
+          <div className="max-w-[85%] rounded-2xl bg-[#14223b] border border-[#1e3557] px-4 py-3 text-sm text-[#f8fafc] leading-relaxed shadow-sm font-sans">
             {turn.user_query}
           </div>
         </div>
       )}
 
       {/* Assistant Card */}
-      <div className="flex gap-3 text-sm text-[#ecebe6]">
+      <div className="flex gap-3 text-sm text-[#f8fafc]">
         <img
           src="/static/favicon.png"
           alt="Harmonix"
@@ -119,7 +119,7 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
 
           {/* Latency & Token Metrics */}
           {turn.metrics && (
-            <div className="text-[11px] text-[#8e8b82] font-mono mt-3 pt-2.5 border-t border-[#2e2c28] flex items-center justify-between select-none">
+            <div className="text-[11px] text-[#94a3b8] font-mono mt-3 pt-2.5 border-t border-[#1e3557] flex items-center justify-between select-none">
               <span>
                 Latensi: {turn.metrics.total_latency_ms || 0}ms
                 {turn.metrics.ttft_ms ? ` (TTFT: ${turn.metrics.ttft_ms}ms)` : ''}

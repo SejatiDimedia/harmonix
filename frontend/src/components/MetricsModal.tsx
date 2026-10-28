@@ -34,20 +34,20 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-lg bg-[#1b1a18] border border-[#2e2c28] rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+        className="relative w-full max-w-lg bg-[#0f1a2e] border border-[#1e3557] rounded-2xl shadow-2xl overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="px-5 py-4 border-b border-[#2e2c28] flex items-center justify-between">
+        <div className="px-5 py-4 border-b border-[#1e3557] flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="p-2 rounded-xl bg-clay-500/10 text-clay-400">
               <Activity className="w-5 h-5" />
             </div>
             <div>
-              <h3 id="metrics-modal-title" className="text-base font-semibold text-[#f5f4ef]">
+              <h3 id="metrics-modal-title" className="text-base font-semibold text-[#f8fafc]">
                 Observabilitas Sistem
               </h3>
-              <p className="text-xs text-[#9c9990]">
+              <p className="text-xs text-[#94a3b8]">
                 Metrik latensi p50/p95, konsumsi token, dan deteksi anomali performa
               </p>
             </div>
@@ -56,7 +56,7 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({
             type="button"
             onClick={onClose}
             aria-label="Tutup modal observabilitas (Esc)"
-            className="p-1.5 rounded-lg text-[#9c9990] hover:text-[#f5f4ef] hover:bg-[#282623] transition cursor-pointer"
+            className="p-1.5 rounded-lg text-[#94a3b8] hover:text-[#f8fafc] hover:bg-[#14223b] transition cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -75,17 +75,17 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({
           )}
 
           <div className="grid grid-cols-2 gap-3">
-            <div className="p-4 rounded-xl bg-[#141413] border border-[#2d2b27]">
-              <span className="text-[10px] font-mono uppercase text-[#8e8b82]">
+            <div className="p-4 rounded-xl bg-[#14223b] border border-[#1e3557]">
+              <span className="text-[10px] font-mono uppercase text-[#94a3b8]">
                 Total Permintaan
               </span>
-              <div className="text-2xl font-bold font-mono tabular-nums text-[#f5f4ef] mt-1">
+              <div className="text-2xl font-bold font-mono tabular-nums text-[#f8fafc] mt-1">
                 {metrics ? metrics.total_requests : '—'}
               </div>
             </div>
 
-            <div className="p-4 rounded-xl bg-[#141413] border border-[#2d2b27]">
-              <span className="text-[10px] font-mono uppercase text-[#8e8b82]">
+            <div className="p-4 rounded-xl bg-[#14223b] border border-[#1e3557]">
+              <span className="text-[10px] font-mono uppercase text-[#94a3b8]">
                 Success Rate
               </span>
               <div className="text-2xl font-bold font-mono tabular-nums text-emerald-400 mt-1">
@@ -93,22 +93,22 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({
               </div>
             </div>
 
-            <div className="p-4 rounded-xl bg-[#141413] border border-[#2d2b27]">
-              <span className="text-[10px] font-mono uppercase text-[#8e8b82]">
+            <div className="p-4 rounded-xl bg-[#14223b] border border-[#1e3557]">
+              <span className="text-[10px] font-mono uppercase text-[#94a3b8]">
                 Latensi (p50 / p95)
               </span>
-              <div className="text-xl font-bold font-mono tabular-nums text-[#f5f4ef] mt-1">
+              <div className="text-xl font-bold font-mono tabular-nums text-[#f8fafc] mt-1">
                 {metrics
                   ? `${metrics.p50_latency_ms}ms / ${metrics.p95_latency_ms}ms`
                   : '—'}
               </div>
             </div>
 
-            <div className="p-4 rounded-xl bg-[#141413] border border-[#2d2b27]">
-              <span className="text-[10px] font-mono uppercase text-[#8e8b82]">
+            <div className="p-4 rounded-xl bg-[#14223b] border border-[#1e3557]">
+              <span className="text-[10px] font-mono uppercase text-[#94a3b8]">
                 Total Token Consumed
               </span>
-              <div className="text-xl font-bold font-mono tabular-nums text-[#f5f4ef] mt-1">
+              <div className="text-xl font-bold font-mono tabular-nums text-[#f8fafc] mt-1">
                 {metrics
                   ? `${metrics.total_tokens_consumed.toLocaleString()} tokens`
                   : '—'}
@@ -118,11 +118,11 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3 border-t border-[#2e2c28] flex justify-end bg-[#161513]">
+        <div className="px-5 py-3 border-t border-[#1e3557] flex justify-end bg-[#0b1526]">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-xl text-xs font-medium text-[#9c9990] hover:text-[#f5f4ef] hover:bg-[#282623] transition cursor-pointer"
+            className="px-4 py-2 rounded-xl text-xs font-medium text-[#94a3b8] hover:text-[#f8fafc] hover:bg-[#14223b] transition cursor-pointer"
           >
             Tutup
           </button>

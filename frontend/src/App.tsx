@@ -530,7 +530,7 @@ export const App: React.FC = () => {
   const widgetCount = dashboardData?.total || 0;
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[#161513] text-[#dedcd5] print:h-auto print:w-full print:max-w-full print:bg-white print:overflow-visible print:text-gray-900 print:block">
+    <div className="flex h-screen w-screen overflow-hidden bg-[#080f1d] text-[#f8fafc] print:h-auto print:w-full print:max-w-full print:bg-white print:overflow-visible print:text-gray-900 print:block">
       {/* Session History Sidebar */}
       <Sidebar
         isOpen={isSidebarOpen}
