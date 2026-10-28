@@ -277,12 +277,12 @@ async def test_sessions_lifecycle_endpoints():
 
 @pytest.mark.asyncio
 async def test_web_ui_endpoint():
-    """Verify GET / returns the Claude-inspired anti-slop HTML interface."""
+    """Verify GET / returns the modern anti-slop HTML interface."""
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         resp = await client.get("/")
         assert resp.status_code == 200
         assert "text/html" in resp.headers.get("content-type", "")
         body = resp.text
-        assert "Harnessly" in body
+        assert "Harmonix" in body
         assert "root" in body
         assert "Newsreader" in body

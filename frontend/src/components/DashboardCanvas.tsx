@@ -71,7 +71,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
               <img
-                src="/static/favicon.png"
+                src="/static/logo.png?v=2"
                 alt="Harmonix Logo"
                 className="w-11 h-11 rounded-xl object-contain border border-gray-200 shadow-sm"
               />

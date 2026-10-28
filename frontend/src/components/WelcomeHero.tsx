@@ -17,7 +17,7 @@ const WelcomeHeroComponent: React.FC<WelcomeHeroProps> = ({ onSelectPrompt }) =>
     <div className="py-12 md:py-16 text-center space-y-7 max-w-2xl mx-auto px-4 select-none">
       <div className="inline-block">
         <img
-          src="/static/favicon.png"
+          src="/static/logo.png?v=2"
           alt="Harmonix Logo"
           className="w-16 h-16 rounded-2xl mx-auto shadow-xl border border-[#1e3557] p-0.5 object-cover"
         />

@@ -35,9 +35,9 @@ const NavbarComponent: React.FC<NavbarProps> = ({
 
         <div className="flex items-center gap-2.5 select-none">
           <img
-            src="/static/favicon.png"
+            src="/static/logo.png?v=2"
             alt="Harmonix Logo"
-            className="w-8 h-8 rounded-lg object-cover shadow-sm border border-clay-500/30 shrink-0"
+            className="w-8 h-8 rounded-lg object-cover shadow-sm border border-[#1e3557] shrink-0"
           />
           <div className="flex flex-col hidden sm:flex">
             <span className="text-sm font-semibold tracking-tight text-[#f8fafc] leading-tight font-sans">

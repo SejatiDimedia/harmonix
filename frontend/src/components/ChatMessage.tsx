@@ -48,9 +48,9 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
       {/* Assistant Card */}
       <div className="flex gap-3 text-sm text-[#f8fafc]">
         <img
-          src="/static/favicon.png"
+          src="/static/logo.png?v=2"
           alt="Harmonix"
-          className="w-7 h-7 rounded-lg object-cover border border-clay-500/30 shrink-0 mt-0.5 select-none shadow-sm"
+          className="w-7 h-7 rounded-lg object-cover border border-[#1e3557] shrink-0 mt-0.5 select-none shadow-sm"
         />
 
         <div className="flex-1 space-y-2 leading-relaxed min-w-0">
