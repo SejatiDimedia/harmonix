@@ -15,6 +15,7 @@ import {
   refreshDashboardWidgets,
   uploadSessionFiles,
   getSessionUploadedTables,
+  getTableHealth,
 } from '../services/api';
 import { PinWidgetPayload, UpdateAPIKeysPayload } from '../types';
 
@@ -159,5 +160,14 @@ export const useUploadSessionFilesMutation = (sessionId: string | null) => {
         queryClient.invalidateQueries({ queryKey: ['session-uploaded-tables', sessionId] });
       }
     },
+  });
+};
+
+export const useTableHealthQuery = (sessionId: string | null, tableName: string | null) => {
+  return useQuery({
+    queryKey: ['table-health', sessionId, tableName],
+    queryFn: () => getTableHealth(sessionId || 'default', tableName!),
+    enabled: !!tableName,
+    staleTime: 1000 * 60 * 5,
   });
 };

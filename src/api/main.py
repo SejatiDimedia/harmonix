@@ -562,6 +562,20 @@ async def list_session_tables(session_id: str):
     }
 
 
+@app.get("/v1/sessions/{session_id}/tables/{table_name}/health", tags=["Ingestion"])
+async def get_table_health(session_id: str, table_name: str):
+    """Compute instant data quality, completeness, and outlier health profile (FR-41)."""
+    from src.ingestion.data_health_profiler import compute_table_data_health
+    try:
+        profile = await compute_table_data_health(table_name=table_name, session_id=session_id)
+        return profile.model_dump()
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error("Error computing table health for %s: %s", table_name, e, exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Gagal memproses profil kesehatan data: {e}")
+
+
 @app.get("/", response_class=HTMLResponse, tags=["UI"])
 async def web_ui():
     """Claude AI-inspired warm aesthetic UI for Harnessly with live streaming, HITL gate, and observability."""

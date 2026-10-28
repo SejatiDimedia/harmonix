@@ -13,6 +13,7 @@ import {
   UpdateAPIKeysPayload,
   FileUploadResponse,
   UploadSessionTablesResponse,
+  TableHealthProfile,
 } from '../types';
 
 export async function getHealth(): Promise<HealthStatus> {
@@ -258,6 +259,18 @@ export async function getSessionUploadedTables(
   const res = await fetch(`/v1/sessions/${sessionId}/tables`);
   if (!res.ok) {
     throw new Error('Gagal memuat tabel data sesi');
+  }
+  return res.json();
+}
+
+export async function getTableHealth(
+  sessionId: string,
+  tableName: string
+): Promise<TableHealthProfile> {
+  const res = await fetch(`/v1/sessions/${sessionId}/tables/${tableName}/health`);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: 'Gagal memuat profil kesehatan data' }));
+    throw new Error(err.detail || 'Gagal memuat profil kesehatan data');
   }
   return res.json();
 }

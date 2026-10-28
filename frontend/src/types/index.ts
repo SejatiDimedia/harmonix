@@ -208,4 +208,67 @@ export interface FileUploadResponse {
   warnings?: string[] | null;
 }
 
+export interface ColumnHealthSummary {
+  column_name: string;
+  data_type: string;
+  total_count: number;
+  null_count: number;
+  null_rate_pct: number;
+  distinct_count: number;
+  is_unique: boolean;
+  is_primary_key_candidate: boolean;
+  min_value?: any;
+  max_value?: any;
+  mean_value?: number | null;
+  median_value?: number | null;
+  stddev_value?: number | null;
+  q1?: number | null;
+  q3?: number | null;
+  iqr?: number | null;
+  outlier_count: number;
+  outlier_rate_pct: number;
+  suspicious_negatives: number;
+  suspicious_zeros: number;
+  top_categories?: { value: string; count: number; pct: number }[];
+}
+
+export interface DataAnomalyItem {
+  anomaly_id: string;
+  column_name?: string | null;
+  category: string;
+  severity: 'critical' | 'warning' | 'info';
+  title: string;
+  description: string;
+  affected_rows: number;
+  affected_rate_pct: number;
+}
+
+export interface QuickActionPrompt {
+  id: string;
+  title: string;
+  prompt: string;
+  category: string;
+}
+
+export interface TableHealthProfile {
+  table_name: string;
+  qualified_name: string;
+  session_id?: string | null;
+  original_filename?: string | null;
+  sheet_name?: string | null;
+  total_rows: number;
+  total_columns: number;
+  total_cells: number;
+  duplicate_rows: number;
+  duplicate_rate_pct: number;
+  overall_completeness_pct: number;
+  health_score: number;
+  health_grade: 'Prima' | 'Perhatian' | 'Kritis';
+  health_badge_color: 'emerald' | 'amber' | 'rose';
+  column_profiles: ColumnHealthSummary[];
+  anomalies: DataAnomalyItem[];
+  quick_prompts: QuickActionPrompt[];
+  scanned_at: string;
+}
+
 

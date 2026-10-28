@@ -300,10 +300,11 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
         </div>
       </div>
 
-      {/* Uploaded Table Schema Inspector Modal */}
+      {/* Uploaded Table Schema Inspector & Data Health Modal */}
       <UploadedTableModal
         isOpen={!!selectedTableForModal}
         table={selectedTableForModal}
+        sessionId={sessionId}
         onClose={() => setSelectedTableForModal(null)}
         onSelectPrompt={(p) => {
           setQuery(p);
