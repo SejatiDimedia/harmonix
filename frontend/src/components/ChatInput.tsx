@@ -185,11 +185,11 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
                         e.stopPropagation();
                         handleDeleteSingleTable(tbl.table_name, displayName);
                       }}
-                      className="p-1 rounded hover:bg-rose-500/20 text-[#94a3b8] hover:text-rose-400 transition cursor-pointer"
+                      className="p-1 rounded-md text-[#94a3b8] hover:text-rose-300 hover:bg-rose-500/25 transition cursor-pointer shrink-0 ml-0.5"
                       title={`Hapus dataset "${displayName}"`}
                       aria-label={`Hapus dataset "${displayName}"`}
                     >
-                      <X className="w-3 h-3" />
+                      <X className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 );
