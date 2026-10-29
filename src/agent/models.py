@@ -64,6 +64,17 @@ class AuditVerdict(BaseModel):
     model_used: str = ""
 
 
+class LongTermMemoryItem(BaseModel):
+    """Recalled long-term memory item retrieved via pgvector similarity search (FR-17)."""
+    id: int | None = None
+    memory_type: str = "successful_query"
+    question_text: str
+    sql_query: str | None = None
+    explanation: str | None = None
+    tables_used: list[str] = Field(default_factory=list)
+    similarity: float = 0.0
+
+
 class AgentStepEvent(BaseModel):
     """Represents a single step in the agent reasoning loop."""
     step_number: int
@@ -89,6 +100,10 @@ class AgentFinalResponse(BaseModel):
     audit_result: AuditVerdict | None = Field(
         default=None,
         description="Independent audit verdict produced by Data Auditor Agent (FR-35)",
+    )
+    memories_recalled: list[LongTermMemoryItem] = Field(
+        default_factory=list,
+        description="Past successful queries or preferences recalled via pgvector (FR-17)",
     )
     total_steps: int = 0
     token_usage: dict[str, int] = Field(default_factory=dict)

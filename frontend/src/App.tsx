@@ -311,6 +311,7 @@ export const App: React.FC = () => {
                 metrics: data.metrics,
                 follow_up_suggestions: data.follow_up_suggestions,
                 audit_result: data.audit_result,
+                memories_recalled: data.memories_recalled,
               };
               appendTurn(completedTurn);
               setStreamingTurn(null);
@@ -382,6 +383,7 @@ export const App: React.FC = () => {
             metrics: data.metrics,
             follow_up_suggestions: data.follow_up_suggestions,
             audit_result: data.audit_result,
+            memories_recalled: data.memories_recalled,
           };
           appendTurn(completedTurn);
           setStreamingTurn(null);
@@ -431,6 +433,7 @@ export const App: React.FC = () => {
             metrics: data.metrics,
             follow_up_suggestions: data.follow_up_suggestions,
             audit_result: data.audit_result,
+            memories_recalled: data.memories_recalled,
           };
           appendTurn(completedTurn);
           setStreamingTurn(null);

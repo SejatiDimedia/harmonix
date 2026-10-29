@@ -19,6 +19,7 @@ from src.agent.models import (
     AuditVerdict,
     ChartSpec,
     Citation,
+    LongTermMemoryItem,
     TableData,
 )
 from src.agent.auditor import DataAuditorAgent
@@ -32,6 +33,7 @@ from src.config import settings
 from src.llm.provider import BaseLLMProvider, ToolCall, get_llm_provider
 from src.observability.models import SpanStatus, SpanType
 from src.observability.tracer import AgentTracer
+from src.rag.long_term_memory import retrieve_relevant_memories, store_successful_query
 from src.tools.base import BaseTool
 from src.tools.chart import MakeChartTool
 from src.tools.database import GetSchemaTool, RunSQLTool
@@ -101,11 +103,27 @@ class ManualAgentLoop:
         self.term_logger.log_task_start(task_id=task_id, query=user_query, session_id=session_id)
 
         # Build initial messages (or restore from resumed state)
+        recalled_memories: list[LongTermMemoryItem] = []
         if resume_messages:
             messages = resume_messages
             logger.info("Resuming task %s from checkpoint with %d messages.", task_id, len(messages))
         else:
-            system_prompt = await build_analyst_system_prompt(session_id=session_id)
+            # FR-17: Retrieve relevant long-term memory (proven queries & user preferences)
+            try:
+                recalled_memories = await retrieve_relevant_memories(
+                    query=user_query,
+                    limit=2,
+                    min_similarity=0.60,
+                )
+                if recalled_memories:
+                    logger.info("Recalled %d long-term memories via pgvector for query: '%s'", len(recalled_memories), user_query[:40])
+            except Exception as mem_err:
+                logger.warning("Could not recall long-term memories: %s", mem_err)
+
+            system_prompt = await build_analyst_system_prompt(
+                session_id=session_id,
+                recalled_memories=recalled_memories,
+            )
             messages = [{"role": "system", "content": system_prompt}]
             # Load short-term conversation memory from session if available (FR-16)
             if session_id:
@@ -659,7 +677,25 @@ class ManualAgentLoop:
             metrics=task_metrics.model_dump(),
             follow_up_suggestions=follow_up_suggestions,
             audit_result=audit_verdict,
+            memories_recalled=recalled_memories,
         )
+
+        # FR-17: Auto-learn and store verified queries in long-term memory (Maker-Checker approved)
+        if executed_sqls and (not audit_verdict or audit_verdict.status.value in ("PASSED", "WARNING")):
+            conf = audit_verdict.confidence_score if audit_verdict else 0.95
+            try:
+                # Fire and forget async memory persist
+                asyncio.create_task(
+                    store_successful_query(
+                        question=user_query,
+                        sql=executed_sqls[0],
+                        session_id=session_id,
+                        explanation=audit_verdict.critique if audit_verdict else "Kueri analitik terverifikasi berhasil",
+                        confidence=conf,
+                    )
+                )
+            except Exception as store_err:
+                logger.debug("Async long-term memory store error: %s", store_err)
 
         # Persist COMPLETED task state in PostgreSQL
         try:

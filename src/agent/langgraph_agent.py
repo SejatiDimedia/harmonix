@@ -183,7 +183,22 @@ class LangGraphAgent:
                         pass
             return state
 
-        system_prompt = await build_analyst_system_prompt(session_id=state.get("session_id"))
+        # FR-17: Retrieve relevant long-term memory (proven queries & preferences)
+        recalled_memories = []
+        try:
+            from src.rag.long_term_memory import retrieve_relevant_memories
+            recalled_memories = await retrieve_relevant_memories(
+                query=state["user_query"],
+                limit=2,
+                min_similarity=0.60,
+            )
+        except Exception:
+            pass
+
+        system_prompt = await build_analyst_system_prompt(
+            session_id=state.get("session_id"),
+            recalled_memories=recalled_memories,
+        )
         messages: list[dict[str, Any]] = [{"role": "system", "content": system_prompt}]
 
         # Inject multi-turn short-term memory
@@ -759,7 +774,27 @@ class LangGraphAgent:
             metrics={"total_latency_ms": int(elapsed_sec * 1000), "total_tokens": total_toks},
             follow_up_suggestions=follow_up_suggestions,
             audit_result=audit_verdict,
+            memories_recalled=recalled_memories,
         )
+
+        # FR-17: Auto-learn and store verified queries in long-term memory
+        exec_sqls = final_state.get("sql_queries", [])
+        if exec_sqls and (not audit_verdict or audit_verdict.status.value in ("PASSED", "WARNING")):
+            try:
+                from src.rag.long_term_memory import store_successful_query
+                import asyncio
+                conf = audit_verdict.confidence_score if audit_verdict else 0.95
+                asyncio.create_task(
+                    store_successful_query(
+                        question=user_query,
+                        sql=exec_sqls[0],
+                        session_id=sid,
+                        explanation=audit_verdict.critique if audit_verdict else None,
+                        confidence=conf,
+                    )
+                )
+            except Exception:
+                pass
 
         try:
             await save_task_checkpoint(

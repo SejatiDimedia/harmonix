@@ -69,7 +69,9 @@ async def lifespan(app: FastAPI):
             await init_dashboard_table()
             from src.ingestion.excel_csv_parser import init_uploaded_tables_registry
             await init_uploaded_tables_registry()
-            logger.info("Auto-seeded metric glossary and initialized state/trace/dashboard/upload tables at startup.")
+            from src.rag.long_term_memory import seed_golden_memories_if_empty
+            await seed_golden_memories_if_empty()
+            logger.info("Auto-seeded metric glossary, long-term memories, and initialized state/trace/dashboard/upload tables at startup.")
     except Exception as e:
         logger.warning("Startup initialization error: %s", e)
     yield
@@ -591,6 +593,68 @@ async def delete_session_table(session_id: str, table_name: str):
         "message": f"Tabel '{table_name}' berhasil dihapus dari sesi.",
         "table_name": table_name,
         "session_id": session_id,
+    }
+
+
+# ==============================================================================
+# Long-Term Memory Endpoints (FR-17)
+# ==============================================================================
+
+class CreateMemoryInput(BaseModel):
+    question: str = Field(..., description="Pertanyaan analisis atau aturan preferensi pengguna")
+    sql: str | None = Field(None, description="Kueri SQL yang terbukti berhasil (opsional)")
+    explanation: str | None = Field(None, description="Penjelasan atau definisi metrik")
+    session_id: str | None = Field(None, description="ID sesi asal (opsional)")
+    memory_type: str = Field("successful_query", description="successful_query atau user_preference")
+
+
+@app.get("/v1/memories", tags=["Memory"])
+async def list_memories_endpoint(limit: int = 50, memory_type: str | None = None):
+    """List long-term memories and few-shot query exemplars stored in pgvector (FR-17)."""
+    from src.rag.long_term_memory import list_long_term_memories
+    memories = await list_long_term_memories(limit=limit, memory_type=memory_type)
+    return {
+        "status": "success",
+        "total": len(memories),
+        "memories": memories,
+    }
+
+
+@app.post("/v1/memories", tags=["Memory"])
+async def create_memory_endpoint(payload: CreateMemoryInput):
+    """Store a verified SQL query or user preference into pgvector long-term memory (FR-17)."""
+    from src.rag.long_term_memory import store_successful_query, store_user_preference
+    if payload.memory_type == "user_preference" or not payload.sql:
+        mem_id = await store_user_preference(
+            preference_text=payload.question,
+            session_id=payload.session_id,
+        )
+    else:
+        mem_id = await store_successful_query(
+            question=payload.question,
+            sql=payload.sql,
+            session_id=payload.session_id,
+            explanation=payload.explanation,
+        )
+    if not mem_id:
+        raise HTTPException(status_code=400, detail="Gagal menyimpan memori.")
+    return {
+        "status": "success",
+        "memory_id": mem_id,
+        "message": "Memori berhasil disimpan ke dalam pgvector.",
+    }
+
+
+@app.delete("/v1/memories/{memory_id}", tags=["Memory"])
+async def delete_memory_endpoint(memory_id: int):
+    """Delete a memory item from long-term memory (FR-17)."""
+    from src.rag.long_term_memory import delete_long_term_memory
+    deleted = await delete_long_term_memory(memory_id=memory_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Memori tidak ditemukan.")
+    return {
+        "status": "success",
+        "message": f"Memori #{memory_id} berhasil dihapus.",
     }
 
 

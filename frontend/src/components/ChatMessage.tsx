@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Brain } from 'lucide-react';
 import { ChatTurn, ChartSpec, TableData } from '../types';
 import { SQLBox } from './SQLBox';
 import { DataTable } from './DataTable';
@@ -70,6 +70,16 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
               className="content markdown-body"
               dangerouslySetInnerHTML={{ __html: sanitizedMarkdown }}
             />
+          )}
+
+          {/* Recalled Long-Term Memories Badge (FR-17) */}
+          {turn.memories_recalled && turn.memories_recalled.length > 0 && (
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#0c1e33] text-xs font-mono text-[#00d2ee] shadow-sm select-none">
+              <Brain className="w-3.5 h-3.5 text-[#00d2ee] shrink-0" />
+              <span>
+                Memori Pengalaman: Memanfaatkan {turn.memories_recalled.length} kueri terverifikasi sebelumnya ({Math.round((turn.memories_recalled[0].similarity || 0.8) * 100)}% kecocokan)
+              </span>
+            </div>
           )}
 
           {/* SQL Box */}

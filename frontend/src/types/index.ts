@@ -103,6 +103,17 @@ export interface ChatSessionSummary {
   last_activity?: string;
 }
 
+export interface LongTermMemoryItem {
+  id?: number;
+  memory_type: string;
+  question_text: string;
+  sql_query?: string | null;
+  explanation?: string | null;
+  tables_used?: string[];
+  similarity?: number;
+  success_count?: number;
+}
+
 export interface ChatTurn {
   task_id: string;
   status: string;
@@ -118,6 +129,7 @@ export interface ChatTurn {
   };
   follow_up_suggestions?: string[];
   audit_result?: AuditVerdict;
+  memories_recalled?: LongTermMemoryItem[];
   created_at?: string;
 }
 

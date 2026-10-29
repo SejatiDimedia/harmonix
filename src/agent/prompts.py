@@ -1,5 +1,7 @@
 """Standardized system prompts and guidelines for Data Analyst AI Agents (DRY Principle)."""
 
+from typing import Any
+
 BASE_ANALYST_SYSTEM_PROMPT = """Anda adalah Senior Data Analyst AI Agent profesional untuk database PostgreSQL analitik.
 Tugas Anda adalah menjawab pertanyaan pengguna secara akurat, berbasis data, dan terstruktur.
 
@@ -145,46 +147,81 @@ PEDOMAN PENILAIAN STATUS:
 """
 
 
-async def build_analyst_system_prompt(session_id: str | None = None) -> str:
-    """Construct dynamic system prompt, injecting uploaded session tables if available."""
+async def build_analyst_system_prompt(
+    session_id: str | None = None,
+    recalled_memories: list[Any] | None = None,
+) -> str:
+    """Construct dynamic system prompt, injecting uploaded session tables and pgvector long-term memories."""
     base_prompt = BASE_ANALYST_SYSTEM_PROMPT
+    sections = [base_prompt]
+
+    # 1. Inject Recalled Long-Term Memories (FR-17 Few-Shot Guidance)
+    if recalled_memories and len(recalled_memories) > 0:
+        memory_lines = []
+        for idx, m in enumerate(recalled_memories, 1):
+            q_text = getattr(m, "question_text", "")
+            sql_text = getattr(m, "sql_query", "")
+            expl_text = getattr(m, "explanation", "")
+            sim_score = getattr(m, "similarity", 0.0)
+
+            memory_block = (
+                f"Contoh #{idx} (Kemiripan Semantik: {round(sim_score * 100)}%):\n"
+                f"- Pertanyaan Pengguna Serupa: \"{q_text}\"\n"
+            )
+            if sql_text:
+                memory_block += f"- Kueri SQL Terbukti Berhasil:\n```sql\n{sql_text}\n```\n"
+            if expl_text:
+                memory_block += f"- Catatan / Definisi: {expl_text}\n"
+
+            memory_lines.append(memory_block)
+
+        memory_section = (
+            "\n\nMEMORI JANGKA PANJANG & KUERI TERBUKTI BERHASIL SEBELUMNYA (FEW-SHOT GUIDANCE - FR-17):\n"
+            "Sistem pgvector menemukan pengalaman kueri SQL serupa yang sebelumnya terbukti berhasil dan diverifikasi akurat:\n"
+            + "\n".join(memory_lines)
+            + "\nATURAN PEMANFAATAN MEMORI:\n"
+            "1. Jika pertanyaan pengguna saat ini serupa dengan contoh di atas, gunakan struktur, rumus, dan relasi JOIN tersebut sebagai acuan utama.\n"
+            "2. Sesuaikan filter tanggal, limit baris, atau nama kolom jika pertanyaan spesifik pengguna membutuhkan parameter berbeda.\n"
+            "3. Tetap jalankan kueri melalui tool `run_sql` untuk mendapatkan data terbaru."
+        )
+        sections.append(memory_section)
 
     if not session_id:
-        return base_prompt
+        return "".join(sections)
 
     try:
         from src.ingestion.excel_csv_parser import get_session_uploaded_tables
         uploaded_tables = await get_session_uploaded_tables(session_id)
-        if not uploaded_tables:
-            return base_prompt
+        if uploaded_tables:
+            table_sections = []
+            for t in uploaded_tables:
+                cols_str = ", ".join(f"{c.name} ({c.data_type})" for c in t.columns)
+                samples_str = ""
+                sample_items = [f"{c.name}: {c.sample_values}" for c in t.columns if c.sample_values]
+                if sample_items:
+                    samples_str = f"    Contoh Nilai: {'; '.join(sample_items[:4])}"
 
-        table_sections = []
-        for t in uploaded_tables:
-            cols_str = ", ".join(f"{c.name} ({c.data_type})" for c in t.columns)
-            samples_str = ""
-            sample_items = [f"{c.name}: {c.sample_values}" for c in t.columns if c.sample_values]
-            if sample_items:
-                samples_str = f"    Contoh Nilai: {'; '.join(sample_items[:4])}"
+                table_sections.append(
+                    f"- `analytics.\"{t.table_name}\"`\n"
+                    f"    Sumber: File '{t.original_filename}', Sheet: '{t.sheet_name}' ({t.row_count} baris)\n"
+                    f"    Kolom: {cols_str}\n"
+                    f"{samples_str}"
+                )
 
-            table_sections.append(
-                f"- `analytics.\"{t.table_name}\"`\n"
-                f"    Sumber: File '{t.original_filename}', Sheet: '{t.sheet_name}' ({t.row_count} baris)\n"
-                f"    Kolom: {cols_str}\n"
-                f"{samples_str}"
+            dynamic_section = (
+                "\n\nTABEL DATA EKSTERNAL DARI FILE PENGGUNA (SESSION UPLOADED TABLES):\n"
+                "Pengguna telah mengunggah file data spreadsheet (CSV/Excel) ke dalam sesi percakapan ini.\n"
+                "Tabel-tabel fisik dinamis berikut TELAH DIBUAT di skema `analytics` PostgreSQL dan SIAP DI-QUERY / DI-JOIN:\n"
+                + "\n".join(table_sections)
+                + "\n\nPANDUAN QUERY TABEL UPLOAD:\n"
+                "1. Anda DAPAT langsung melakukan `SELECT * FROM analytics.\"{table_name}\"` untuk mengekstrak dan menganalisis data upload.\n"
+                "2. JIKA data upload merupakan dataset mandiri/independen (misalnya: data HR/karyawan, data sensor IoT, survei, kesehatan, akademik, dsb. yang tidak terkait dengan e-commerce), Anda TIDAK PERLU melakukan JOIN ke tabel warehouse. Cukup analisis tabel upload tersebut secara langsung sesuai permintaan pengguna.\n"
+                "3. JIKA data upload memiliki relasi dengan domain e-commerce (misalnya: target kategori, KPI kota/wilayah, atau order_id), Anda DAPAT menggabungkannya (JOIN) dengan tabel master database (`orders`, `customers`, `products`, dll.).\n"
+                "4. Tabel-tabel ini terdaftar secara resmi di database analitik sesi ini. Jawablah pertanyaan analitik pengguna terkait data upload secara akurat berbasis data nyata!"
             )
+            sections.append(dynamic_section)
 
-        dynamic_section = (
-            "\n\nTABEL DATA EKSTERNAL DARI FILE PENGGUNA (SESSION UPLOADED TABLES):\n"
-            "Pengguna telah mengunggah file data spreadsheet (CSV/Excel) ke dalam sesi percakapan ini.\n"
-            "Tabel-tabel fisik dinamis berikut TELAH DIBUAT di skema `analytics` PostgreSQL dan SIAP DI-QUERY / DI-JOIN:\n"
-            + "\n".join(table_sections)
-            + "\n\nPANDUAN QUERY TABEL UPLOAD:\n"
-            "1. Anda DAPAT langsung melakukan `SELECT * FROM analytics.\"{table_name}\"` untuk mengekstrak dan menganalisis data upload.\n"
-            "2. JIKA data upload merupakan dataset mandiri/independen (misalnya: data HR/karyawan, data sensor IoT, survei, kesehatan, akademik, dsb. yang tidak terkait dengan e-commerce), Anda TIDAK PERLU melakukan JOIN ke tabel warehouse. Cukup analisis tabel upload tersebut secara langsung sesuai permintaan pengguna.\n"
-            "3. JIKA data upload memiliki relasi dengan domain e-commerce (misalnya: target kategori, KPI kota/wilayah, atau order_id), Anda DAPAT menggabungkannya (JOIN) dengan tabel master database (`orders`, `customers`, `products`, dll.).\n"
-            "4. Tabel-tabel ini terdaftar secara resmi di database analitik sesi ini. Jawablah pertanyaan analitik pengguna terkait data upload secara akurat berbasis data nyata!"
-        )
-        return base_prompt + dynamic_section
+        return "".join(sections)
     except Exception:
-        return base_prompt
+        return "".join(sections)
 
