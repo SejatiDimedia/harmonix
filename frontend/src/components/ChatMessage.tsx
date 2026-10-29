@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
-import { Loader2, Brain, Database, ChevronDown } from 'lucide-react';
+import { Loader2, Brain, Database, ChevronDown, Copy, Check, Pencil, RotateCcw } from 'lucide-react';
 import { ChatTurn, ChartSpec, TableData } from '../types';
 import { SQLBox } from './SQLBox';
 import { DataTable } from './DataTable';
@@ -16,6 +16,7 @@ interface ChatMessageProps {
   isStreaming?: boolean;
   streamingStatus?: string;
   onSelectSuggestion: (text: string) => void;
+  onEditQuery?: (text: string) => void;
   onPinChart?: (spec: ChartSpec, sqlQuery?: string) => void;
   onPinTable?: (table: TableData, title: string, sqlQuery?: string) => void;
 }
@@ -25,16 +26,33 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
   isStreaming,
   streamingStatus,
   onSelectSuggestion,
+  onEditQuery,
   onPinChart,
   onPinTable,
 }) => {
   const [showDataFlow, setShowDataFlow] = useState(false);
+  const [copiedQuery, setCopiedQuery] = useState(false);
+  const [copiedAnswer, setCopiedAnswer] = useState(false);
 
   const hasDataFlow = Boolean(
     (turn.sql_queries && turn.sql_queries.length > 0) ||
     (turn.tables && turn.tables.length > 0) ||
     (turn.memories_recalled && turn.memories_recalled.length > 0)
   );
+
+  const handleCopyQuery = () => {
+    if (!turn.user_query) return;
+    navigator.clipboard.writeText(turn.user_query);
+    setCopiedQuery(true);
+    setTimeout(() => setCopiedQuery(false), 2000);
+  };
+
+  const handleCopyAnswer = () => {
+    if (!turn.answer_text) return;
+    navigator.clipboard.writeText(turn.answer_text);
+    setCopiedAnswer(true);
+    setTimeout(() => setCopiedAnswer(false), 2000);
+  };
 
   const sanitizedMarkdown = useMemo(() => {
     if (!turn.answer_text) return '';
@@ -46,9 +64,57 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
     <div className="space-y-4">
       {/* User Bubble */}
       {turn.user_query && (
-        <div className="flex justify-end">
-          <div className="max-w-[85%] rounded-2xl bg-[#14223b] px-4 py-3 text-sm text-[#f8fafc] leading-relaxed shadow-sm font-sans">
-            {turn.user_query}
+        <div className="flex justify-end group">
+          <div className="relative max-w-[85%] rounded-2xl bg-[#14223b] px-4 py-3 text-sm text-[#f8fafc] leading-relaxed shadow-sm font-sans border border-white/[0.04]">
+            <div className="select-text whitespace-pre-wrap break-words">
+              {turn.user_query}
+            </div>
+
+            {/* Quick Actions for User Query (Copy, Edit, Resend) */}
+            <div className="mt-2 pt-1.5 border-t border-white/[0.06] flex items-center justify-end gap-1 sm:opacity-80 sm:group-hover:opacity-100 transition-opacity select-none">
+              <button
+                type="button"
+                onClick={handleCopyQuery}
+                title="Salin pertanyaan ke clipboard"
+                className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-mono text-[#94a3b8] hover:text-[#f8fafc] hover:bg-white/[0.06] transition cursor-pointer"
+              >
+                {copiedQuery ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-emerald-400" />
+                    <span className="text-emerald-400 font-medium">Tersalin!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3.5 h-3.5" />
+                    <span>Salin</span>
+                  </>
+                )}
+              </button>
+
+              {onEditQuery && (
+                <button
+                  type="button"
+                  onClick={() => onEditQuery(turn.user_query!)}
+                  title="Salin pertanyaan ke kolom pesan untuk diedit"
+                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-mono text-[#94a3b8] hover:text-[#f8fafc] hover:bg-white/[0.06] transition cursor-pointer"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                  <span>Edit</span>
+                </button>
+              )}
+
+              {onSelectSuggestion && (
+                <button
+                  type="button"
+                  onClick={() => onSelectSuggestion(turn.user_query!)}
+                  title="Ajukan ulang pertanyaan ini langsung ke agent"
+                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-mono text-[#94a3b8] hover:text-[#f8fafc] hover:bg-white/[0.06] transition cursor-pointer"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Ajukan Ulang</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -203,16 +269,40 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
             </div>
           )}
 
-          {/* Latency & Token Metrics */}
-          {turn.metrics && (
-            <div className="text-[11px] text-[#94a3b8] font-mono mt-3 pt-2.5 border-t border-white/[0.06] flex items-center justify-between select-none">
-              <span>
-                Latensi: {turn.metrics.total_latency_ms || 0}ms
-                {turn.metrics.ttft_ms ? ` (TTFT: ${turn.metrics.ttft_ms}ms)` : ''}
-              </span>
-              <span>Konsumsi Token: {turn.metrics.total_tokens?.toLocaleString() || 0}</span>
+          {/* Latency & Token Metrics & Copy Answer */}
+          <div className="text-[11px] text-[#94a3b8] font-mono mt-3 pt-2.5 border-t border-white/[0.06] flex items-center justify-between select-none">
+            <div className="flex items-center gap-3">
+              {turn.metrics && (
+                <span>
+                  Latensi: {turn.metrics.total_latency_ms || 0}ms
+                  {turn.metrics.ttft_ms ? ` (TTFT: ${turn.metrics.ttft_ms}ms)` : ''}
+                </span>
+              )}
+              {turn.answer_text && !isStreaming && (
+                <button
+                  type="button"
+                  onClick={handleCopyAnswer}
+                  title="Salin jawaban analitik lengkap"
+                  className="flex items-center gap-1 hover:text-[#f8fafc] transition cursor-pointer text-[#94a3b8]"
+                >
+                  {copiedAnswer ? (
+                    <>
+                      <Check className="w-3 h-3 text-emerald-400" />
+                      <span className="text-emerald-400 font-medium">Jawaban tersalin!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3 h-3" />
+                      <span>Salin Jawaban</span>
+                    </>
+                  )}
+                </button>
+              )}
             </div>
-          )}
+            {turn.metrics && (
+              <span>Konsumsi Token: {turn.metrics.total_tokens?.toLocaleString() || 0}</span>
+            )}
+          </div>
 
           {/* Data Auditor verdict */}
           {turn.audit_result && <AuditorGate verdict={turn.audit_result} />}

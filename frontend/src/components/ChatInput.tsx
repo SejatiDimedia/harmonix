@@ -21,6 +21,8 @@ interface ChatInputProps {
   onOpenFullModelModal: () => void;
   onSubmit: (query: string) => void;
   showToast?: (message: string) => void;
+  inputPrefill?: string;
+  onClearPrefill?: () => void;
 }
 
 const ChatInputComponent: React.FC<ChatInputProps> = ({
@@ -36,6 +38,8 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
   onOpenFullModelModal,
   onSubmit,
   showToast,
+  inputPrefill,
+  onClearPrefill,
 }) => {
   const [query, setQuery] = useState('');
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
@@ -45,6 +49,21 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
+
+  // Auto-fill query when user clicks "Edit" on a previous question
+  useEffect(() => {
+    if (inputPrefill !== undefined && inputPrefill !== null && inputPrefill !== '') {
+      setQuery(inputPrefill);
+      setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.focus();
+          textareaRef.current.selectionStart = inputPrefill.length;
+          textareaRef.current.selectionEnd = inputPrefill.length;
+          adjustTextareaHeight();
+        }
+      }, 50);
+    }
+  }, [inputPrefill]);
 
   // Load active session-scoped uploaded tables
   const { data: uploadedData } = useSessionUploadedTablesQuery(sessionId);
@@ -87,6 +106,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
     if (!q || isLoading || isUploading) return;
     onSubmit(q);
     setQuery('');
+    onClearPrefill?.();
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
     }

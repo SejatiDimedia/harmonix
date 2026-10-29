@@ -84,6 +84,7 @@ export const App: React.FC = () => {
   const deleteWidgetMutation = useDeleteWidgetMutation(currentSessionId);
   const refreshDashboardMutation = useRefreshDashboardMutation(currentSessionId);
 
+  const [inputPrefill, setInputPrefill] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Sync initial catalog config
@@ -236,6 +237,14 @@ export const App: React.FC = () => {
       );
     },
     [setActiveModels, showToast]
+  );
+
+  const handleEditQuery = useCallback(
+    (queryText: string) => {
+      setInputPrefill(queryText);
+      showToast('Pertanyaan dimuat ke kolom pesan ✏️');
+    },
+    [showToast]
   );
 
   // Streaming & Human-in-the-Loop Handlers
@@ -657,6 +666,7 @@ export const App: React.FC = () => {
                         key={turn.task_id || idx}
                         turn={turn}
                         onSelectSuggestion={handleSendMessage}
+                        onEditQuery={handleEditQuery}
                         onPinChart={handlePinChart}
                         onPinTable={handlePinTable}
                       />
@@ -668,6 +678,7 @@ export const App: React.FC = () => {
                         isStreaming={isStreaming}
                         streamingStatus={streamingStatus}
                         onSelectSuggestion={handleSendMessage}
+                        onEditQuery={handleEditQuery}
                         onPinChart={handlePinChart}
                         onPinTable={handlePinTable}
                       />
@@ -694,6 +705,8 @@ export const App: React.FC = () => {
               onOpenFullModelModal={() => setIsModelModalOpen(true)}
               onSubmit={handleSendMessage}
               showToast={showToast}
+              inputPrefill={inputPrefill}
+              onClearPrefill={() => setInputPrefill('')}
             />
           </>
         ) : (
