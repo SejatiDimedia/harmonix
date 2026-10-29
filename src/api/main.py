@@ -308,6 +308,8 @@ async def submit_approval(approval_id: str, request: ApprovalRequest):
                 user_query=record.user_query,
                 session_id=record.session_id,
                 pending_approval=record.pending_approval,
+                analyst_provider=record.analyst_provider,
+                analyst_model=record.analyst_model,
             )
 
     return {
@@ -372,10 +374,27 @@ async def resume_task_stream(task_id: str, request: ResumeTaskRequest | None = N
                 "content": f"Operator Feedback: {request.feedback}",
             })
 
+    # Resolve active model for task/session
+    req_provider = record.analyst_provider
+    req_model = record.analyst_model
+    if (not req_provider or not req_model) and record.session_id:
+        sess_prov, sess_model = await get_session_active_model(record.session_id)
+        if sess_prov and sess_model:
+            req_provider = req_provider or sess_prov
+            req_model = req_model or sess_model
+
+    registry = ModelRegistry.get_instance()
+    analyst_llm = registry.create_analyst_llm(
+        override_provider=req_provider,
+        override_model=req_model,
+    )
+    auditor_llm = registry.create_auditor_llm()
+    custom_auditor = DataAuditorAgent(llm=auditor_llm)
+
     is_langgraph = task_id.startswith("langgraph_")
     if is_langgraph:
         from src.agent.langgraph_agent import LangGraphAgent
-        agent = LangGraphAgent()
+        agent = LangGraphAgent(llm=analyst_llm, auditor=custom_auditor)
         agent_iter = agent.run_stream(
             user_query=record.user_query,
             task_id=task_id,
@@ -385,7 +404,7 @@ async def resume_task_stream(task_id: str, request: ResumeTaskRequest | None = N
             is_approved=(decision == "approved"),
         )
     else:
-        agent = ManualAgentLoop()
+        agent = ManualAgentLoop(llm=analyst_llm, auditor=custom_auditor)
         agent_iter = agent.run(
             user_query=record.user_query,
             task_id=task_id,

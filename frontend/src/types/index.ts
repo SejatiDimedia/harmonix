@@ -145,6 +145,7 @@ export interface ChatSessionDetail {
 export interface ApprovalPayload {
   approval_id: string;
   task_id: string;
+  user_query?: string;
   sanitized_query?: string;
   risk_reasons: string[];
   sensitive_columns?: string[];

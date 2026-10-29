@@ -508,6 +508,7 @@ class ManualAgentLoop:
                             "sanitized_query": observation.get("sanitized_query"),
                             "risk_reasons": observation.get("risk_reasons", []),
                             "sensitive_columns": observation.get("sensitive_columns", []),
+                            "user_query": user_query,
                         }
                         self.term_logger.log_approval_required(
                             approval_id=approval_id,

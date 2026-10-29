@@ -694,6 +694,7 @@ class LangGraphAgent:
                 "tool_name": pending_tc.get("tool_name", "run_sql"),
                 "sanitized_query": pending_tc.get("sanitized_query", ""),
                 "risk_reasons": pending_tc.get("risk_reasons", [final_state.get("approval_reason", "Persetujuan diperlukan")]),
+                "user_query": user_query,
             }
             try:
                 await save_task_checkpoint(
@@ -704,6 +705,8 @@ class LangGraphAgent:
                     user_query=user_query,
                     session_id=sid,
                     pending_approval=approval_payload,
+                    analyst_provider=getattr(self.llm, "provider_name", getattr(self.llm, "provider", None)),
+                    analyst_model=getattr(self.llm, "model", None),
                 )
             except Exception as e:
                 logger.warning("LangGraph approval save failed: %s", e)

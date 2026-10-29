@@ -359,7 +359,8 @@ export const App: React.FC = () => {
 
   const handleApprove = useCallback(async () => {
     if (!pendingApproval) return;
-    const { approval_id, task_id } = pendingApproval;
+    const { approval_id, task_id, user_query: apprUserQuery } = pendingApproval;
+    const activeUserQuery = apprUserQuery || streamingTurn?.user_query || '';
     setPendingApproval(null);
     setIsStreaming(true);
     setStreamingStatus('Mengeksekusi query yang disetujui...');
@@ -371,11 +372,29 @@ export const App: React.FC = () => {
         if (event === 'token') {
           accumulatedText += data.delta || '';
           setStreamingTurn((prev) => (prev ? { ...prev, answer_text: accumulatedText } : null));
+        } else if (event === 'step_start') {
+          setStreamingStatus(`Langkah ${data.step}/${data.max_steps}: Menganalisis...`);
+        } else if (event === 'tool_trigger') {
+          setStreamingStatus(`⚙️ Menjalankan tool: ${data.tool_name}...`);
+        } else if (event === 'approval_required') {
+          setPendingApproval(data);
+          setIsStreaming(false);
+        } else if (event === 'auditor_evaluation') {
+          const st = data.status || 'review';
+          if (st === 'failed') {
+            setStreamingStatus(`⚠️ Auditor: Ditolak - ${data.hallucination_type || 'Data mismatch'}`);
+          } else if (st === 'passed') {
+            setStreamingStatus(
+              `🛡️ Auditor: Terverifikasi (${Math.round((data.confidence_score || 1) * 100)}%)`
+            );
+          } else {
+            setStreamingStatus(`⚠️ Auditor: ${data.badge || 'Flagged'}`);
+          }
         } else if (event === 'final_result') {
           const completedTurn = {
             task_id,
             status: 'COMPLETED',
-            user_query: streamingTurn?.user_query || '',
+            user_query: activeUserQuery,
             answer_text: data.answer_text || accumulatedText,
             sql_queries: data.sql_queries,
             tables: data.tables,
@@ -388,9 +407,27 @@ export const App: React.FC = () => {
           appendTurn(completedTurn);
           setStreamingTurn(null);
           refetchSessions();
+        } else if (event === 'error') {
+          const errorTurn = {
+            task_id,
+            status: 'ERROR',
+            user_query: activeUserQuery,
+            answer_text: `Error: ${data.message || 'Terjadi kesalahan sistem saat resume task'}`,
+          };
+          appendTurn(errorTurn);
+          setStreamingTurn(null);
+          showToast(`Resume error: ${data.message || 'Error eksekusi'}`);
         }
       });
     } catch (err: any) {
+      const errorTurn = {
+        task_id,
+        status: 'ERROR',
+        user_query: activeUserQuery,
+        answer_text: `Error: ${err.message || 'Koneksi resume terputus'}`,
+      };
+      appendTurn(errorTurn);
+      setStreamingTurn(null);
       showToast(`Resume error: ${err.message}`);
     } finally {
       setIsStreaming(false);
@@ -409,7 +446,8 @@ export const App: React.FC = () => {
 
   const handleReject = useCallback(async () => {
     if (!pendingApproval) return;
-    const { approval_id, task_id } = pendingApproval;
+    const { approval_id, task_id, user_query: apprUserQuery } = pendingApproval;
+    const activeUserQuery = apprUserQuery || streamingTurn?.user_query || '';
     setPendingApproval(null);
     setIsStreaming(true);
     setStreamingStatus('Membatalkan dan menyusun query alternatif...');
@@ -421,11 +459,29 @@ export const App: React.FC = () => {
         if (event === 'token') {
           accumulatedText += data.delta || '';
           setStreamingTurn((prev) => (prev ? { ...prev, answer_text: accumulatedText } : null));
+        } else if (event === 'step_start') {
+          setStreamingStatus(`Langkah ${data.step}/${data.max_steps}: Menganalisis...`);
+        } else if (event === 'tool_trigger') {
+          setStreamingStatus(`⚙️ Menjalankan tool: ${data.tool_name}...`);
+        } else if (event === 'approval_required') {
+          setPendingApproval(data);
+          setIsStreaming(false);
+        } else if (event === 'auditor_evaluation') {
+          const st = data.status || 'review';
+          if (st === 'failed') {
+            setStreamingStatus(`⚠️ Auditor: Ditolak - ${data.hallucination_type || 'Data mismatch'}`);
+          } else if (st === 'passed') {
+            setStreamingStatus(
+              `🛡️ Auditor: Terverifikasi (${Math.round((data.confidence_score || 1) * 100)}%)`
+            );
+          } else {
+            setStreamingStatus(`⚠️ Auditor: ${data.badge || 'Flagged'}`);
+          }
         } else if (event === 'final_result') {
           const completedTurn = {
             task_id,
             status: 'COMPLETED',
-            user_query: streamingTurn?.user_query || '',
+            user_query: activeUserQuery,
             answer_text: data.answer_text || accumulatedText,
             sql_queries: data.sql_queries,
             tables: data.tables,
@@ -438,9 +494,27 @@ export const App: React.FC = () => {
           appendTurn(completedTurn);
           setStreamingTurn(null);
           refetchSessions();
+        } else if (event === 'error') {
+          const errorTurn = {
+            task_id,
+            status: 'ERROR',
+            user_query: activeUserQuery,
+            answer_text: `Error: ${data.message || 'Terjadi kesalahan sistem saat resume task'}`,
+          };
+          appendTurn(errorTurn);
+          setStreamingTurn(null);
+          showToast(`Resume error: ${data.message || 'Error eksekusi'}`);
         }
       });
     } catch (err: any) {
+      const errorTurn = {
+        task_id,
+        status: 'ERROR',
+        user_query: activeUserQuery,
+        answer_text: `Error: ${err.message || 'Koneksi resume terputus'}`,
+      };
+      appendTurn(errorTurn);
+      setStreamingTurn(null);
       showToast(`Resume error: ${err.message}`);
     } finally {
       setIsStreaming(false);
