@@ -66,6 +66,7 @@ class LangGraphAgentState(TypedDict, total=False):
     final_answer: str | None
     error: str | None
     status: str
+    recalled_memories: list[Any]
 
 
 class LangGraphAgent:
@@ -202,6 +203,7 @@ class LangGraphAgent:
             session_id=state.get("session_id"),
             recalled_memories=recalled_memories,
         )
+        state["recalled_memories"] = recalled_memories
         messages: list[dict[str, Any]] = [{"role": "system", "content": system_prompt}]
 
         # Inject multi-turn short-term memory
@@ -544,6 +546,7 @@ class LangGraphAgent:
             "final_answer": None,
             "error": None,
             "status": AgentTaskStatus.PENDING.value,
+            "recalled_memories": [],
         }
 
         final_state = await self.graph.ainvoke(initial_state)
@@ -616,6 +619,7 @@ class LangGraphAgent:
             total_steps=final_state.get("current_step", 0),
             token_usage={"total_tokens": final_state.get("current_step", 0) * 80},
             follow_up_suggestions=follow_up_suggestions,
+            memories_recalled=final_state.get("recalled_memories") or [],
         )
 
     async def run_stream(
@@ -655,6 +659,7 @@ class LangGraphAgent:
             "final_answer": None,
             "error": None,
             "status": AgentTaskStatus.PENDING.value,
+            "recalled_memories": [],
         }
 
         # Save initial checkpoint
@@ -805,6 +810,7 @@ class LangGraphAgent:
                 "data": audit_verdict.model_dump(),
             }
 
+        recalled_memories = final_state.get("recalled_memories") or []
         final_response = AgentFinalResponse(
             answer_text=clean_answer,
             sql_queries=final_state.get("sql_queries", []),
