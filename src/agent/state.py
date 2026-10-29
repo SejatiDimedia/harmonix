@@ -225,12 +225,19 @@ async def get_session_history(session_id: str, limit: int = 5) -> list[dict[str,
     await init_task_state_table()
 
     async with get_db_session() as session:
+        # Retrieve the LATEST completed turns in chronological order, skipping empty answers
         query = text("""
             SELECT user_query, final_result
-            FROM analytics.agent_tasks
-            WHERE session_id = :session_id AND status = 'COMPLETED' AND final_result IS NOT NULL
-            ORDER BY created_at ASC
-            LIMIT :limit;
+            FROM (
+                SELECT user_query, final_result, created_at
+                FROM analytics.agent_tasks
+                WHERE session_id = :session_id 
+                  AND status = 'COMPLETED' 
+                  AND final_result IS NOT NULL
+                ORDER BY created_at DESC
+                LIMIT :limit
+            ) recent_tasks
+            ORDER BY created_at ASC;
         """)
         res = await session.execute(query, {"session_id": session_id, "limit": limit})
         rows = res.fetchall()
@@ -239,8 +246,12 @@ async def get_session_history(session_id: str, limit: int = 5) -> list[dict[str,
         for r in rows:
             u_query = r[0]
             f_result = r[1] if isinstance(r[1], dict) else json.loads(r[1])
+            ans_text = (f_result.get("answer_text") or "").strip()
+            # Skip turns that failed or have empty answers to prevent dangling prompt confusion
+            if not ans_text:
+                continue
             history_messages.append({"role": "user", "content": u_query})
-            history_messages.append({"role": "assistant", "content": f_result.get("answer_text", "")})
+            history_messages.append({"role": "assistant", "content": ans_text})
 
         return history_messages
 
