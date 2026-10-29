@@ -35,8 +35,8 @@ def get_auditor_provider() -> BaseLLMProvider:
         # Model Diversity: Pick a distinct high-reasoning free tier model if keys available
         primary_provider = settings.llm_provider.lower().strip()
 
-        # 1. Prefer Groq Llama-3.3-70B if API key is present and primary is not Groq
-        if settings.groq_api_key and primary_provider != "groq":
+        # 1. Prefer Groq Llama-3.3-70B if real API key is present and primary is not Groq
+        if settings.groq_api_key and not settings.groq_api_key.startswith("gsk_abc") and "123456789" not in settings.groq_api_key and primary_provider != "groq":
             try:
                 logger.info("Auditor Agent using Groq Llama-3.3-70B for Model Diversity.")
                 return create_single_provider("groq")

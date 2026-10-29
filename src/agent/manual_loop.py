@@ -306,6 +306,29 @@ class ManualAgentLoop:
                 },
             }
 
+            # Determine if this is the final allowed step in the budget
+            is_final_step = (step >= self.max_steps)
+            tools_to_pass = None if is_final_step else self.openai_tools
+
+            # Nudge model on penultimate step if queries have already been executed
+            if step == self.max_steps - 1 and len(executed_sqls) >= 2:
+                messages.append({
+                    "role": "user",
+                    "content": (
+                        "PENGINGAT SISTEM: Anda mendekati batas akhir langkah. Jika data yang telah diperoleh dari query di atas sudah cukup untuk menjawab pertanyaan pengguna, segera sajikan kesimpulan dan jawaban akhir Anda sekarang tanpa memanggil tool tambahan."
+                    ),
+                })
+            elif is_final_step:
+                messages.append({
+                    "role": "user",
+                    "content": (
+                        "PERINGATAN LANGKAH TERAKHIR: Ini adalah langkah terakhir dari batas alur analisis. "
+                        "DILARANG memanggil tool apa pun lagi. Rangkum dan jawab pertanyaan pengguna secara langsung, "
+                        "lengkap, terstruktur (gunakan tabel Markdown jika relevan), serta berikan kesimpulan akhir "
+                        "berdasarkan seluruh data dan observasi yang telah Anda peroleh di atas."
+                    ),
+                })
+
             # 3. Call LLM with timeout and tracing
             llm_span = tracer.start_span(
                 name=f"llm_step_{step}",
@@ -316,9 +339,11 @@ class ManualAgentLoop:
 
             try:
                 llm_response = await asyncio.wait_for(
-                    self.llm.chat(messages=messages, tools=self.openai_tools),
+                    self.llm.chat(messages=messages, tools=tools_to_pass),
                     timeout=self.step_timeout,
                 )
+                if is_final_step:
+                    llm_response.tool_calls = []
                 tracer.end_span(
                     span_id=llm_span.span_id,
                     output_data={
@@ -587,11 +612,47 @@ class ManualAgentLoop:
             # No tool calls -> Agent has concluded reasoning!
             break
 
-        # Graceful degradation if max steps or token budget reached
+        # Graceful degradation and emergency synthesis if max steps or token budget reached
         if step >= self.max_steps or total_tokens > self.max_token_budget:
+            # If no narrative answer was generated yet but data was captured, force a zero-tool synthesis
+            if not final_answer_text and (captured_tables or executed_sqls):
+                logger.info("Task %s reached step limit without final narrative answer. Running emergency synthesis...", task_id)
+                synth_messages = list(messages)
+                synth_messages.append({
+                    "role": "user",
+                    "content": (
+                        "Batas iterasi langkah tercapai. Berdasarkan seluruh baris data dan hasil query di atas, "
+                        "tuliskan jawaban akhir lengkap, terstruktur, dan langsung menjawab pertanyaan pengguna: "
+                        f"\"{user_query}\"."
+                    ),
+                })
+                try:
+                    synth_span = tracer.start_span(
+                        name="emergency_synthesis",
+                        span_type=SpanType.LLM,
+                        parent_span_id=root_span.span_id,
+                    )
+                    synth_resp = await asyncio.wait_for(
+                        self.llm.chat(messages=synth_messages, tools=None),
+                        timeout=self.step_timeout,
+                    )
+                    tracer.end_span(synth_span.span_id)
+                    if synth_resp.content:
+                        final_answer_text = synth_resp.content
+                        total_tokens += synth_resp.usage.total_tokens
+                        prompt_tokens += synth_resp.usage.prompt_tokens
+                        completion_tokens += synth_resp.usage.completion_tokens
+                        yield {
+                            "event": "token",
+                            "data": {"delta": synth_resp.content},
+                        }
+                except Exception as e:
+                    logger.warning("Emergency synthesis failed: %s", e)
+
             warning = f"Batas langkah ({self.max_steps}) tercapai sebelum analisis selesai penuh."
             if final_answer_text:
-                final_answer_text = f"{warning} {final_answer_text}"
+                if not final_answer_text.startswith("Batas langkah"):
+                    final_answer_text = f"{warning}\n\n{final_answer_text}"
             else:
                 if captured_charts or captured_tables:
                     final_answer_text = f"{warning} Berikut adalah visualisasi dan data yang berhasil diekstrak."

@@ -212,14 +212,30 @@ class LangGraphAgent:
 
     async def _reason_node(self, state: LangGraphAgentState) -> LangGraphAgentState:
         """Reasoning node: invokes LLM to formulate plan, choose tools, or formulate final answer."""
-        state["current_step"] = state.get("current_step", 0) + 1
-        self.term_logger.log_step_start(step=state["current_step"], max_steps=self.max_steps, elapsed_seconds=0.0)
+        curr_step = state.get("current_step", 0) + 1
+        state["current_step"] = curr_step
+        max_s = state.get("max_steps", self.max_steps)
+        self.term_logger.log_step_start(step=curr_step, max_steps=max_s, elapsed_seconds=0.0)
+
+        is_last_step = (curr_step >= max_s)
+        tools_to_pass = None if is_last_step else self.openai_tools
+        if is_last_step and (state.get("sql_queries") or state.get("tables")):
+            state["messages"].append({
+                "role": "user",
+                "content": (
+                    "PERINGATAN LANGKAH TERAKHIR: Ini adalah langkah terakhir. DILARANG memanggil tool apa pun lagi. "
+                    "Rangkum dan jawab pertanyaan pengguna secara langsung, lengkap, dan terstruktur berdasarkan data yang telah Anda peroleh."
+                ),
+            })
 
         response = await self.llm.chat(
             messages=state["messages"],
-            tools=self.openai_tools,
+            tools=tools_to_pass,
             temperature=0.0,
         )
+
+        if is_last_step:
+            response.tool_calls = []
 
         if response.content:
             self.term_logger.log_thought(response.content)
@@ -443,6 +459,26 @@ class LangGraphAgent:
     async def _synthesize_node(self, state: LangGraphAgentState) -> LangGraphAgentState:
         """Synthesis node: finalizes structured output and citations."""
         self.term_logger.log_synthesizing()
+
+        # Emergency synthesis if final_answer is missing but data was captured
+        if not state.get("final_answer") and (state.get("sql_queries") or state.get("tables")):
+            try:
+                synth_messages = list(state.get("messages", []))
+                synth_messages.append({
+                    "role": "user",
+                    "content": (
+                        "Batas iterasi langkah tercapai. Berdasarkan seluruh baris data dan hasil query di atas, "
+                        "tuliskan jawaban akhir lengkap, terstruktur, dan langsung menjawab pertanyaan pengguna: "
+                        f"\"{state.get('user_query', '')}\"."
+                    ),
+                })
+                synth_resp = await self.llm.chat(messages=synth_messages, tools=None, temperature=0.0)
+                if synth_resp.content:
+                    state["final_answer"] = synth_resp.content
+                    state["messages"].append({"role": "assistant", "content": synth_resp.content})
+            except Exception as e:
+                logger.warning("LangGraph synthesis call failed: %s", e)
+
         state["status"] = AgentTaskStatus.COMPLETED.value
         state["is_completed"] = True
         return state

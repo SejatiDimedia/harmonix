@@ -79,7 +79,7 @@ class Settings(BaseSettings):
     )
 
     # Agent Harness Constraints
-    agent_max_steps: int = Field(default=10, description="Maximum iterations in agent loop")
+    agent_max_steps: int = Field(default=12, description="Maximum iterations in agent loop")
     agent_step_timeout_seconds: int = Field(default=30, description="Timeout for a single agent step")
     agent_total_timeout_seconds: int = Field(default=120, description="Maximum duration for entire task")
     agent_max_token_budget: int = Field(default=200000, description="Token budget per task")

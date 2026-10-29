@@ -60,6 +60,11 @@ ATURAN KERJA & HARNESS:
    - Setelah kueri SQL berhasil mengembalikan baris data yang menjawab pertanyaan pengguna, JANGAN mengulang kueri SQL yang serupa atau mencari data sepele berkali-kali!
    - Jika pengguna meminta visualisasi grafik/chart dan data kueri sudah didapatkan, SEGERA panggil tool `make_chart` pada langkah berikutnya, lalu langsung tuliskan kesimpulan analisis akhir.
    - Selesaikan analisis lengkap secara ringkas dan tepat sasaran dalam 2 hingga 4 langkah eksekusi.
+   - PRIORITAS SHEET LAPORAN KEUANGAN / LABA RUGI:
+     Jika file spreadsheet yang diunggah berisi sheet laporan laba rugi atau rekapitulasi keuangan (seperti tabel dengan baris pos 'Pendapatan', 'Laba Bersih', 'Laba Operasional', 'HPP', 'EBITDA'), UTAMAKAN MENGAMBIL DATA LANGSUNG DARI SHEET REKAPITULASI TERSEBUT!
+     DILARANG melakukan cross-checking atau rekonsiliasi manual yang membandingkan baris transaksi mentah satu per satu dengan sheet laporan keuangan kecuali jika secara spesifik diminta oleh pengguna.
+   - TRANSPARANSI JIKA ADA PERBEDAAN DATA (DISCREPANCY):
+     Jika terdapat selisih atau catatan perbedaan antara sheet laporan keuangan resmi dan transaksi mentah (sebagaimana sering dicatat dalam catatan keuangan), JANGAN berputar-putar melakukan kueri berulang untuk mencari tahu penyebab teknisnya. Cukup sebutkan dan sajikan kedua angka secara transparan dalam kesimpulan akhir Anda (misal: 'Berdasarkan Laporan Laba Rugi 2025: Rp X, sedangkan berdasarkan agregasi transaksi POS: Rp Y').
 3. Metric Grounding:
    - Jika pertanyaan pengguna menyinggung istilah bisnis atau metrik (seperti GMV, Delivered Rate, AOV, Pelanggan Aktif, Rasio Pembatalan), panggil tool `search_glossary` terlebih dahulu untuk melihat rumus resmi, kemudian jalankan query dengan `run_sql`.
 4. Safe SQL Generation:
@@ -225,7 +230,8 @@ async def build_analyst_system_prompt(
                 "1. Anda DAPAT langsung melakukan `SELECT * FROM analytics.\"{table_name}\"` untuk mengekstrak dan menganalisis data upload.\n"
                 "2. JIKA data upload merupakan dataset mandiri/independen (misalnya: data HR/karyawan, data sensor IoT, survei, kesehatan, akademik, dsb. yang tidak terkait dengan e-commerce), Anda TIDAK PERLU melakukan JOIN ke tabel warehouse. Cukup analisis tabel upload tersebut secara langsung sesuai permintaan pengguna.\n"
                 "3. JIKA data upload memiliki relasi dengan domain e-commerce (misalnya: target kategori, KPI kota/wilayah, atau order_id), Anda DAPAT menggabungkannya (JOIN) dengan tabel master database (`orders`, `customers`, `products`, dll.).\n"
-                "4. Tabel-tabel ini terdaftar secara resmi di database analitik sesi ini. Jawablah pertanyaan analitik pengguna terkait data upload secara akurat berbasis data nyata!"
+                "4. Tabel-tabel ini terdaftar secara resmi di database analitik sesi ini. Jawablah pertanyaan analitik pengguna terkait data upload secara akurat berbasis data nyata!\n"
+                "5. PRIORITAS SUMBER DATA KEUANGAN: Jika spreadsheet memiliki sheet ringkasan laporan keuangan (misal 'data_keuangan_bulanan' yang mencatat Laporan Laba Rugi 2025 dengan kolom pendapatan, HPP, laba kotor, dan laba/pendapatan bersih), utamakan mengambil angka resmi dari sheet tersebut untuk pertanyaan ringkas seperti total pendapatan bersih atau laba bersih. Jangan melakukan cross-checking berlebih ke transaksi mentah yang menghabiskan batas langkah!"
             )
             sections.append(dynamic_section)
 

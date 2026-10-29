@@ -108,3 +108,43 @@ async def test_manual_agent_loop_meta_identity_query_does_not_force_sql():
     assert "Gemini 3.8 Flash" in final_event["data"]["answer_text"]
     assert len(final_event["data"]["sql_queries"]) == 0
 
+
+@pytest.mark.asyncio
+async def test_manual_agent_loop_emergency_synthesis_on_step_limit():
+    """Verify that when agent reaches max_steps with captured SQL/data,
+    it executes emergency synthesis to produce a complete answer rather than an empty fallback."""
+    from src.llm.provider import LLMResponse, ToolCall, LLMUsage
+
+    # Step 1: run query
+    resp1 = LLMResponse(
+        content=None,
+        tool_calls=[ToolCall(name="run_sql", arguments={"query": "SELECT 100 AS pendapatan;"})],
+        usage=LLMUsage(prompt_tokens=20, completion_tokens=20, total_tokens=40),
+    )
+    # Step 2: run query again
+    resp2 = LLMResponse(
+        content=None,
+        tool_calls=[ToolCall(name="run_sql", arguments={"query": "SELECT 200 AS pendapatan_bersih;"})],
+        usage=LLMUsage(prompt_tokens=20, completion_tokens=20, total_tokens=40),
+    )
+    # Emergency synthesis response
+    synth_resp = LLMResponse(
+        content="Berdasarkan data yang diekstrak, total pendapatan bersih adalah Rp 200.",
+        tool_calls=[],
+        usage=LLMUsage(prompt_tokens=30, completion_tokens=30, total_tokens=60),
+    )
+
+    mock_llm = MockLLMProvider(canned_responses=[resp1, resp2, synth_resp])
+    agent = ManualAgentLoop(llm=mock_llm, max_steps=2)
+
+    events = []
+    async for event in agent.run(user_query="Berapa total pendapatan bersih?"):
+        events.append(event)
+
+    final_event = next(e for e in events if e["event"] == "final_result")
+    assert final_event["data"]["total_steps"] == 2
+    assert "Batas langkah" in final_event["data"]["answer_text"]
+    assert "total pendapatan bersih adalah Rp 200" in final_event["data"]["answer_text"]
+    assert len(final_event["data"]["sql_queries"]) >= 1
+
+
