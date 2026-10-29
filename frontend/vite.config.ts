@@ -4,9 +4,9 @@ import tailwindcss from '@tailwindcss/vite';
 import { fileURLToPath } from 'node:url';
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   plugins: [react(), tailwindcss()],
-  base: '/static/',
+  base: command === 'build' ? '/static/' : '/',
   build: {
     outDir: fileURLToPath(new URL('../src/api/static', import.meta.url)),
     emptyOutDir: false,
@@ -19,4 +19,4 @@ export default defineConfig({
       '/static': 'http://127.0.0.1:8000',
     },
   },
-});
+}));

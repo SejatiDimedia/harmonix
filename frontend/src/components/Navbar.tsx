@@ -57,11 +57,10 @@ const NavbarComponent: React.FC<NavbarProps> = ({
           role="tab"
           aria-selected={activeTab === 'chat'}
           onClick={() => onSelectTab('chat')}
-          className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition cursor-pointer ${
-            activeTab === 'chat'
-              ? 'bg-clay-600 text-white shadow-sm'
-              : 'text-[#94a3b8] hover:text-[#f8fafc]'
-          }`}
+          className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition cursor-pointer ${activeTab === 'chat'
+            ? 'bg-clay-600 text-white shadow-sm'
+            : 'text-[#94a3b8] hover:text-[#f8fafc]'
+            }`}
         >
           <MessageSquare className="w-3.5 h-3.5" />
           <span>Percakapan</span>
@@ -71,11 +70,10 @@ const NavbarComponent: React.FC<NavbarProps> = ({
           role="tab"
           aria-selected={activeTab === 'dashboard'}
           onClick={() => onSelectTab('dashboard')}
-          className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition cursor-pointer ${
-            activeTab === 'dashboard'
-              ? 'bg-clay-600 text-white shadow-sm'
-              : 'text-[#94a3b8] hover:text-[#f8fafc]'
-          }`}
+          className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition cursor-pointer ${activeTab === 'dashboard'
+            ? 'bg-clay-600 text-white shadow-sm'
+            : 'text-[#94a3b8] hover:text-[#f8fafc]'
+            }`}
         >
           <LayoutDashboard className="w-3.5 h-3.5" />
           <span>Live Dashboard</span>
@@ -93,20 +91,18 @@ const NavbarComponent: React.FC<NavbarProps> = ({
           className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono bg-[#0f1a2e] border border-[#1e3557] text-[#94a3b8] select-none"
           title={
             health
-              ? `Provider: ${health.llm_provider} | Database: ${
-                  health.database_connected ? 'Connected' : 'Disconnected'
-                }`
+              ? `Provider: ${health.llm_provider} | Database: ${health.database_connected ? 'Connected' : 'Disconnected'
+              }`
               : 'Memuat status...'
           }
         >
           <span
-            className={`w-1.5 h-1.5 rounded-full ${
-              health?.status === 'healthy'
-                ? 'bg-emerald-400'
-                : health?.status === 'degraded'
+            className={`w-1.5 h-1.5 rounded-full ${health?.status === 'healthy'
+              ? 'bg-emerald-400'
+              : health?.status === 'degraded'
                 ? 'bg-amber-400'
                 : 'bg-rose-400'
-            }`}
+              }`}
           />
           <span>
             {health ? `${health.llm_provider.toUpperCase()} (${health.status})` : 'CHECKING...'}
