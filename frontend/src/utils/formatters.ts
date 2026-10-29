@@ -115,12 +115,63 @@ export function getChartDescriptiveTitle(
 }
 
 /**
+ * Cleans and converts raw LaTeX math notations (e.g., $\rightarrow$, $\ge$, $\text{Rp ...}$)
+ * into clean, readable Unicode characters (→, ≥, ≤, Rp) for professional presentation.
+ */
+export function cleanLatexMathToUnicode(text?: string): string {
+  if (!text) return '';
+  let s = text;
+
+  // 1. Arrows
+  s = s.replace(/\$\s*\\rightarrow\s*\$/g, '→');
+  s = s.replace(/\\rightarrow/g, '→');
+  s = s.replace(/\$\s*\\leftarrow\s*\$/g, '←');
+  s = s.replace(/\\leftarrow/g, '←');
+  s = s.replace(/\$\s*\\leftrightarrow\s*\$/g, '↔');
+  s = s.replace(/\$\s*\\Rightarrow\s*\$/g, '⇒');
+  s = s.replace(/\$\s*\\Leftarrow\s*\$/g, '⇐');
+
+  // 2. Comparisons with currency \text{Rp ...}
+  s = s.replace(/\$\s*\\ge(?:q)?\s*\\text\{\s*Rp\s*\}\s*([\d\.,]+)\s*\$/gi, '≥ Rp $1');
+  s = s.replace(/\$\s*\\le(?:q)?\s*\\text\{\s*Rp\s*\}\s*([\d\.,]+)\s*\$/gi, '≤ Rp $1');
+
+  // 3. Comparisons with numbers / simple expressions: $\ge 4,7$ -> ≥ 4,7
+  s = s.replace(/\$\s*\\ge(?:q)?\s*([^\$]+?)\s*\$/g, '≥ $1');
+  s = s.replace(/\$\s*\\le(?:q)?\s*([^\$]+?)\s*\$/g, '≤ $1');
+  s = s.replace(/\\ge(?:q)?\b/g, '≥');
+  s = s.replace(/\\le(?:q)?\b/g, '≤');
+
+  // 4. Common math symbols
+  s = s.replace(/\$\s*\\approx\s*\$/g, '≈');
+  s = s.replace(/\\approx/g, '≈');
+  s = s.replace(/\$\s*\\times\s*\$/g, '×');
+  s = s.replace(/\\times/g, '×');
+  s = s.replace(/\$\s*\\pm\s*\$/g, '±');
+  s = s.replace(/\\pm/g, '±');
+  s = s.replace(/\$\s*\\neq\s*\$/g, '≠');
+  s = s.replace(/\\neq/g, '≠');
+
+  // 5. Unwrap \text{...}
+  s = s.replace(/\\text\{\s*([^}]+)\s*\}/g, '$1');
+
+  // 6. Clean variable formulas like ($r = +0,984$) -> (r = +0,984) or $p < 0.05$ -> p < 0.05
+  s = s.replace(/\$\s*([a-zA-Z]\s*=\s*[+-]?[\d\.,]+)\s*\$/g, '$1');
+  s = s.replace(/\$\s*([a-zA-Z]\s*[<>≤≥]\s*[+-]?[\d\.,]+)\s*\$/g, '$1');
+
+  // 7. Clean simple standalone math / alphanumeric wrapped in $...$
+  s = s.replace(/\$\s*([a-zA-Z0-9\s,\.\+\-%≤≥=]+)\s*\$/g, '$1');
+
+  return s;
+}
+
+/**
  * Normalizes pseudo-table text (space-separated column blocks) into standard
  * GitHub-Flavored Markdown tables so they render as rich, accessible HTML tables.
  */
 export function formatPseudoTableToMarkdown(content?: string): string {
   if (!content) return '';
-  const lines = content.split('\n');
+  const cleanedContent = cleanLatexMathToUnicode(content);
+  const lines = cleanedContent.split('\n');
   const output: string[] = [];
   let inCodeBlock = false;
   let buffer: string[] = [];

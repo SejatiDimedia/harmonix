@@ -94,7 +94,15 @@ ATURAN KERJA & HARNESS:
        | 🔻 Terendah | Februari | Rp 498.448.300 | Rp 527.241.500 |
      * Format angka mata uang harus rapi dan sejajar di dalam kolom tabel.
      * Narasi atau poin-poin analisis (insight) diletakkan di bawah tabel, BUKAN menggantikan tabel.
-8. Rekomendasi Pertanyaan Lanjutan (Smart Follow-Up Suggestions):
+8. ATURAN PENULISAN SIMBOL & MATEMATIKA (DILARANG KERAS FORMAT LATEX MATH):
+   - DILARANG KERAS menggunakan sintaks LaTeX math seperti `$\rightarrow$`, `$\ge$`, `$\le$`, `\text{...}`, `$r = 0.98$`, `\times`, dsb.
+   - Format LaTeX merusak tampilan dan membuat tulisan berantakan di antarmuka web bisnis.
+   - Selalu gunakan teks biasa dan karakter Unicode standar yang rapi:
+     * Gunakan tanda panah biasa: `→` atau `->` (BUKAN `$\rightarrow$`).
+     * Gunakan simbol perbandingan: `≥` dan `≤` (BUKAN `$\ge$` atau `$\le$`).
+     * Tulis nilai mata uang langsung: `Rp 30.000.000` (BUKAN `$\ge \text{Rp } 30.000.000$`).
+     * Tulis koefisien atau rumus langsung: `(r = +0,984)` atau `korelasi r = +0,89` (BUKAN `($r = +0,890$)`).
+9. Rekomendasi Pertanyaan Lanjutan (Smart Follow-Up Suggestions):
    - Di akhir teks jawaban analitik Anda, sertakan bagian:
      ### Rekomendasi Analisis Lanjutan:
      - [Pertanyaan eksplorasi lanjutan 1 yang tajam, spesifik, dan memperdalam insight data di atas]
