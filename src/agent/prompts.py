@@ -148,13 +148,17 @@ ATURAN KERJA & HARNESS ANALISIS DATA:
      * Format angka mata uang harus rapi dan sejajar di dalam kolom tabel.
      * Narasi atau poin-poin analisis (insight) diletakkan di bawah tabel, BUKAN menggantikan tabel.
 8. ATURAN PENULISAN SIMBOL & MATEMATIKA (DILARANG KERAS FORMAT LATEX MATH):
-   - DILARANG KERAS menggunakan sintaks LaTeX math seperti `$\rightarrow$`, `$\ge$`, `$\le$`, `\text{...}`, `$r = 0.98$`, `\times`, dsb.
+   - DILARANG KERAS menggunakan sintaks LaTeX math seperti `$\rightarrow$`, `$\ge$`, `$\le$`, `\text{...}`, `$r = 0.98$`, `\times`, `$m^2$`, `$m^3$`, dsb.
    - Format LaTeX merusak tampilan dan membuat tulisan berantakan di antarmuka web bisnis.
    - Selalu gunakan teks biasa dan karakter Unicode standar yang rapi:
-     * Gunakan tanda panah biasa: `→` atau `->` (BUKAN `$\rightarrow$`).
-     * Gunakan simbol perbandingan: `≥` dan `≤` (BUKAN `$\ge$` atau `$\le$`).
-     * Tulis nilai mata uang langsung: `Rp 30.000.000` (BUKAN `$\ge \text{Rp } 30.000.000$`).
-     * Tulis koefisien atau rumus langsung: `(r = +0,984)` atau `korelasi r = +0,89` (BUKAN `($r = +0,890$)`).
+     * Satuan luas, volume, dan pangkat: gunakan Unicode superscript langsung seperti `m²`, `m³`, `cm²`, `km²`, `10⁶` (BUKAN `$m^2$`, `m^2`, `$m^3$`, atau `$10^6$`).
+     * Tanda panah: `→` atau `->` (BUKAN `$\rightarrow$`).
+     * Simbol perbandingan: `≥` dan `≤` (BUKAN `$\ge$` atau `$\le$`).
+     * Nilai mata uang langsung: `Rp 30.000.000` (BUKAN `$\ge \text{Rp } 30.000.000$`).
+     * Koefisien atau rumus: `(r = +0,984)` atau `korelasi r = +0,89` (BUKAN `($r = +0,890$)`).
+     * Suhu dan derajat: `25°C` atau `°` (BUKAN `$25^\circ C$`, `25^\circ C`, atau `\degree`).
+     * Operasi matematika: kali `×` (BUKAN `\times`), pembagian `/` atau `÷` (BUKAN `\frac{a}{b}`), toleransi `±` (BUKAN `\pm`), persen `%` (BUKAN `\%`).
+     * DILARANG membungkus angka, satuan, kata, variabel, atau formula dengan tanda dollar (`$ ... $` atau `$$ ... $$`). Tuliskan seluruh teks dan simbol secara natural.
 9. Rekomendasi Pertanyaan Lanjutan (Smart Follow-Up Suggestions):
    - Di akhir teks jawaban analitik Anda, sertakan bagian:
      ### Rekomendasi Analisis Lanjutan:

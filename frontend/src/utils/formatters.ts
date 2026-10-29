@@ -114,52 +114,143 @@ export function getChartDescriptiveTitle(
   return fallbackTitle || 'Visualisasi Analitik';
 }
 
+const SUPERSCRIPT_MAP: Record<string, string> = {
+  '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴',
+  '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹',
+  '+': '⁺', '-': '⁻', '=': '⁼', '(': '⁽', ')': '⁾',
+  'n': 'ⁿ', 'i': 'ⁱ', 'x': 'ˣ', 'y': 'ʸ',
+};
+
+const SUBSCRIPT_MAP: Record<string, string> = {
+  '0': '₀', '1': '₁', '2': '₂', '3': '₃', '4': '₄',
+  '5': '₅', '6': '₆', '7': '₇', '8': '₈', '9': '₉',
+  '+': '₊', '-': '₋', '=': '₌', '(': '₍', ')': '₎',
+  'a': 'ₐ', 'e': 'ₑ', 'o': 'ₒ', 'x': 'ₓ', 'i': 'ᵢ', 'j': 'ⱼ', 'n': 'ₙ', 't': 'ₜ',
+};
+
 /**
- * Cleans and converts raw LaTeX math notations (e.g., $\rightarrow$, $\ge$, $\text{Rp ...}$)
- * into clean, readable Unicode characters (→, ≥, ≤, Rp) for professional presentation.
+ * Cleans and converts raw LaTeX math notations (e.g., $m^2$, $\rightarrow$, $\ge$, $\text{Rp ...}$, \frac{a}{b})
+ * into clean, readable Unicode characters (m², →, ≥, ≤, Rp, a/b) for professional presentation.
  */
 export function cleanLatexMathToUnicode(text?: string): string {
   if (!text) return '';
   let s = text;
 
-  // 1. Arrows
-  s = s.replace(/\$\s*\\rightarrow\s*\$/g, '→');
-  s = s.replace(/\\rightarrow/g, '→');
-  s = s.replace(/\$\s*\\leftarrow\s*\$/g, '←');
-  s = s.replace(/\\leftarrow/g, '←');
-  s = s.replace(/\$\s*\\leftrightarrow\s*\$/g, '↔');
-  s = s.replace(/\$\s*\\Rightarrow\s*\$/g, '⇒');
-  s = s.replace(/\$\s*\\Leftarrow\s*\$/g, '⇐');
+  // 1. Fractions: \frac{a}{b} or \dfrac{a}{b} -> a / b
+  s = s.replace(/\\(?:d|t)?frac\{([^{}]+)\}\{([^{}]+)\}/g, '$1 / $2');
 
-  // 2. Comparisons with currency \text{Rp ...}
-  s = s.replace(/\$\s*\\ge(?:q)?\s*\\text\{\s*Rp\s*\}\s*([\d\.,]+)\s*\$/gi, '≥ Rp $1');
-  s = s.replace(/\$\s*\\le(?:q)?\s*\\text\{\s*Rp\s*\}\s*([\d\.,]+)\s*\$/gi, '≤ Rp $1');
+  // 2. Roots: \sqrt[3]{x} -> ∛(x), \sqrt{x} -> √(x)
+  s = s.replace(/\\sqrt\[3\]\{([^{}]+)\}/g, '∛($1)');
+  s = s.replace(/\\sqrt\{([^{}]+)\}/g, '√($1)');
 
-  // 3. Comparisons with numbers / simple expressions: $\ge 4,7$ -> ≥ 4,7
-  s = s.replace(/\$\s*\\ge(?:q)?\s*([^\$]+?)\s*\$/g, '≥ $1');
-  s = s.replace(/\$\s*\\le(?:q)?\s*([^\$]+?)\s*\$/g, '≤ $1');
-  s = s.replace(/\\ge(?:q)?\b/g, '≥');
-  s = s.replace(/\\le(?:q)?\b/g, '≤');
+  // 3. Degrees: ^\circ C, ^\circ\text{C}, ^\circ, \degree
+  s = s.replace(/\^\{?\\circ\}?\s*(?:\\text\{)?(?:C|Celsius)?\}?/gi, '°C');
+  s = s.replace(/\\degree\s*(?:C)?/gi, '°C');
+  s = s.replace(/\\circ\b/g, '°');
 
-  // 4. Common math symbols
-  s = s.replace(/\$\s*\\approx\s*\$/g, '≈');
-  s = s.replace(/\\approx/g, '≈');
-  s = s.replace(/\$\s*\\times\s*\$/g, '×');
-  s = s.replace(/\\times/g, '×');
-  s = s.replace(/\$\s*\\pm\s*\$/g, '±');
-  s = s.replace(/\\pm/g, '±');
-  s = s.replace(/\$\s*\\neq\s*\$/g, '≠');
-  s = s.replace(/\\neq/g, '≠');
+  // 4. Micro units & Greek letters
+  s = s.replace(/\\mu\s*([a-zA-Z])/g, 'µ$1');
+  s = s.replace(/\\mu\b/g, 'µ');
 
-  // 5. Unwrap \text{...}
-  s = s.replace(/\\text\{\s*([^}]+)\s*\}/g, '$1');
+  const greekLetters: [RegExp, string][] = [
+    [/\\alpha\b/g, 'α'], [/\\beta\b/g, 'β'], [/\\gamma\b/g, 'γ'], [/\\Gamma\b/g, 'Γ'],
+    [/\\delta\b/g, 'δ'], [/\\Delta\b/g, 'Δ'], [/\\epsilon\b/g, 'ε'], [/\\varepsilon\b/g, 'ε'],
+    [/\\zeta\b/g, 'ζ'], [/\\eta\b/g, 'η'], [/\\theta\b/g, 'θ'], [/\\vartheta\b/g, 'θ'],
+    [/\\lambda\b/g, 'λ'], [/\\Lambda\b/g, 'Λ'], [/\\nu\b/g, 'ν'], [/\\xi\b/g, 'ξ'],
+    [/\\pi\b/g, 'π'], [/\\Pi\b/g, 'Π'], [/\\rho\b/g, 'ρ'], [/\\sigma\b/g, 'σ'],
+    [/\\Sigma\b/g, 'Σ'], [/\\tau\b/g, 'τ'], [/\\phi\b/g, 'φ'], [/\\varphi\b/g, 'φ'],
+    [/\\Phi\b/g, 'Φ'], [/\\chi\b/g, 'χ'], [/\\psi\b/g, 'ψ'], [/\\Psi\b/g, 'Ψ'],
+    [/\\omega\b/g, 'ω'], [/\\Omega\b/g, 'Ω'],
+  ];
+  for (const [regex, val] of greekLetters) {
+    s = s.replace(regex, val);
+  }
 
-  // 6. Clean variable formulas like ($r = +0,984$) -> (r = +0,984) or $p < 0.05$ -> p < 0.05
-  s = s.replace(/\$\s*([a-zA-Z]\s*=\s*[+-]?[\d\.,]+)\s*\$/g, '$1');
-  s = s.replace(/\$\s*([a-zA-Z]\s*[<>≤≥]\s*[+-]?[\d\.,]+)\s*\$/g, '$1');
+  // 5. Arrows
+  s = s.replace(/\\leftrightarrow\b/g, '↔');
+  s = s.replace(/\\Leftrightarrow\b|\\iff\b/g, '⇔');
+  s = s.replace(/\\(?:rightarrow|to|longrightarrow)\b/g, '→');
+  s = s.replace(/\\(?:leftarrow|longleftarrow)\b/g, '←');
+  s = s.replace(/\\(?:Rightarrow|implies)\b/g, '⇒');
+  s = s.replace(/\\Leftarrow\b/g, '⇐');
+  s = s.replace(/\\uparrow\b/g, '↑');
+  s = s.replace(/\\downarrow\b/g, '↓');
 
-  // 7. Clean simple standalone math / alphanumeric wrapped in $...$
-  s = s.replace(/\$\s*([a-zA-Z0-9\s,\.\+\-%≤≥=]+)\s*\$/g, '$1');
+  // 6. Comparisons & Relations
+  s = s.replace(/\\ge(?:q)?\b|\\geqslant\b/g, '≥');
+  s = s.replace(/\\le(?:q)?\b|\\leqslant\b/g, '≤');
+  s = s.replace(/\\neq\b|\\ne\b/g, '≠');
+  s = s.replace(/\\approx\b/g, '≈');
+  s = s.replace(/\\simeq\b/g, '≃');
+  s = s.replace(/\\sim\b/g, '~');
+  s = s.replace(/\\equiv\b/g, '≡');
+  s = s.replace(/\\ll\b/g, '<<');
+  s = s.replace(/\\gg\b/g, '>>');
+
+  // 7. Math & Set Operators
+  s = s.replace(/\\times\b/g, '×');
+  s = s.replace(/\\div\b/g, '÷');
+  s = s.replace(/\\pm\b/g, '±');
+  s = s.replace(/\\mp\b/g, '∓');
+  s = s.replace(/\\(?:cdot|centerdot)\b/g, '·');
+  s = s.replace(/\\bullet\b/g, '•');
+  s = s.replace(/\\infty\b/g, '∞');
+  s = s.replace(/\\sum\b/g, '∑');
+  s = s.replace(/\\prod\b/g, '∏');
+  s = s.replace(/\\int\b/g, '∫');
+  s = s.replace(/\\partial\b/g, '∂');
+  s = s.replace(/\\nabla\b/g, '∇');
+  s = s.replace(/\\forall\b/g, '∀');
+  s = s.replace(/\\exists\b/g, '∃');
+  s = s.replace(/\\in\b/g, '∈');
+  s = s.replace(/\\notin\b/g, '∉');
+  s = s.replace(/\\subset\b/g, '⊂');
+  s = s.replace(/\\subseteq\b/g, '⊆');
+
+  // 8. Superscripts & Subscripts (converts m^2 -> m², m^3 -> m³, 10^6 -> 10⁶, etc.)
+  s = s.replace(/([a-zA-Z0-9\)])\^\{?([0-9\+\-nixy]+)\}?/g, (_match, base, exp) => {
+    const converted = exp.split('').map((c: string) => SUPERSCRIPT_MAP[c] || c).join('');
+    return `${base}${converted}`;
+  });
+
+  s = s.replace(/([a-zA-Z0-9\)])_\{?([0-9\+\-aeoxijnt]+)\}?/g, (_match, base, sub) => {
+    const converted = sub.split('').map((c: string) => SUBSCRIPT_MAP[c] || c).join('');
+    return `${base}${converted}`;
+  });
+
+  // 9. LaTeX Text & Formatting unwrappers
+  s = s.replace(/\\(?:text|mathrm|mathbf|textit|textsf|textbf|operatorname)\{\s*([^}]+)\s*\}/g, '$1');
+  s = s.replace(/\\left\(/g, '(');
+  s = s.replace(/\\right\)/g, ')');
+  s = s.replace(/\\left\[/g, '[');
+  s = s.replace(/\\right\]/g, ']');
+  s = s.replace(/\\left\\\{/g, '{');
+  s = s.replace(/\\right\\\}/g, '}');
+  s = s.replace(/\\left\|/g, '|');
+  s = s.replace(/\\right\|/g, '|');
+  s = s.replace(/\\(?:dots|ldots|cdots)\b/g, '...');
+  s = s.replace(/\\quad\b/g, '  ');
+  s = s.replace(/\\qquad\b/g, '    ');
+  s = s.replace(/\\[,;:!]/g, ' ');
+  s = s.replace(/\\%/g, '%');
+  s = s.replace(/\\\\\$/g, '$');
+  s = s.replace(/\\&/g, '&');
+  s = s.replace(/\\_/g, '_');
+
+  // 10. Normalize double dollar and single dollar math wrappers
+  s = s.replace(/\$\$(.*?)\$\$/gs, '$1');
+
+  const nlConjunctions = /\b(?:dan|atau|hingga|sampai|ke|dari|per|dengan|and|or|to|from|with|between)\b/i;
+  s = s.replace(/\$([^\$\n]+?)\$/g, (match, inner) => {
+    const trimmed = inner.trim();
+    if (nlConjunctions.test(trimmed)) {
+      return match;
+    }
+    return trimmed;
+  });
+
+  // Clean redundant spaces around currency (e.g. "Rp  30.000.000" -> "Rp 30.000.000")
+  s = s.replace(/\bRp\s{2,}/g, 'Rp ');
 
   return s;
 }

@@ -8,6 +8,162 @@ import re
 from typing import Any
 from src.agent.models import ChartSpec, TableData
 
+SUPERSCRIPT_MAP = {
+    "0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴",
+    "5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹",
+    "+": "⁺", "-": "⁻", "=": "⁼", "(": "⁽", ")": "⁾",
+    "n": "ⁿ", "i": "ⁱ", "x": "ˣ", "y": "ʸ",
+}
+
+SUBSCRIPT_MAP = {
+    "0": "₀", "1": "₁", "2": "₂", "3": "₃", "4": "₄",
+    "5": "₅", "6": "₆", "7": "₇", "8": "₈", "9": "₉",
+    "+": "₊", "-": "₋", "=": "₌", "(": "₍", ")": "₎",
+    "a": "ₐ", "e": "ₑ", "o": "ₒ", "x": "ₓ", "i": "ᵢ", "j": "ⱼ", "n": "ₙ", "t": "ₜ",
+}
+
+
+def clean_latex_math_to_unicode(text: str) -> str:
+    """
+    Cleans and converts raw LaTeX math notations (e.g. $m^2$, $\\rightarrow$, $\\ge$, $\\text{Rp ...}$, \\frac{a}{b})
+    into clean, readable Unicode characters (m², →, ≥, ≤, Rp, a/b) for presentation.
+    """
+    if not text:
+        return ""
+    s = text
+
+    # 1. Fractions: \frac{a}{b} -> a / b
+    s = re.sub(r"\\(?:d|t)?frac\{([^{}]+)\}\{([^{}]+)\}", r"\1 / \2", s)
+
+    # 2. Roots: \sqrt[3]{x} -> ∛(x), \sqrt{x} -> √(x)
+    s = re.sub(r"\\sqrt\[3\]\{([^{}]+)\}", r"∛(\1)", s)
+    s = re.sub(r"\\sqrt\{([^{}]+)\}", r"√(\1)", s)
+
+    # 3. Degrees
+    s = re.sub(r"\^\{?\\circ\}?\s*(?:\\text\{)?(?:C|Celsius)?\}?", "°C", s, flags=re.IGNORECASE)
+    s = re.sub(r"\\degree\s*(?:C)?", "°C", s, flags=re.IGNORECASE)
+    s = re.sub(r"\\circ\b", "°", s)
+
+    # 4. Micro units & Greek letters
+    s = re.sub(r"\\mu\s*([a-zA-Z])", r"µ\1", s)
+    s = re.sub(r"\\mu\b", "µ", s)
+    greek = {
+        r"\\alpha\b": "α", r"\\beta\b": "β", r"\\gamma\b": "γ", r"\\Gamma\b": "Γ",
+        r"\\delta\b": "δ", r"\\Delta\b": "Δ", r"\\epsilon\b": "ε", r"\\varepsilon\b": "ε",
+        r"\\zeta\b": "ζ", r"\\eta\b": "η", r"\\theta\b": "θ", r"\\vartheta\b": "θ",
+        r"\\lambda\b": "λ", r"\\Lambda\b": "Λ", r"\\nu\b": "ν",
+        r"\\xi\b": "ξ", r"\\pi\b": "π", r"\\Pi\b": "Π", r"\\rho\b": "ρ",
+        r"\\sigma\b": "σ", r"\\Sigma\b": "Σ", r"\\tau\b": "τ", r"\\phi\b": "φ",
+        r"\\varphi\b": "φ", r"\\Phi\b": "Φ", r"\\chi\b": "χ", r"\\psi\b": "ψ",
+        r"\\Psi\b": "Ψ", r"\\omega\b": "ω", r"\\Omega\b": "Ω"
+    }
+    for pat, val in greek.items():
+        s = re.sub(pat, val, s)
+
+    # 5. Arrows
+    arrows = {
+        r"\\leftrightarrow\b": "↔", r"\\Leftrightarrow\b": "⇔", r"\\iff\b": "⇔",
+        r"\\rightarrow\b|\\to\b|\\longrightarrow\b": "→",
+        r"\\leftarrow\b|\\longleftarrow\b": "←",
+        r"\\Rightarrow\b|\\implies\b": "⇒",
+        r"\\Leftarrow\b": "⇐",
+        r"\\uparrow\b": "↑", r"\\downarrow\b": "↓"
+    }
+    for pat, val in arrows.items():
+        s = re.sub(pat, val, s)
+
+    # 6. Comparisons & Relations
+    relations = {
+        r"\\ge(?:q)?\b|\\geqslant\b": "≥",
+        r"\\le(?:q)?\b|\\leqslant\b": "≤",
+        r"\\neq\b|\\ne\b": "≠",
+        r"\\approx\b": "≈",
+        r"\\simeq\b": "≃",
+        r"\\sim\b": "~",
+        r"\\equiv\b": "≡",
+        r"\\ll\b": "<<",
+        r"\\gg\b": ">>"
+    }
+    for pat, val in relations.items():
+        s = re.sub(pat, val, s)
+
+    # 7. Math & Set Operators
+    ops = {
+        r"\\times\b": "×",
+        r"\\div\b": "÷",
+        r"\\pm\b": "±",
+        r"\\mp\b": "∓",
+        r"\\cdot\b|\\centerdot\b": "·",
+        r"\\bullet\b": "•",
+        r"\\infty\b": "∞",
+        r"\\sum\b": "∑",
+        r"\\prod\b": "∏",
+        r"\\int\b": "∫",
+        r"\\partial\b": "∂",
+        r"\\nabla\b": "∇",
+        r"\\forall\b": "∀",
+        r"\\exists\b": "∃",
+        r"\\in\b": "∈",
+        r"\\notin\b": "∉",
+        r"\\subset\b": "⊂",
+        r"\\subseteq\b": "⊆"
+    }
+    for pat, val in ops.items():
+        s = re.sub(pat, val, s)
+
+    # 8. Superscripts & Subscripts (converts m^2 -> m², m^3 -> m³, 10^6 -> 10⁶, etc.)
+    def to_sup(m):
+        base, exp = m.group(1), m.group(2)
+        return base + "".join(SUPERSCRIPT_MAP.get(c, c) for c in exp)
+    s = re.sub(r"([a-zA-Z0-9\)])\^\{?([0-9\+\-nixy]+)\}?", to_sup, s)
+
+    def to_sub(m):
+        base, sub = m.group(1), m.group(2)
+        return base + "".join(SUBSCRIPT_MAP.get(c, c) for c in sub)
+    s = re.sub(r"([a-zA-Z0-9\)])_\{?([0-9\+\-aeoxijnt]+)\}?", to_sub, s)
+
+    # 9. LaTeX Text & Formatting unwrappers
+    s = re.sub(r"\\(?:text|mathrm|mathbf|textit|textsf|textbf|operatorname)\{\s*([^}]+)\s*\}", r"\1", s)
+    s = re.sub(r"\\left\(", "(", s)
+    s = re.sub(r"\\right\)", ")", s)
+    s = re.sub(r"\\left\[", "[", s)
+    s = re.sub(r"\\right\]", "]", s)
+    s = re.sub(r"\\left\\\{", "{", s)
+    s = re.sub(r"\\right\\\}", "}", s)
+    s = re.sub(r"\\left\|", "|", s)
+    s = re.sub(r"\\right\|", "|", s)
+    s = re.sub(r"\\(?:dots|ldots|cdots)\b", "...", s)
+    s = re.sub(r"\\quad\b", "  ", s)
+    s = re.sub(r"\\qquad\b", "    ", s)
+    s = re.sub(r"\\[,;:!]", " ", s)
+    s = re.sub(r"\\%", "%", s)
+    s = re.sub(r"\\\$", "$", s)
+    s = re.sub(r"\\&", "&", s)
+    s = re.sub(r"\\_", "_", s)
+
+    # 10. Normalize double dollar and single dollar math wrappers
+    s = re.sub(r"\$\$(.*?)\$\$", r"\1", s, flags=re.DOTALL)
+
+    nl_conjunctions = r"\b(?:dan|atau|hingga|sampai|ke|dari|per|dengan|and|or|to|from|with|between)\b"
+    def replace_inline_math(match):
+        inner = match.group(1)
+        trimmed = inner.strip()
+        if re.search(nl_conjunctions, trimmed, re.IGNORECASE):
+            return match.group(0)
+        math_indicators = r"[=<>≤≥≠≈~→←⇒°µ·²³⁴⁵⁶⁷⁸⁹⁺⁻√∑∏∫∂±×÷/]|[a-zA-Z]\b"
+        if re.search(math_indicators, trimmed):
+            return trimmed
+        if re.match(r"^[\d\.,]+%?$", trimmed):
+            return trimmed
+        return trimmed
+
+    s = re.sub(r"\$([^\$\n]+?)\$", replace_inline_math, s)
+
+    # Clean redundant spaces around currency (e.g. "Rp  30.000.000" -> "Rp 30.000.000")
+    s = re.sub(r"\bRp\s{2,}", "Rp ", s)
+
+    return s
+
 
 def clean_suggestion_text(text: str) -> str:
     """Strip bullet points, numbering, markdown bolding, and excess whitespace."""
@@ -182,10 +338,12 @@ def get_smart_suggestions(
     otherwise blends in heuristic fallbacks to guarantee 3 crisp questions.
     """
     clean_answer, extracted = extract_suggestions_from_text(answer_text)
+    clean_answer = clean_latex_math_to_unicode(clean_answer)
 
     # If LLM gave 3 valid suggestions, use them directly
     if len(extracted) >= 3:
-        return clean_answer, extracted[:3]
+        cleaned_suggestions = [clean_latex_math_to_unicode(s) for s in extracted[:3]]
+        return clean_answer, cleaned_suggestions
 
     sqls = sql_queries if sql_queries is not None else (executed_sqls or [])
     tables = tables or []
@@ -210,4 +368,5 @@ def get_smart_suggestions(
             if len(combined) >= 3:
                 break
 
-    return clean_answer, combined[:3]
+    cleaned_combined = [clean_latex_math_to_unicode(s) for s in combined[:3]]
+    return clean_answer, cleaned_combined
