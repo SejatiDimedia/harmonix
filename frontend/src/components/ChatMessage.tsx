@@ -1,7 +1,7 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
-import { Loader2, Brain } from 'lucide-react';
+import { Loader2, Brain, Database, ChevronDown } from 'lucide-react';
 import { ChatTurn, ChartSpec, TableData } from '../types';
 import { SQLBox } from './SQLBox';
 import { DataTable } from './DataTable';
@@ -28,6 +28,14 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
   onPinChart,
   onPinTable,
 }) => {
+  const [showDataFlow, setShowDataFlow] = useState(false);
+
+  const hasDataFlow = Boolean(
+    (turn.sql_queries && turn.sql_queries.length > 0) ||
+    (turn.tables && turn.tables.length > 0) ||
+    (turn.memories_recalled && turn.memories_recalled.length > 0)
+  );
+
   const sanitizedMarkdown = useMemo(() => {
     if (!turn.answer_text) return '';
     const formatted = formatPseudoTableToMarkdown(turn.answer_text);
@@ -53,7 +61,7 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
           className="w-7 h-7 rounded-lg object-cover shrink-0 mt-0.5 select-none shadow-sm"
         />
 
-        <div className="flex-1 space-y-2 leading-relaxed min-w-0">
+        <div className="flex-1 space-y-2.5 leading-relaxed min-w-0">
           {/* Streaming status badge */}
           {isStreaming && (
             <div role="status" aria-live="polite" className="text-xs font-mono flex items-center gap-1.5 select-none pb-1">
@@ -64,7 +72,7 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
             </div>
           )}
 
-          {/* Answer Markdown content */}
+          {/* Answer Markdown content (Jawaban Inti / Kesimpulan Utama) */}
           {sanitizedMarkdown && (
             <div
               className="content markdown-body"
@@ -72,56 +80,7 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
             />
           )}
 
-          {/* Recalled Long-Term Memories Badge (FR-17) */}
-          {turn.memories_recalled && turn.memories_recalled.length > 0 && (
-            <div className="flex flex-col gap-1.5 p-2.5 rounded-xl bg-[#0c1e33]/80 border border-[#00d2ee]/20 text-xs font-mono text-[#00d2ee] shadow-sm select-none">
-              <div className="flex items-center gap-2">
-                <Brain className="w-4 h-4 text-[#00d2ee] shrink-0" />
-                <span className="font-semibold">
-                  Memori Pengalaman (pgvector): {turn.memories_recalled.length} kueri terverifikasi digunakan
-                </span>
-              </div>
-              <div className="pl-6 text-[11px] text-slate-300 flex flex-col gap-1">
-                {turn.memories_recalled.map((m, idx) => (
-                  <div key={idx} className="flex items-baseline gap-1.5">
-                    <span className="text-[#00d2ee] font-bold">›</span>
-                    <span className="truncate max-w-[420px] text-slate-200" title={m.question_text}>
-                      "{m.question_text}"
-                    </span>
-                    <span className="text-[#00d2ee]/90 text-[10px] ml-auto shrink-0 font-medium">
-                      ({Math.round((m.similarity || 0.8) * 100)}% mirip)
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* SQL Box */}
-          {turn.sql_queries && turn.sql_queries.length > 0 && (
-            <SQLBox queries={turn.sql_queries} />
-          )}
-
-          {/* Tables */}
-          {turn.tables && turn.tables.length > 0 && (
-            <DataTable
-              tables={turn.tables}
-              onPinTable={
-                onPinTable
-                  ? (tbl, title) =>
-                      onPinTable(
-                        tbl,
-                        title,
-                        turn.sql_queries && turn.sql_queries.length > 0
-                          ? turn.sql_queries[0]
-                          : undefined
-                      )
-                  : undefined
-              }
-            />
-          )}
-
-          {/* Charts */}
+          {/* Charts (Visualisasi Grafik Utama - Ditampilkan Langsung Bersama Jawaban Inti) */}
           {turn.charts && turn.charts.length > 0 && (
             <ErrorBoundary fallbackTitle="Gagal memuat visualisasi grafik">
               <DataChart
@@ -140,6 +99,108 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
                 }
               />
             </ErrorBoundary>
+          )}
+
+          {/* Data Auditor verdict */}
+          {turn.audit_result && <AuditorGate verdict={turn.audit_result} />}
+
+          {/* Collapsible Flow Pengambilan Data (Query SQL, Tabel Mentah & Memori pgvector) */}
+          {hasDataFlow && (
+            <div className="pt-1 select-none">
+              <button
+                type="button"
+                onClick={() => setShowDataFlow((prev) => !prev)}
+                aria-expanded={showDataFlow}
+                className="group flex items-center justify-between w-full px-3.5 py-2 rounded-xl bg-[#0f1a2e]/90 hover:bg-[#14233e] text-xs font-mono text-[#94a3b8] hover:text-[#f8fafc] transition border border-white/[0.04] cursor-pointer shadow-sm"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <Database className="w-3.5 h-3.5 text-clay-400 shrink-0 group-hover:text-clay-300 transition" />
+                  <span className="font-medium text-[#cbd5e1] group-hover:text-white transition truncate">
+                    {showDataFlow ? 'Sembunyikan Flow Pengambilan Data' : 'Lihat Flow Pengambilan Data'}
+                  </span>
+                  <div className="hidden sm:flex items-center gap-1.5 shrink-0 ml-1">
+                    {turn.sql_queries && turn.sql_queries.length > 0 && (
+                      <span className="text-[10px] text-[#94a3b8] bg-[#162742] px-2 py-0.5 rounded-full font-mono">
+                        {turn.sql_queries.length} SQL
+                      </span>
+                    )}
+                    {turn.tables && turn.tables.length > 0 && (
+                      <span className="text-[10px] text-[#94a3b8] bg-[#162742] px-2 py-0.5 rounded-full font-mono">
+                        {turn.tables.length} Tabel
+                      </span>
+                    )}
+                    {turn.memories_recalled && turn.memories_recalled.length > 0 && (
+                      <span className="text-[10px] text-[#00d2ee] bg-[#0c2438] px-2 py-0.5 rounded-full font-mono flex items-center gap-1">
+                        <Brain className="w-2.5 h-2.5" />
+                        Memori pgvector
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5 text-[11px] text-[#64748b] group-hover:text-[#94a3b8] shrink-0 ml-2">
+                  <span>{showDataFlow ? 'Tutup' : 'Buka'}</span>
+                  <ChevronDown
+                    className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                      showDataFlow ? 'rotate-180' : ''
+                    }`}
+                  />
+                </div>
+              </button>
+
+              {showDataFlow && (
+                <div className="mt-2.5 space-y-3 pt-1 border-t border-white/[0.04]">
+                  {/* Recalled Long-Term Memories Badge (FR-17) */}
+                  {turn.memories_recalled && turn.memories_recalled.length > 0 && (
+                    <div className="flex flex-col gap-1.5 p-2.5 rounded-xl bg-[#0c1e33]/80 border border-[#00d2ee]/20 text-xs font-mono text-[#00d2ee] shadow-sm select-none">
+                      <div className="flex items-center gap-2">
+                        <Brain className="w-4 h-4 text-[#00d2ee] shrink-0" />
+                        <span className="font-semibold">
+                          Memori Pengalaman (pgvector): {turn.memories_recalled.length} kueri terverifikasi digunakan
+                        </span>
+                      </div>
+                      <div className="pl-6 text-[11px] text-slate-300 flex flex-col gap-1">
+                        {turn.memories_recalled.map((m, idx) => (
+                          <div key={idx} className="flex items-baseline gap-1.5">
+                            <span className="text-[#00d2ee] font-bold">›</span>
+                            <span className="truncate max-w-[420px] text-slate-200" title={m.question_text}>
+                              "{m.question_text}"
+                            </span>
+                            <span className="text-[#00d2ee]/90 text-[10px] ml-auto shrink-0 font-medium">
+                              ({Math.round((m.similarity || 0.8) * 100)}% mirip)
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* SQL Box */}
+                  {turn.sql_queries && turn.sql_queries.length > 0 && (
+                    <SQLBox queries={turn.sql_queries} />
+                  )}
+
+                  {/* Tables */}
+                  {turn.tables && turn.tables.length > 0 && (
+                    <DataTable
+                      tables={turn.tables}
+                      onPinTable={
+                        onPinTable
+                          ? (tbl, title) =>
+                              onPinTable(
+                                tbl,
+                                title,
+                                turn.sql_queries && turn.sql_queries.length > 0
+                                  ? turn.sql_queries[0]
+                                  : undefined
+                              )
+                          : undefined
+                      }
+                    />
+                  )}
+                </div>
+              )}
+            </div>
           )}
 
           {/* Latency & Token Metrics */}
