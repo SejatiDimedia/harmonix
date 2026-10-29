@@ -13,6 +13,8 @@ from pathlib import Path
 import re
 import uuid
 from typing import Any
+import datetime
+import numpy as np
 import openpyxl
 import pandas as pd
 from pydantic import BaseModel, Field
@@ -113,23 +115,120 @@ def sanitize_identifier(raw: str, max_length: int = 30, prefix: str = "col") -> 
     return cleaned[:max_length].rstrip("_")
 
 
-def sanitize_cell_value(val: Any) -> Any:
-    """Sanitize cell value to prevent CSV formula injection and normalize NaN/NaT."""
-    if val is None or pd.isna(val):
+def sanitize_cell_value(val: Any, pg_type: str = "TEXT") -> Any:
+    """Sanitize cell value to match PostgreSQL column type, prevent formula injection, and normalize NaN/NaT/datetime."""
+    if val is None:
         return None
-    if isinstance(val, str):
-        # CSV formula injection prevention: if starts with = + - @ \t \r, strip or neutralize
-        if len(val) > 0 and val[0] in ("=", "+", "-", "@", "\t", "\r"):
-            # Neutralize formula character
-            val = "'" + val
+    try:
+        if pd.isna(val):
+            return None
+    except Exception:
+        pass
+
+    pg_type_upper = (pg_type or "TEXT").upper().strip()
+
+    # 1. If target is TEXT or VARCHAR: MUST ALWAYS BE str in asyncpg!
+    if "TEXT" in pg_type_upper or "VARCHAR" in pg_type_upper or "CHAR" in pg_type_upper:
+        if isinstance(val, (datetime.datetime, datetime.date, pd.Timestamp)):
+            if isinstance(val, pd.Timestamp):
+                val = val.to_pydatetime()
+            if isinstance(val, datetime.datetime):
+                if val.hour == 0 and val.minute == 0 and val.second == 0 and val.microsecond == 0:
+                    return val.strftime("%Y-%m-%d")
+                return val.strftime("%Y-%m-%d %H:%M:%S")
+            if isinstance(val, datetime.date):
+                return val.strftime("%Y-%m-%d")
+            return str(val)
+
+        # Handle float/int formatting in string
+        if isinstance(val, (float, np.floating)):
+            if np.isnan(val) or np.isinf(val):
+                return None
+            if val.is_integer():
+                return str(int(val))
+            return str(val)
+
+        if isinstance(val, (int, np.integer)):
+            return str(val)
+
+        s_val = str(val)
+        # CSV formula injection prevention: if starts with = + - @ \t \r, neutralize
+        if len(s_val) > 0 and s_val[0] in ("=", "+", "-", "@", "\t", "\r"):
+            s_val = "'" + s_val
+        return s_val
+
+    # 2. If target is TIMESTAMP / DATE: asyncpg requires naive datetime/date objects
+    if "TIMESTAMP" in pg_type_upper:
+        if isinstance(val, pd.Timestamp):
+            if pd.isna(val):
+                return None
+            val = val.to_pydatetime()
+        if isinstance(val, datetime.datetime):
+            return val.replace(tzinfo=None)
+        if isinstance(val, datetime.date):
+            return datetime.datetime.combine(val, datetime.time.min)
+        if isinstance(val, str):
+            try:
+                return pd.to_datetime(val).to_pydatetime().replace(tzinfo=None)
+            except Exception:
+                return None
         return val
+
+    if pg_type_upper == "DATE":
+        if isinstance(val, (datetime.datetime, pd.Timestamp)):
+            return val.date()
+        if isinstance(val, datetime.date):
+            return val
+        if isinstance(val, str):
+            try:
+                return pd.to_datetime(val).date()
+            except Exception:
+                return None
+        return val
+
+    # 3. If target is integer
+    if any(k in pg_type_upper for k in ("INT", "SERIAL")):
+        if isinstance(val, (int, np.integer)):
+            return int(val)
+        if isinstance(val, (float, np.floating)):
+            if np.isnan(val) or np.isinf(val):
+                return None
+            return int(val)
+        if isinstance(val, str):
+            try:
+                return int(float(val.strip()))
+            except Exception:
+                return None
+        return int(val)
+
+    # 4. If target is float/numeric
+    if any(k in pg_type_upper for k in ("NUMERIC", "FLOAT", "DOUBLE", "REAL", "DECIMAL")):
+        if isinstance(val, (int, float, np.number)):
+            if np.isnan(val) or np.isinf(val):
+                return None
+            return float(val)
+        if isinstance(val, str):
+            try:
+                return float(val.strip())
+            except Exception:
+                return None
+        return float(val)
+
+    # 5. If target is boolean
+    if "BOOL" in pg_type_upper:
+        if isinstance(val, (bool, np.bool_)):
+            return bool(val)
+        if isinstance(val, str):
+            return val.strip().lower() in ("true", "1", "t", "y", "yes", "ya")
+        return bool(val)
+
     return val
 
 
 def infer_pg_type(series: pd.Series) -> str:
     """Infer optimal PostgreSQL column type from Pandas Series."""
     dtype_str = str(series.dtype).lower()
-    
+
     if "int" in dtype_str:
         return "BIGINT"
     if "float" in dtype_str:
@@ -137,11 +236,16 @@ def infer_pg_type(series: pd.Series) -> str:
     if "bool" in dtype_str:
         return "BOOLEAN"
     if "datetime" in dtype_str:
-        return "TIMESTAMP WITH TIME ZONE"
-    
+        return "TIMESTAMP"
+
     # Try converting non-null values to numeric or datetime
     non_null = series.dropna()
     if len(non_null) > 0:
+        # Check if first element is already a datetime or date object (e.g. from openpyxl Excel)
+        first_val = non_null.iloc[0]
+        if isinstance(first_val, (datetime.datetime, datetime.date, pd.Timestamp)):
+            return "TIMESTAMP"
+
         # Check if all non-null can be integer
         try:
             converted_int = pd.to_numeric(non_null, downcast="integer")
@@ -149,7 +253,7 @@ def infer_pg_type(series: pd.Series) -> str:
                 return "BIGINT"
         except Exception:
             pass
-        
+
         # Check if all non-null can be float
         try:
             pd.to_numeric(non_null)
@@ -262,6 +366,7 @@ async def process_file_and_create_tables(
             seen_cols: set[str] = set()
             col_definitions: list[str] = []
             clean_col_names: list[str] = []
+            col_types: dict[str, str] = {}
 
             for raw_col in df.columns:
                 c_name = sanitize_identifier(str(raw_col), max_length=30)
@@ -275,13 +380,18 @@ async def process_file_and_create_tables(
                 clean_col_names.append(c_name)
 
                 pg_type = infer_pg_type(df[raw_col])
+                col_types[c_name] = pg_type
                 col_definitions.append(f'"{c_name}" {pg_type}')
 
                 # Extract sample values (up to 3 non-null)
-                samples = [
-                    sanitize_cell_value(val)
-                    for val in df[raw_col].dropna().head(3).tolist()
-                ]
+                samples = []
+                for val in df[raw_col].dropna().head(3).tolist():
+                    s_val = sanitize_cell_value(val, pg_type)
+                    if isinstance(s_val, (datetime.datetime, datetime.date, pd.Timestamp)):
+                        samples.append(s_val.strftime("%Y-%m-%d %H:%M:%S") if isinstance(s_val, datetime.datetime) else str(s_val))
+                    else:
+                        samples.append(s_val)
+
                 col_metas.append(
                     ColumnMeta(name=c_name, data_type=pg_type, sample_values=samples)
                 )
@@ -307,7 +417,7 @@ async def process_file_and_create_tables(
                 # Clean cell values
                 clean_records = []
                 for _, row in df.iterrows():
-                    rec = {c: sanitize_cell_value(row[c]) for c in clean_col_names}
+                    rec = {c: sanitize_cell_value(row[c], col_types[c]) for c in clean_col_names}
                     clean_records.append(rec)
 
                 # Batch inserts in chunks of 500 for optimal performance
@@ -333,7 +443,7 @@ async def process_file_and_create_tables(
                     "filename": filename,
                     "sheet_name": str(raw_sheet_name),
                     "row_count": len(df),
-                    "columns": json.dumps(columns_json),
+                    "columns": json.dumps(columns_json, default=str),
                 },
             )
 

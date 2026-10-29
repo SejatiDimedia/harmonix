@@ -242,3 +242,50 @@ async def test_delete_single_uploaded_table():
         assert del_res2.status_code == 404
 
     await cleanup_session_uploaded_tables(test_session)
+
+
+@pytest.mark.asyncio
+async def test_excel_with_datetime_and_timestamps():
+    """Verify Excel files containing datetime, date, and mixed timestamp columns upload without asyncpg errors."""
+    import datetime
+    transport = ASGITransport(app=app)
+    test_session = "sess_excel_datetime_test"
+
+    excel_buffer = io.BytesIO()
+    with pd.ExcelWriter(excel_buffer, engine="openpyxl") as writer:
+        df = pd.DataFrame({
+            "id_transaksi": ["TRX-001", "TRX-002", "TRX-003"],
+            "tanggal": [
+                datetime.datetime(2025, 7, 31, 0, 0),
+                datetime.date(2025, 2, 12),
+                pd.Timestamp("2025-08-15 14:30:00"),
+            ],
+            "id_pelanggan": ["C5257", "C2448", "C1613"],
+            "sku": ["SKU-007", "SKU-027", "SKU-007"],
+            "qty": [1, 2, 3],
+            "harga_satuan": [3055000, 168000, 3055000],
+            "diskon_persen": [5.0, 0.0, 10.0],
+            "status": ["Selesai", "Selesai", "Batal"],
+        })
+        df.to_excel(writer, sheet_name="data_transaksi", index=False)
+    excel_bytes = excel_buffer.getvalue()
+
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        upload_res = await client.post(
+            f"/v1/sessions/{test_session}/upload",
+            files=[("files", ("Dataset_Uji_Data_Analyst.xlsx", excel_bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))],
+        )
+        assert upload_res.status_code == 200, f"Upload failed: {upload_res.text}"
+        data = upload_res.json()
+        assert data["total_tables_created"] == 1
+        tname = data["tables"][0]["table_name"]
+
+        # Verify physical table can be queried
+        async with get_db_session() as session:
+            res = await session.execute(text(f'SELECT id_transaksi, tanggal, qty, harga_satuan FROM analytics."{tname}" ORDER BY qty ASC;'))
+            rows = res.fetchall()
+            assert len(rows) == 3
+            assert rows[0][0] == "TRX-001"
+            assert rows[0][2] == 1
+
+    await cleanup_session_uploaded_tables(test_session)
