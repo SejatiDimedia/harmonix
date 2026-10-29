@@ -30,7 +30,7 @@ from src.agent.prompts import BASE_ANALYST_SYSTEM_PROMPT, build_analyst_system_p
 from src.agent.state import get_session_history, save_task_checkpoint
 from src.agent.suggestions import get_smart_suggestions
 from src.config import settings
-from src.llm.provider import BaseLLMProvider, ToolCall, get_llm_provider
+from src.llm.provider import BaseLLMProvider, MockLLMProvider, ToolCall, get_llm_provider
 from src.observability.models import SpanStatus, SpanType
 from src.observability.tracer import AgentTracer
 from src.rag.long_term_memory import retrieve_relevant_memories, store_successful_query
@@ -62,7 +62,10 @@ class ManualAgentLoop:
         auditor: DataAuditorAgent | None = None,
     ):
         self.llm = llm or get_llm_provider()
-        self.auditor = auditor or DataAuditorAgent()
+        if isinstance(self.llm, MockLLMProvider) and auditor is None:
+            self.auditor = DataAuditorAgent(llm=MockLLMProvider())
+        else:
+            self.auditor = auditor or DataAuditorAgent()
         tool_instances = tools or [
             SearchGlossaryTool(),
             GetSchemaTool(),

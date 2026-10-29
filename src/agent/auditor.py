@@ -5,6 +5,7 @@ checking SQL logic soundness, data faithfulness / anti-hallucination, and busine
 Supports zero-cost model diversity (Groq Llama-3.3-70B / Gemini Flash / DeepSeek R1 / Mock).
 """
 
+import asyncio
 import json
 import logging
 import re
@@ -34,6 +35,13 @@ def get_auditor_provider() -> BaseLLMProvider:
     if provider_choice == "auto":
         # Model Diversity: Pick a distinct high-reasoning free tier model if keys available
         primary_provider = settings.llm_provider.lower().strip()
+
+        # If primary is 9router, use 9router for reliable local inference
+        if primary_provider == "9router":
+            try:
+                return create_single_provider("9router", model_override="ag/gemini-3.8-flash")
+            except Exception as e:
+                logger.warning("Failed to initialize 9router for auditor: %s", e)
 
         # 1. Prefer Groq Llama-3.3-70B if real API key is present and primary is not Groq
         if settings.groq_api_key and not settings.groq_api_key.startswith("gsk_abc") and "123456789" not in settings.groq_api_key and primary_provider != "groq":
@@ -225,7 +233,10 @@ class DataAuditorAgent:
         ]
 
         try:
-            llm_response = await self.llm.chat(messages=messages, temperature=0.0)
+            llm_response = await asyncio.wait_for(
+                self.llm.chat(messages=messages, temperature=0.0),
+                timeout=15.0,
+            )
             raw_content = llm_response.content or ""
             parsed = self._parse_audit_json(raw_content)
 

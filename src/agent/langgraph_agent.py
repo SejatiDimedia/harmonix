@@ -29,7 +29,7 @@ from src.agent.prompts import BASE_ANALYST_SYSTEM_PROMPT, build_analyst_system_p
 from src.agent.state import save_task_checkpoint
 from src.agent.suggestions import get_smart_suggestions
 from src.config import settings
-from src.llm.provider import BaseLLMProvider, ToolCall, get_llm_provider
+from src.llm.provider import BaseLLMProvider, MockLLMProvider, ToolCall, get_llm_provider
 from src.tools.base import BaseTool
 from src.tools.chart import MakeChartTool
 from src.tools.database import GetSchemaTool, RunSQLTool
@@ -80,7 +80,10 @@ class LangGraphAgent:
         auditor: DataAuditorAgent | None = None,
     ):
         self.llm = llm or get_llm_provider()
-        self.auditor = auditor or DataAuditorAgent()
+        if isinstance(self.llm, MockLLMProvider) and auditor is None:
+            self.auditor = DataAuditorAgent(llm=MockLLMProvider())
+        else:
+            self.auditor = auditor or DataAuditorAgent()
         tool_instances = tools or [
             SearchGlossaryTool(),
             GetSchemaTool(),

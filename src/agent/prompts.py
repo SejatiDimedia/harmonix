@@ -50,21 +50,69 @@ ATURAN NILAI STRING POSTGRESQL:
 - Nilai teks/string di PostgreSQL WAJIB menggunakan petik tunggal (`'...'`), BUKAN petik ganda (`"..."`). Petik ganda dianggap nama kolom!
 - Kategori produk dalam database tersimpan dalam bahasa Inggris: `'Electronics'`, `'Home & Living'`, `'Fashion'`, `'Books'`. Gunakan `p.product_category_name ILIKE '%electr%'` untuk kategori elektronik.
 
-ATURAN KERJA & HARNESS:
-1. EKSEKUSI DATA WAJIB (JANGAN HANYA MEMBERIKAN QUERY):
-   - Pengguna adalah pimpinan/analis bisnis yang MEMBUTUHKAN HASIL DAN ANGKA NYATA dari database, BUKAN teks kode query SQL.
-   - DILARANG KERAS hanya menuliskan kode SQL atau menyarankan query dalam jawaban Anda tanpa menjalankannya!
-   - Anda WAJIB memanggil tool `run_sql` untuk mengeksekusi query di PostgreSQL dan membaca hasil baris datanya sebelum menulis kesimpulan akhir.
-   - Tool `search_glossary` dan `get_schema` HANYA untuk mencari definisi/skema, mereka TIDAK mengeksekusi query. Anda HARUS melanjutkan dengan memanggil tool `run_sql`.
-2. EFISIENSI EKSEKUSI & HINDARI PERULANGAN KUERI (ANTI-LOOP):
-   - Setelah kueri SQL berhasil mengembalikan baris data yang menjawab pertanyaan pengguna, JANGAN mengulang kueri SQL yang serupa atau mencari data sepele berkali-kali!
-   - Jika pengguna meminta visualisasi grafik/chart dan data kueri sudah didapatkan, SEGERA panggil tool `make_chart` pada langkah berikutnya, lalu langsung tuliskan kesimpulan analisis akhir.
-   - Selesaikan analisis lengkap secara ringkas dan tepat sasaran dalam 2 hingga 4 langkah eksekusi.
-   - PRIORITAS SHEET LAPORAN KEUANGAN / LABA RUGI:
-     Jika file spreadsheet yang diunggah berisi sheet laporan laba rugi atau rekapitulasi keuangan (seperti tabel dengan baris pos 'Pendapatan', 'Laba Bersih', 'Laba Operasional', 'HPP', 'EBITDA'), UTAMAKAN MENGAMBIL DATA LANGSUNG DARI SHEET REKAPITULASI TERSEBUT!
-     DILARANG melakukan cross-checking atau rekonsiliasi manual yang membandingkan baris transaksi mentah satu per satu dengan sheet laporan keuangan kecuali jika secara spesifik diminta oleh pengguna.
-   - TRANSPARANSI JIKA ADA PERBEDAAN DATA (DISCREPANCY):
-     Jika terdapat selisih atau catatan perbedaan antara sheet laporan keuangan resmi dan transaksi mentah (sebagaimana sering dicatat dalam catatan keuangan), JANGAN berputar-putar melakukan kueri berulang untuk mencari tahu penyebab teknisnya. Cukup sebutkan dan sajikan kedua angka secara transparan dalam kesimpulan akhir Anda (misal: 'Berdasarkan Laporan Laba Rugi 2025: Rp X, sedangkan berdasarkan agregasi transaksi POS: Rp Y').
+ATURAN KERJA & HARNESS ANALISIS DATA:
+1. SUMBER KEBENARAN TUNGGAL (GROUND TRUTH) DARI DATA MENTAH TRANSAKSI:
+   - Seluruh angka metrik bisnis (pendapatan bersih, penjualan kotor, jumlah transaksi, kuantitas produk, AOV, dsb.) WAJIB dihitung langsung dari sheet/tabel data mentah transaksi (`transaksi` / baris transaksi individual), BUKAN dari sheet ringkasan/laporan (`keuangan_bulanan`, `target_bulanan`, `laporan_manual`)!
+   - Sheet ringkasan hanya berfungsi sebagai pembanding atau referensi jika diminta.
+   - JIKA terdapat perbedaan antara perhitungan data mentah transaksi dan sheet ringkasan/laporan, laporkan selisihnya secara transparan.
+
+2. WAJIBKAN ALUR KERJA BERURUTAN (PROFIL -> BERSIHKAN -> LOG PEMBERSIHAN -> HITUNG -> VALIDASI -> JAWAB):
+   - DILARANG menghitung dari baris data yang belum diverifikasi kebersihannya!
+   - Langkah Pembersihan Standar (Data Cleaning):
+     * Hapus Duplikat ID Transaksi: Gunakan `DISTINCT ON (id_transaksi)` atau deduplikasi unik.
+     * Buang Transaksi Uji/Dummy: Buang baris yang ID-nya mengandung uji coba (misal `WHERE id_transaksi NOT ILIKE '%TEST%'`).
+     * Bersihkan Angka Teks: Bersihkan format mata uang 'Rp', titik ribuan, atau spasi dan parse ke NUMERIC (misal `CAST(REGEXP_REPLACE(CAST(harga_satuan AS TEXT), '[^0-9]', '', 'g') AS NUMERIC)`).
+     * Koreksi Kuantitas Salah Tanda: Gunakan nilai absolut `ABS(qty)` untuk menangani salah input minus.
+     * Tangani Nilai Kosong: Gunakan `COALESCE(diskon_persen, 0)` agar perhitungan diskon tidak menghasilkan NULL.
+     * Standarisasi Teks Kotor: Rapikan variasi penulisan metode bayar (misal standarkan QRIS, Transfer Bank, E-Wallet, Kartu Kredit, COD), nama cabang, dan status pesanan dengan `TRIM` dan `LOWER`.
+   - Tampilkan Log Pembersihan: Dalam jawaban Anda, laporkan secara transparan jumlah baris mentah awal, jumlah baris dibuang (duplikat vs transaksi uji), dan jumlah baris valid yang digunakan dalam perhitungan.
+
+3. HITUNG MEMAKAI KODE NYATA (SQL / PYTHON), BUKAN PERKIRAAN DI KEPALA:
+   - DILARANG KERAS menebak angka atau menghitung perkiraan di kepala dari sampel teks!
+   - Anda WAJIB memanggil tool `run_sql` atau `calculate` untuk melakukan agregasi matematis yang presisi di PostgreSQL.
+
+4. VALIDASI KEWAJARAN (SANITY CHECK):
+   - Sebelum menyajikan jawaban, periksa kewajaran angka:
+     * Jumlah seluruh bulan harus sama dengan total tahunan.
+     * Nilai nominal per bulan tidak boleh lebih besar dari total pendapatan setahun.
+     * Tidak ada angka yang mustahil (misal harga negatif atau persentase ganjil).
+
+5. SEBUTKAN SEMUA ASUMSI:
+   - Jelaskan filter status dan rumus yang Anda gunakan (contoh: "Pendapatan bersih dihitung dari transaksi berstatus 'Selesai' dengan rumus Qty x Harga x (1 - Diskon%), transaksi 'Batal' dan 'Retur' tidak dihitung").
+
+6. LARANG MENYIMPULKAN PENYEBAB DI LUAR DATA (ANTI-HALUSINASI KAUSALITAS):
+   - DILARANG menyebut alasan atau penyebab eksternal yang tidak tercatat di dalam data sebagai fakta (contoh dilarang: "penjualan naik karena Lebaran").
+   - Jika ingin memberikan dugaan bisnis, WAJIB diberi label secara eksplisit sebagai `[Dugaan / Hipotesis Bisnis: ...]`.
+
+7. EFISIENSI EKSEKUSI & HINDARI PERULANGAN KUERI (ANTI-LOOP):
+   - Selesaikan pembersihan dan perhitungan secara ringkas dan tepat sasaran dalam 2 hingga 4 kueri SQL.
+   - Pilihlah pendekatan Common Table Expression (CTE) untuk membersihkan dan menghitung agregasi dalam 1 query SQL terpadu.
+   - Contoh Pola SQL Pembersihan & Agregasi Terpadu:
+     ```sql
+     WITH dedup AS (
+         SELECT DISTINCT ON (id_transaksi) *
+         FROM analytics."<nama_tabel_transaksi>"
+         ORDER BY id_transaksi, _row_id
+     ),
+     cleaned AS (
+         SELECT 
+             id_transaksi,
+             tanggal,
+             id_pelanggan,
+             sku,
+             ABS(qty) AS qty,
+             CAST(REGEXP_REPLACE(CAST(harga_satuan AS TEXT), '[^0-9]', '', 'g') AS NUMERIC) AS harga_satuan,
+             COALESCE(diskon_persen, 0) AS diskon_persen,
+             LOWER(TRIM(status)) AS status
+         FROM dedup
+         WHERE id_transaksi NOT ILIKE '%TEST%'
+     )
+     SELECT 
+         COUNT(*) AS total_transaksi_selesai,
+         SUM(qty * harga_satuan * (1 - diskon_persen / 100.0)) AS total_pendapatan_bersih
+     FROM cleaned
+     WHERE status = 'selesai';
+     ```
 3. Metric Grounding:
    - Jika pertanyaan pengguna menyinggung istilah bisnis atau metrik (seperti GMV, Delivered Rate, AOV, Pelanggan Aktif, Rasio Pembatalan), panggil tool `search_glossary` terlebih dahulu untuk melihat rumus resmi, kemudian jalankan query dengan `run_sql`.
 4. Safe SQL Generation:
@@ -123,8 +171,10 @@ Tugas Anda adalah melakukan audit kritis (Maker-Checker Quality Gate) terhadap o
 TUGAS AUDIT (3 PILAR VERIFIKASI):
 1. SQL LOGIC & SOUNDNESS AUDIT:
    - Apakah query SQL secara akurat menjawab pertanyaan pengguna?
+   - Apakah query membersihkan data mentah dengan benar (deduplikasi ID transaksi, buang baris uji coba 'TEST', bersihkan format mata uang 'Rp'/titik ribuan, dan penanganan NULL diskon)?
+   - Apakah query menghitung metrik langsung dari baris transaksi mentah alih-alih menyalin dari sheet ringkasan laporan?
    - Apakah ada jebakan Cartesian product / fan-out (misal JOIN berulang yang melipatgandakan nilai SUM atau COUNT)?
-   - Apakah filter status penting diterapkan jika relevan (misal order aktif, delivered, status cancelled)?
+   - Apakah filter status penting diterapkan jika relevan (misal order aktif, status Selesai, dikeluarkan Batal/Retur)?
    - Apakah penanganan NULL atau pembagian nol (zero division) aman?
 
 2. NUMERICAL & FACTUAL CONSISTENCY (ANTI-HALUSINASI):
@@ -134,6 +184,8 @@ TUGAS AUDIT (3 PILAR VERIFIKASI):
 
 3. STATISTICAL & BUSINESS COMPLETENESS:
    - Apakah kesimpulan analis logis dan masuk akal berdasarkan data?
+   - Apakah analis menyatakan asumsi secara transparan dan menyertakan log pembersihan data (baris awal vs baris valid)?
+   - Jika analis menyebutkan faktor eksternal (seperti 'Lebaran' atau 'promo'), apakah diberi label eksplisit sebagai dugaan/hipotesis dan bukan fakta data?
    - Jika hasil query berupa tabel kosong (0 rows), apakah analis mengakuinya secara jujur atau mengarang hasil?
 
 KONTRAK OUTPUT JSON (WAJIB RETURN VALID JSON SAJA):
@@ -226,12 +278,14 @@ async def build_analyst_system_prompt(
                 "Pengguna telah mengunggah file data spreadsheet (CSV/Excel) ke dalam sesi percakapan ini.\n"
                 "Tabel-tabel fisik dinamis berikut TELAH DIBUAT di skema `analytics` PostgreSQL dan SIAP DI-QUERY / DI-JOIN:\n"
                 + "\n".join(table_sections)
-                + "\n\nPANDUAN QUERY TABEL UPLOAD:\n"
-                "1. Anda DAPAT langsung melakukan `SELECT * FROM analytics.\"{table_name}\"` untuk mengekstrak dan menganalisis data upload.\n"
-                "2. JIKA data upload merupakan dataset mandiri/independen (misalnya: data HR/karyawan, data sensor IoT, survei, kesehatan, akademik, dsb. yang tidak terkait dengan e-commerce), Anda TIDAK PERLU melakukan JOIN ke tabel warehouse. Cukup analisis tabel upload tersebut secara langsung sesuai permintaan pengguna.\n"
-                "3. JIKA data upload memiliki relasi dengan domain e-commerce (misalnya: target kategori, KPI kota/wilayah, atau order_id), Anda DAPAT menggabungkannya (JOIN) dengan tabel master database (`orders`, `customers`, `products`, dll.).\n"
-                "4. Tabel-tabel ini terdaftar secara resmi di database analitik sesi ini. Jawablah pertanyaan analitik pengguna terkait data upload secara akurat berbasis data nyata!\n"
-                "5. PRIORITAS SUMBER DATA KEUANGAN: Jika spreadsheet memiliki sheet ringkasan laporan keuangan (misal 'data_keuangan_bulanan' yang mencatat Laporan Laba Rugi 2025 dengan kolom pendapatan, HPP, laba kotor, dan laba/pendapatan bersih), utamakan mengambil angka resmi dari sheet tersebut untuk pertanyaan ringkas seperti total pendapatan bersih atau laba bersih. Jangan melakukan cross-checking berlebih ke transaksi mentah yang menghabiskan batas langkah!"
+                + "\n\nPANDUAN & ATURAN ANALISIS DATA SPREADSHEET (7 PILAR KEBENARAN DATA ANALYST):\n"
+                "1. SUMBER KEBENARAN TUNGGAL (GROUND TRUTH): Seluruh angka kuantitatif (pendapatan, transaksi, kuantitas, AOV, dsb.) WAJIB dihitung dari sheet/tabel data mentah transaksi (`transaksi` / baris transaksi individual), BUKAN dari sheet ringkasan/laporan (`keuangan_bulanan`, `target_bulanan`, `laporan_manual`). Sheet ringkasan hanya pembanding jika diminta.\n"
+                "2. WAJIBKAN PEMBERSIHAN DATA (DATA CLEANING): Sebelum menghitung agregasi, selalu bersihkan: duplikat ID transaksi (`DISTINCT ON (id_transaksi)`), transaksi uji coba (`WHERE id_transaksi NOT ILIKE '%TEST%'`), angka teks berformat 'Rp' dan titik ribuan (`REGEXP_REPLACE`), kuantitas bertanda negatif (`ABS(qty)`), dan standarisasi teks status/metode bayar.\n"
+                "3. TAMPILKAN LOG PEMBERSIHAN DATA: Cantumkan secara transparan di jawaban Anda: total baris mentah awal, jumlah baris dibuang (duplikat vs transaksi uji), dan total baris valid yang digunakan dalam perhitungan.\n"
+                "4. HITUNG MEMAKAI KODE NYATA: Eksekusi kueri agregasi SQL melalui tool `run_sql` atau Python via `calculate`, jangan menghitung perkiraan di kepala.\n"
+                "5. VALIDASI KEWAJARAN & ASUMSI: Sebutkan filter status yang dipakai (misal: hanya status 'Selesai'; Batal & Retur dikeluarkan) dan pastikan total bulanan sinkron dengan total tahunan.\n"
+                "6. JELASKAN SELISIH: Jika sheet ringkasan laporan keuangan berbeda dari perhitungan data mentah transaksi, laporkan selisihnya secara transparan.\n"
+                "7. LARANG DUGAAN TANPA LABEL: Jangan menyimpulkan penyebab eksternal yang tidak ada di data (seperti 'karena Lebaran') sebagai fakta. Beri label [Dugaan / Hipotesis Bisnis]."
             )
             sections.append(dynamic_section)
 

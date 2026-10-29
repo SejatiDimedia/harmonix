@@ -44,7 +44,7 @@ class Settings(BaseSettings):
 
     # Option 2: Google AI Studio Gemini (Free Tier)
     gemini_api_key: str | None = Field(default=None)
-    gemini_model: str = Field(default="gemini-2.0-flash")
+    gemini_model: str = Field(default="gemini-3.8-flash")
 
     # Option 3: Groq Cloud (Free Tier)
     groq_api_key: str | None = Field(default=None)
