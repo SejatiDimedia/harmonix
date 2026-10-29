@@ -34,11 +34,11 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-lg bg-[#0f1a2e] border border-[#1e3557] rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+        className="relative w-full max-w-lg bg-[#0f1a2e] border border-white/[0.08] rounded-2xl shadow-2xl overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="px-5 py-4 border-b border-[#1e3557] flex items-center justify-between">
+        <div className="px-5 py-4 border-b border-white/[0.04] flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="p-2 rounded-xl bg-clay-500/10 text-clay-400">
               <Activity className="w-5 h-5" />
@@ -65,7 +65,7 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({
         {/* Content */}
         <div className="p-5 space-y-4">
           {metrics?.drift_detected && (metrics.drift_reasons || []).length > 0 && (
-            <div className="p-3.5 rounded-xl bg-[#1a161f] border border-amber-500/30 text-xs text-amber-200 flex items-start gap-2.5 shadow-sm">
+            <div className="p-3.5 rounded-xl bg-[#1a161f] text-xs text-amber-200 flex items-start gap-2.5 shadow-sm">
               <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
               <div>
                 <span className="font-semibold font-mono">Peringatan Anomali Drift:</span>
@@ -75,7 +75,7 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({
           )}
 
           <div className="grid grid-cols-2 gap-3">
-            <div className="p-4 rounded-xl bg-[#14223b] border border-[#1e3557]">
+            <div className="p-4 rounded-xl bg-[#14223b] shadow-sm">
               <span className="text-[10px] font-mono uppercase text-[#94a3b8]">
                 Total Permintaan
               </span>
@@ -84,7 +84,7 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({
               </div>
             </div>
 
-            <div className="p-4 rounded-xl bg-[#14223b] border border-[#1e3557]">
+            <div className="p-4 rounded-xl bg-[#14223b] shadow-sm">
               <span className="text-[10px] font-mono uppercase text-[#94a3b8]">
                 Success Rate
               </span>
@@ -93,7 +93,7 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({
               </div>
             </div>
 
-            <div className="p-4 rounded-xl bg-[#14223b] border border-[#1e3557]">
+            <div className="p-4 rounded-xl bg-[#14223b] shadow-sm">
               <span className="text-[10px] font-mono uppercase text-[#94a3b8]">
                 Latensi (p50 / p95)
               </span>
@@ -104,7 +104,7 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({
               </div>
             </div>
 
-            <div className="p-4 rounded-xl bg-[#14223b] border border-[#1e3557]">
+            <div className="p-4 rounded-xl bg-[#14223b] shadow-sm">
               <span className="text-[10px] font-mono uppercase text-[#94a3b8]">
                 Total Token Consumed
               </span>

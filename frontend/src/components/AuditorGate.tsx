@@ -16,26 +16,26 @@ export const AuditorGate: React.FC<AuditorGateProps> = ({ verdict }) => {
   const critique = verdict.critique || '';
   const issues = verdict.issues || [];
 
-  let badgeBg = 'bg-[#0c1e33] border-cyan-500/30 text-cyan-200';
+  let badgeBg = 'bg-[#0c1e33] text-cyan-200';
   let Icon = ShieldCheck;
   let iconColor = 'text-[#00d2ee]';
-  let confidenceBg = 'bg-cyan-950/60 text-cyan-300 border-cyan-800/40';
+  let confidenceBg = 'bg-cyan-950/60 text-cyan-300';
 
   if (status === 'flagged') {
-    badgeBg = 'bg-[#1a1222] border-rose-500/30 text-rose-200';
+    badgeBg = 'bg-[#1a1222] text-rose-200';
     Icon = AlertOctagon;
     iconColor = 'text-rose-400';
-    confidenceBg = 'bg-rose-950/60 text-rose-300 border-rose-800/40';
+    confidenceBg = 'bg-rose-950/60 text-rose-300';
   } else if (status === 'warning') {
-    badgeBg = 'bg-[#1a161f] border-amber-500/30 text-amber-200';
+    badgeBg = 'bg-[#1a161f] text-amber-200';
     Icon = AlertTriangle;
     iconColor = 'text-amber-400';
-    confidenceBg = 'bg-amber-950/60 text-amber-300 border-amber-800/40';
+    confidenceBg = 'bg-amber-950/60 text-amber-300';
   }
 
   return (
-    <div className="mt-3 pt-2.5 border-t border-[#1e3557] text-xs">
-      <div className={`rounded-xl p-3 border transition-all shadow-sm ${badgeBg}`}>
+    <div className="mt-3 pt-2.5 border-t border-white/[0.06] text-xs">
+      <div className={`rounded-xl p-3 transition-all shadow-sm ${badgeBg}`}>
         <button
           type="button"
           aria-expanded={isExpanded}
@@ -46,7 +46,7 @@ export const AuditorGate: React.FC<AuditorGateProps> = ({ verdict }) => {
           <div className="flex items-center gap-2 text-xs">
             <Icon className={`w-4 h-4 ${iconColor} shrink-0`} />
             <span className="font-semibold text-[#f8fafc] font-sans tracking-tight">{badgeText}</span>
-            <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono border ${confidenceBg}`}>
+            <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono ${confidenceBg}`}>
               {confidence}%
             </span>
           </div>
@@ -73,10 +73,10 @@ export const AuditorGate: React.FC<AuditorGateProps> = ({ verdict }) => {
                 {issues.map((iss, idx) => (
                   <div
                     key={idx}
-                    className="bg-[#0b1322] rounded-lg p-2.5 border border-[#1e3557]"
+                    className="bg-[#0b1322] rounded-lg p-2.5"
                   >
                     <div className="flex items-center gap-1.5">
-                      <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold uppercase bg-rose-950/60 border border-rose-800/40 text-rose-300">
+                      <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold uppercase bg-rose-950/60 text-rose-300">
                         {iss.severity || 'medium'}
                       </span>
                       <span className="font-medium font-mono text-[10px] text-[#f8fafc]">

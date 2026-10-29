@@ -153,10 +153,10 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
         </div>
 
         {/* Dashboard Canvas Header (Hidden on print) */}
-        <div className="no-print flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl bg-[#0f1a2e] border border-[#1e3557] shadow-sm">
+        <div className="no-print flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl bg-[#0f1a2e] border border-white/[0.06] shadow-sm">
           <div className="space-y-1">
             <div className="flex items-center gap-2.5">
-              <div className="p-2 rounded-xl bg-clay-500/15 border border-clay-500/30 text-clay-400">
+              <div className="p-2 rounded-xl bg-clay-500/15 text-clay-400">
                 <LayoutDashboard className="w-5 h-5" />
               </div>
               <h1 className="text-lg font-semibold text-[#f8fafc] font-sans">
@@ -173,7 +173,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
               type="button"
               onClick={triggerExecutivePDFPrint}
               disabled={widgets.length === 0}
-              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#14223b] hover:bg-[#182a47] disabled:opacity-40 disabled:hover:bg-[#14223b] text-[#94a3b8] hover:text-[#f8fafc] border border-[#1e3557] hover:border-[#25416c] text-xs font-medium transition shadow-sm cursor-pointer disabled:cursor-not-allowed"
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#14223b] hover:bg-[#182a47] disabled:opacity-40 disabled:hover:bg-[#14223b] text-[#94a3b8] hover:text-[#f8fafc] text-xs font-medium transition shadow-sm cursor-pointer disabled:cursor-not-allowed"
               aria-label="Ekspor dashboard sebagai dokumen laporan PDF"
               title="Cetak atau simpan dashboard sebagai dokumen laporan PDF"
             >
@@ -197,8 +197,8 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
 
         {/* Empty State */}
         {widgets.length === 0 && !isLoading && (
-          <div className="py-16 text-center space-y-5 rounded-2xl border border-dashed border-[#1e3557] bg-[#0b1526] p-8 no-print">
-            <div className="w-12 h-12 rounded-2xl bg-[#14223b] border border-[#1e3557] flex items-center justify-center text-[#94a3b8] mx-auto">
+          <div className="py-16 text-center space-y-5 rounded-2xl border border-dashed border-white/[0.1] bg-[#0b1526] p-8 no-print">
+            <div className="w-12 h-12 rounded-2xl bg-[#14223b] flex items-center justify-center text-[#94a3b8] mx-auto shadow-sm">
               <Pin className="w-6 h-6" />
             </div>
             <div className="space-y-2 max-w-md mx-auto">
@@ -213,7 +213,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
               <button
                 type="button"
                 onClick={onSwitchToChat}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#14223b] hover:bg-[#182a47] text-xs font-medium text-clay-400 border border-[#1e3557] hover:border-clay-500/50 transition cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#14223b] hover:bg-[#182a47] text-xs font-medium text-clay-400 transition cursor-pointer shadow-sm"
               >
                 <MessageSquare className="w-3.5 h-3.5" />
                 <span>Buka Tab Percakapan</span>
@@ -234,16 +234,16 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                 w.widget_type === 'chart'
                   ? getChartDescriptiveTitle(w.chart_spec, w.title)
                   : w.title && w.title.toLowerCase() !== 'table'
-                  ? w.title
-                  : `Tabel Data (${w.table_data?.rows?.length || 0} baris)`;
+                    ? w.title
+                    : `Tabel Data (${w.table_data?.rows?.length || 0} baris)`;
 
               return (
                 <div
                   key={w.widget_id}
-                  className="print-widget-card rounded-2xl bg-[#0f1a2e] print:bg-white border border-[#1e3557] print:border-gray-300 hover:border-[#25416c] p-5 shadow-sm print:shadow-none flex flex-col justify-between transition space-y-4 print:space-y-3 print:rounded-xl print:p-0 print:overflow-hidden"
+                  className="print-widget-card rounded-2xl bg-[#0f1a2e] print:bg-white border border-white/[0.06] print:border-gray-300 p-5 shadow-md shadow-black/20 flex flex-col justify-between transition space-y-4 print:space-y-3 print:rounded-xl print:p-0 print:overflow-hidden"
                 >
                   {/* Card Header (Corporate Styled on Print) */}
-                  <div className="flex items-start justify-between gap-3 pb-3 border-b border-[#1e3557] print:bg-gray-50/80 print:p-4 print:pb-3 print:border-b print:border-gray-200">
+                  <div className="flex items-start justify-between gap-3 pb-3 border-b border-white/[0.04] print:bg-gray-50/80 print:p-4 print:pb-3 print:border-b print:border-gray-200">
                     <div className="space-y-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="no-print w-2 h-2 rounded-full bg-clay-500 shrink-0" />
@@ -255,7 +255,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                         </h2>
                       </div>
                       <div className="flex items-center gap-2 text-[10px] text-[#94a3b8] font-mono print:text-gray-500">
-                        <span className="uppercase px-2 py-0.5 rounded bg-[#14223b] text-clay-400 border border-[#1e3557] print:bg-white print:text-gray-700 print:border-gray-300 print:font-semibold print:text-[9px]">
+                        <span className="uppercase px-2 py-0.5 rounded bg-[#14223b] text-clay-400 print:bg-white print:text-gray-700 print:border-gray-300 print:font-semibold print:text-[9px]">
                           {w.widget_type === 'chart'
                             ? w.chart_spec?.chart_type
                               ? `Grafik ${w.chart_spec.chart_type.toUpperCase()}`
@@ -284,7 +284,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                         <button
                           type="button"
                           onClick={() => exportTableToCSV(w.table_data!, displayTitle)}
-                          className="flex items-center gap-1 text-[11px] font-mono px-2 py-1 rounded bg-[#14223b] hover:bg-[#182a47] text-[#94a3b8] hover:text-[#f8fafc] border border-[#1e3557] hover:border-[#25416c] transition cursor-pointer"
+                          className="flex items-center gap-1 text-[11px] font-mono px-2 py-1 rounded bg-[#14223b] hover:bg-[#182a47] text-[#94a3b8] hover:text-[#f8fafc] transition cursor-pointer shadow-sm"
                           aria-label={`Unduh data ${displayTitle} sebagai CSV`}
                           title="Unduh data tabel sebagai CSV"
                         >
@@ -298,7 +298,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                         <button
                           type="button"
                           onClick={() => handleExportChartData(w.chart_spec!, displayTitle)}
-                          className="flex items-center gap-1 text-[11px] font-mono px-2 py-1 rounded bg-[#14223b] hover:bg-[#182a47] text-[#94a3b8] hover:text-[#f8fafc] border border-[#1e3557] hover:border-[#25416c] transition cursor-pointer"
+                          className="flex items-center gap-1 text-[11px] font-mono px-2 py-1 rounded bg-[#14223b] hover:bg-[#182a47] text-[#94a3b8] hover:text-[#f8fafc] transition cursor-pointer shadow-sm"
                           aria-label={`Unduh data ${displayTitle} sebagai CSV`}
                           title="Unduh data grafik sebagai CSV"
                         >
@@ -333,7 +333,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                     )}
 
                     {isTable && (
-                      <div className="overflow-x-auto rounded-xl border border-[#1e3557] bg-[#0b1322] w-full print:bg-white print:border print:border-gray-200 print:rounded-lg print:overflow-hidden">
+                      <div className="overflow-x-auto rounded-xl border border-white/[0.06] bg-[#0b1322] w-full print:bg-white print:border print:border-gray-200 print:rounded-lg print:overflow-hidden">
                         <table className="w-full text-xs text-left border-collapse table-auto print:bg-white">
                           <thead>
                             <tr className="print:bg-gray-100">
@@ -341,7 +341,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                                 <th
                                   key={cIdx}
                                   scope="col"
-                                  className="p-2.5 text-[10px] font-mono uppercase bg-[#14223b] print:bg-gray-100 text-[#94a3b8] print:text-gray-900 border-b border-[#1e3557] print:border-gray-300 print:font-bold"
+                                  className="p-2.5 text-[10px] font-mono uppercase bg-[#14223b] print:bg-gray-100 text-[#94a3b8] print:text-gray-900 border-b border-white/[0.04] print:border-gray-300 print:font-bold"
                                 >
                                   {col}
                                 </th>
@@ -352,14 +352,13 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                             {(w.table_data?.rows || []).slice(0, 25).map((row, rIdx) => (
                               <tr
                                 key={rIdx}
-                                className={`${
-                                  rIdx % 2 === 0 ? 'bg-[#0f1a2e]' : 'bg-[#111e33]'
-                                } print:bg-white print:even:bg-gray-50/70 hover:bg-[#14223b] transition`}
+                                className={`${rIdx % 2 === 0 ? 'bg-[#0f1a2e]' : 'bg-[#111e33]'
+                                  } print:bg-white print:even:bg-gray-50/70 hover:bg-[#14223b] transition`}
                               >
                                 {row.map((val, cellIdx) => (
                                   <td
                                     key={cellIdx}
-                                    className="p-2.5 border-b border-[#162742] print:border-gray-200 text-[#f8fafc] print:text-gray-800 font-mono text-[11px] print:bg-transparent"
+                                    className="p-2.5 border-b border-white/[0.03] print:border-gray-200 text-[#f8fafc] print:text-gray-800 font-mono text-[11px] print:bg-transparent"
                                   >
                                     {val !== null && val !== undefined ? String(val) : '-'}
                                   </td>
@@ -385,7 +384,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
 
                   {/* Card Footer: Collapsible SQL on screen only */}
                   {w.sql_query && (
-                    <div className="pt-2 border-t border-[#1e3557] no-print">
+                    <div className="pt-2 border-t border-white/[0.04] no-print">
                       <button
                         type="button"
                         onClick={() => toggleSql(w.widget_id)}
@@ -397,7 +396,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                       </button>
 
                       {isSqlExpanded && (
-                        <div className="mt-2 p-2.5 rounded-lg bg-[#0b1322] border border-[#1e3557] text-[11px] font-mono text-clay-300 overflow-x-auto whitespace-pre">
+                        <div className="mt-2 p-2.5 rounded-lg bg-[#0b1322] border border-white/[0.06] text-[11px] font-mono text-clay-300 overflow-x-auto whitespace-pre">
                           {formatSQL(w.sql_query)}
                         </div>
                       )}

@@ -130,13 +130,13 @@ export const UploadedTableModal: React.FC<UploadedTableModalProps> = ({
       aria-labelledby="uploaded-table-title"
     >
       <div
-        className="relative w-full max-w-3xl max-h-[90vh] flex flex-col rounded-2xl bg-[#0f1a2e] border border-[#1e3557] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150"
+        className="relative w-full max-w-3xl max-h-[90vh] flex flex-col rounded-2xl bg-[#0f1a2e] border border-white/[0.08] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
-        <div className="flex items-start justify-between p-5 border-b border-[#1e3557] bg-[#0b1526]">
+        <div className="flex items-start justify-between p-5 border-b border-white/[0.04] bg-[#0b1526]">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="p-2.5 rounded-xl bg-[#14223b] border border-[#1e3557] text-[#00d2ee] shrink-0">
+            <div className="p-2.5 rounded-xl bg-[#14223b] text-[#00d2ee] shrink-0 shadow-sm">
               <FileSpreadsheet className="w-5 h-5" />
             </div>
             <div className="min-w-0">
@@ -145,7 +145,7 @@ export const UploadedTableModal: React.FC<UploadedTableModalProps> = ({
                   {table.original_filename}
                 </h3>
                 {table.sheet_name && (
-                  <span className="px-2 py-0.5 rounded-md text-[11px] font-mono bg-[#14223b] border border-[#1e3557] text-[#7dd3fc]">
+                  <span className="px-2 py-0.5 rounded-md text-[11px] font-mono bg-[#14223b] text-[#7dd3fc]">
                     Sheet: {table.sheet_name}
                   </span>
                 )}
@@ -168,7 +168,7 @@ export const UploadedTableModal: React.FC<UploadedTableModalProps> = ({
         </div>
 
         {/* Tab Switcher & Subheader */}
-        <div className="px-5 py-2.5 bg-[#111e33] border-b border-[#1e3557] flex flex-wrap items-center justify-between gap-3">
+        <div className="px-5 py-2.5 bg-[#111e33] border-b border-white/[0.04] flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-1.5">
             <button
               type="button"
@@ -213,7 +213,7 @@ export const UploadedTableModal: React.FC<UploadedTableModalProps> = ({
             <button
               type="button"
               onClick={handleCopyName}
-              className="flex items-center gap-1 text-[11px] font-mono px-2 py-1 rounded-lg bg-[#14223b] border border-[#1e3557] text-[#94a3b8] hover:text-[#f8fafc] transition cursor-pointer"
+              className="flex items-center gap-1 text-[11px] font-mono px-2 py-1 rounded-lg bg-[#14223b] text-[#94a3b8] hover:text-[#f8fafc] transition cursor-pointer shadow-sm"
               title="Salin nama tabel SQL lengkap"
             >
               {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
@@ -283,7 +283,7 @@ export const UploadedTableModal: React.FC<UploadedTableModalProps> = ({
 
                   {/* 4 Summary Metric Cards */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                    <div className="p-3 rounded-xl bg-[#111e33] border border-[#1e3557] space-y-1">
+                    <div className="p-3 rounded-xl bg-[#111e33] space-y-1 shadow-sm">
                       <span className="text-[10px] font-mono text-[#94a3b8] uppercase">Kelengkapan</span>
                       <div className="text-sm font-semibold font-mono text-[#f8fafc]">
                         {healthProfile.overall_completeness_pct}%
@@ -296,7 +296,7 @@ export const UploadedTableModal: React.FC<UploadedTableModalProps> = ({
                       </div>
                     </div>
 
-                    <div className="p-3 rounded-xl bg-[#111e33] border border-[#1e3557] space-y-1">
+                    <div className="p-3 rounded-xl bg-[#111e33] space-y-1 shadow-sm">
                       <span className="text-[10px] font-mono text-[#94a3b8] uppercase">Total Data</span>
                       <div className="text-sm font-semibold font-mono text-[#f8fafc]">
                         {healthProfile.total_rows.toLocaleString()}
@@ -306,7 +306,7 @@ export const UploadedTableModal: React.FC<UploadedTableModalProps> = ({
                       </span>
                     </div>
 
-                    <div className="p-3 rounded-xl bg-[#111e33] border border-[#1e3557] space-y-1">
+                    <div className="p-3 rounded-xl bg-[#111e33] space-y-1 shadow-sm">
                       <span className="text-[10px] font-mono text-[#94a3b8] uppercase">Baris Duplikat</span>
                       <div className={`text-sm font-semibold font-mono ${healthProfile.duplicate_rows > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>
                         {healthProfile.duplicate_rows.toLocaleString()}
@@ -316,7 +316,7 @@ export const UploadedTableModal: React.FC<UploadedTableModalProps> = ({
                       </span>
                     </div>
 
-                    <div className="p-3 rounded-xl bg-[#111e33] border border-[#1e3557] space-y-1">
+                    <div className="p-3 rounded-xl bg-[#111e33] space-y-1 shadow-sm">
                       <span className="text-[10px] font-mono text-[#94a3b8] uppercase">Anomali Terdeteksi</span>
                       <div className={`text-sm font-semibold font-mono ${healthProfile.anomalies.length > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>
                         {healthProfile.anomalies.length} Temuan
@@ -340,7 +340,7 @@ export const UploadedTableModal: React.FC<UploadedTableModalProps> = ({
                             key={qp.id}
                             type="button"
                             onClick={() => handleAction(qp.prompt)}
-                            className="group p-3 rounded-xl bg-[#111e33] hover:bg-[#14223b] border border-[#1e3557] hover:border-[#008cd0]/60 transition text-left cursor-pointer flex flex-col justify-between gap-2 shadow-sm"
+                            className="group p-3 rounded-xl bg-[#111e33] hover:bg-[#14223b] transition text-left cursor-pointer flex flex-col justify-between gap-2 shadow-sm"
                           >
                             <span className="text-xs font-medium text-[#f8fafc] font-sans group-hover:text-[#00d2ee] transition">
                               {qp.title}
@@ -417,17 +417,17 @@ export const UploadedTableModal: React.FC<UploadedTableModalProps> = ({
                     <h4 className="text-xs font-mono font-medium text-[#f8fafc] uppercase tracking-wider">
                       Ringkasan Kelengkapan Kolom
                     </h4>
-                    <div className="rounded-xl border border-[#1e3557] overflow-hidden bg-[#0b1322]">
+                    <div className="rounded-xl border border-white/[0.06] overflow-hidden bg-[#0b1322]">
                       <table className="w-full text-left text-xs font-mono">
                         <thead>
-                          <tr className="border-b border-[#1e3557] bg-[#14223b] text-[#94a3b8]">
+                          <tr className="border-b border-white/[0.04] bg-[#14223b] text-[#94a3b8]">
                             <th scope="col" className="py-2 px-3">Kolom</th>
                             <th scope="col" className="py-2 px-3">Tipe</th>
                             <th scope="col" className="py-2 px-3">Kelengkapan</th>
                             <th scope="col" className="py-2 px-3">Outlier / Nilai Unik</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-[#162742]">
+                        <tbody className="divide-y divide-white/[0.03]">
                           {healthProfile.column_profiles.map((cp) => (
                             <tr key={cp.column_name} className="hover:bg-[#14223b]/60 transition">
                               <td className="py-2 px-3 font-semibold text-[#f8fafc]">
@@ -457,11 +457,11 @@ export const UploadedTableModal: React.FC<UploadedTableModalProps> = ({
                               </td>
                               <td className="py-2 px-3 text-[11px]">
                                 {cp.outlier_count > 0 ? (
-                                  <span className="px-1.5 py-0.5 rounded bg-amber-500/15 border border-amber-500/30 text-amber-300 font-mono">
+                                  <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 font-mono">
                                     {cp.outlier_count} outlier ({cp.outlier_rate_pct}%)
                                   </span>
                                 ) : cp.is_unique ? (
-                                  <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-mono">
+                                  <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 font-mono">
                                     100% Unik
                                   </span>
                                 ) : (
@@ -486,23 +486,23 @@ export const UploadedTableModal: React.FC<UploadedTableModalProps> = ({
                 <h4 className="text-xs font-mono font-medium text-[#f8fafc] uppercase tracking-wider mb-2.5">
                   Struktur Kolom &amp; Tipe Data
                 </h4>
-                <div className="rounded-xl border border-[#1e3557] overflow-hidden bg-[#0b1322]">
+                <div className="rounded-xl border border-white/[0.06] overflow-hidden bg-[#0b1322]">
                   <table className="w-full text-left text-xs font-mono">
                     <thead>
-                      <tr className="border-b border-[#1e3557] bg-[#14223b] text-[#94a3b8]">
+                      <tr className="border-b border-white/[0.04] bg-[#14223b] text-[#94a3b8]">
                         <th scope="col" className="py-2.5 px-3.5 font-medium">Nama Kolom</th>
                         <th scope="col" className="py-2.5 px-3.5 font-medium">Tipe PostgreSQL</th>
                         <th scope="col" className="py-2.5 px-3.5 font-medium">Contoh Nilai</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-[#162742]">
+                    <tbody className="divide-y divide-white/[0.03]">
                       {table.columns.map((col) => (
                         <tr key={col.name} className="hover:bg-[#14223b]/70 transition">
                           <td className="py-2 px-3.5 font-semibold text-[#f8fafc]">
                             {col.name}
                           </td>
                           <td className="py-2 px-3.5">
-                            <span className="px-2 py-0.5 rounded text-[10px] bg-[#14223b] border border-[#1e3557] text-[#00d2ee]">
+                            <span className="px-2 py-0.5 rounded text-[10px] bg-[#14223b] text-[#00d2ee]">
                               {col.data_type}
                             </span>
                           </td>
@@ -529,7 +529,7 @@ export const UploadedTableModal: React.FC<UploadedTableModalProps> = ({
                     onClick={() =>
                       handleAction(`Tampilkan 5 baris pertama dari tabel ${qualifiedName} dalam bentuk tabel`)
                     }
-                    className="group flex items-center justify-between p-2.5 rounded-xl bg-[#111e33] hover:bg-[#14223b] border border-[#1e3557] hover:border-[#25416c] transition text-left cursor-pointer"
+                    className="group flex items-center justify-between p-2.5 rounded-xl bg-[#111e33] hover:bg-[#14223b] transition text-left cursor-pointer shadow-sm"
                   >
                     <span className="text-xs text-[#94a3b8] group-hover:text-[#f8fafc] font-sans">
                       Lihat 5 sampel data pertama
@@ -542,7 +542,7 @@ export const UploadedTableModal: React.FC<UploadedTableModalProps> = ({
                     onClick={() =>
                       handleAction(`Hitung ringkasan statistik (jumlah, rata-rata, nilai min dan max) untuk tabel ${qualifiedName}`)
                     }
-                    className="group flex items-center justify-between p-2.5 rounded-xl bg-[#111e33] hover:bg-[#14223b] border border-[#1e3557] hover:border-[#25416c] transition text-left cursor-pointer"
+                    className="group flex items-center justify-between p-2.5 rounded-xl bg-[#111e33] hover:bg-[#14223b] transition text-left cursor-pointer shadow-sm"
                   >
                     <span className="text-xs text-[#94a3b8] group-hover:text-[#f8fafc] font-sans">
                       Hitung ringkasan statistik kolom
@@ -555,7 +555,7 @@ export const UploadedTableModal: React.FC<UploadedTableModalProps> = ({
                     onClick={() =>
                       handleAction(`Bandingkan dan gabungkan data dari tabel ${qualifiedName} dengan data pesanan di tabel orders`)
                     }
-                    className="group flex items-center justify-between p-2.5 rounded-xl bg-[#111e33] hover:bg-[#14223b] border border-[#1e3557] hover:border-[#25416c] transition text-left cursor-pointer sm:col-span-2"
+                    className="group flex items-center justify-between p-2.5 rounded-xl bg-[#111e33] hover:bg-[#14223b] transition text-left cursor-pointer sm:col-span-2 shadow-sm"
                   >
                     <span className="text-xs text-[#94a3b8] group-hover:text-[#f8fafc] font-sans">
                       Cross-Join: Gabungkan data ini dengan data transaksi pesanan (orders)
@@ -569,7 +569,7 @@ export const UploadedTableModal: React.FC<UploadedTableModalProps> = ({
         </div>
 
         {/* Modal Footer */}
-        <div className="flex flex-wrap items-center justify-between gap-3 p-4 border-t border-[#1e3557] bg-[#0b1526]">
+        <div className="flex flex-wrap items-center justify-between gap-3 p-4 border-t border-white/[0.04] bg-[#0b1526]">
           {confirmDelete ? (
             <div className="flex items-center gap-2 bg-rose-950/40 border border-rose-800/50 px-3 py-1.5 rounded-xl">
               <span className="text-xs text-rose-300 font-sans font-medium">Hapus dataset ini dari sesi?</span>
@@ -593,7 +593,7 @@ export const UploadedTableModal: React.FC<UploadedTableModalProps> = ({
             <button
               type="button"
               onClick={() => setConfirmDelete(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium text-rose-300 hover:text-rose-200 bg-rose-950/30 hover:bg-rose-900/40 border border-rose-800/40 transition cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium text-rose-300 hover:text-rose-200 bg-rose-950/30 hover:bg-rose-900/40 transition cursor-pointer shadow-sm"
               title="Hapus dataset ini dari database sesi"
             >
               <Trash2 className="w-3.5 h-3.5 text-rose-400" />
@@ -609,7 +609,7 @@ export const UploadedTableModal: React.FC<UploadedTableModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-xl text-xs font-medium text-[#94a3b8] bg-[#14223b] hover:bg-[#182a47] border border-[#1e3557] hover:text-[#f8fafc] transition cursor-pointer"
+              className="px-4 py-2 rounded-xl text-xs font-medium text-[#94a3b8] bg-[#14223b] hover:bg-[#182a47] hover:text-[#f8fafc] transition cursor-pointer shadow-sm"
             >
               Tutup
             </button>

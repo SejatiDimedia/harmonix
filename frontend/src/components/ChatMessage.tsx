@@ -39,7 +39,7 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
       {/* User Bubble */}
       {turn.user_query && (
         <div className="flex justify-end">
-          <div className="max-w-[85%] rounded-2xl bg-[#14223b] border border-[#1e3557] px-4 py-3 text-sm text-[#f8fafc] leading-relaxed shadow-sm font-sans">
+          <div className="max-w-[85%] rounded-2xl bg-[#14223b] px-4 py-3 text-sm text-[#f8fafc] leading-relaxed shadow-sm font-sans">
             {turn.user_query}
           </div>
         </div>
@@ -50,7 +50,7 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
         <img
           src="/static/logo.png?v=2"
           alt="Harmonix"
-          className="w-7 h-7 rounded-lg object-cover border border-[#1e3557] shrink-0 mt-0.5 select-none shadow-sm"
+          className="w-7 h-7 rounded-lg object-cover shrink-0 mt-0.5 select-none shadow-sm"
         />
 
         <div className="flex-1 space-y-2 leading-relaxed min-w-0">
@@ -119,7 +119,7 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
 
           {/* Latency & Token Metrics */}
           {turn.metrics && (
-            <div className="text-[11px] text-[#94a3b8] font-mono mt-3 pt-2.5 border-t border-[#1e3557] flex items-center justify-between select-none">
+            <div className="text-[11px] text-[#94a3b8] font-mono mt-3 pt-2.5 border-t border-white/[0.06] flex items-center justify-between select-none">
               <span>
                 Latensi: {turn.metrics.total_latency_ms || 0}ms
                 {turn.metrics.ttft_ms ? ` (TTFT: ${turn.metrics.ttft_ms}ms)` : ''}

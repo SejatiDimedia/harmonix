@@ -38,7 +38,7 @@ export const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
       aria-describedby="delete-modal-desc"
     >
       <div
-        className="relative w-full max-w-md rounded-2xl bg-[#0f1a2e] border border-[#1e3557] p-6 shadow-2xl space-y-5 animate-in zoom-in-95 duration-150"
+        className="relative w-full max-w-md rounded-2xl bg-[#0f1a2e] border border-white/[0.08] p-6 shadow-2xl space-y-5 animate-in zoom-in-95 duration-150"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close Button */}
@@ -55,7 +55,7 @@ export const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
 
         {/* Header with Danger Icon */}
         <div className="flex items-start gap-3.5">
-          <div className="p-2.5 rounded-xl bg-[#1a1222] border border-rose-500/30 text-rose-400 shrink-0">
+          <div className="p-2.5 rounded-xl bg-[#1a1222] text-rose-400 shrink-0 shadow-sm">
             <AlertTriangle className="w-5 h-5" />
           </div>
           <div className="space-y-1 pr-6">

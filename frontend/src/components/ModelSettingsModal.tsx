@@ -178,11 +178,11 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-2xl bg-[#0f1a2e] border border-[#1e3557] rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden"
+        className="relative w-full max-w-2xl bg-[#0f1a2e] border border-white/[0.08] rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="px-6 py-4 border-b border-[#1e3557] flex items-center justify-between">
+        <div className="px-6 py-4 border-b border-white/[0.04] flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="p-2 rounded-xl bg-clay-500/10 text-clay-400">
               <Sliders className="w-5 h-5" />
@@ -207,7 +207,7 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
         </div>
 
         {/* Tab Switcher */}
-        <div role="tablist" aria-label="Navigasi Pengaturan Model" className="flex items-center px-6 border-b border-[#1e3557] bg-[#0b1526]">
+        <div role="tablist" aria-label="Navigasi Pengaturan Model" className="flex items-center px-6 border-b border-white/[0.04] bg-[#0b1526]">
           <button
             type="button"
             role="tab"
@@ -249,14 +249,14 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
         {/* Body Content */}
         <div className="p-6 overflow-y-auto space-y-6">
           {errorFeedback && (
-            <div className="p-3 rounded-xl bg-[#1a1222] border border-rose-500/30 text-xs text-rose-200 flex items-center gap-2 shadow-sm">
+            <div className="p-3 rounded-xl bg-[#1a1222] text-xs text-rose-200 flex items-center gap-2 shadow-sm">
               <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
               <span>{errorFeedback}</span>
             </div>
           )}
 
           {successFeedback && (
-            <div className="p-3 rounded-xl bg-[#0c1e33] border border-cyan-500/30 text-xs text-cyan-200 flex items-center gap-2 shadow-sm">
+            <div className="p-3 rounded-xl bg-[#0c1e33] text-xs text-cyan-200 flex items-center gap-2 shadow-sm">
               <CheckCircle2 className="w-4 h-4 text-[#00d2ee] shrink-0" />
               <span>{successFeedback}</span>
             </div>
@@ -273,10 +273,10 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
                   {catalog.providers.map((p) => (
                     <div
                       key={p.provider}
-                      className={`p-3 rounded-xl border flex flex-col justify-between gap-1.5 transition-all shadow-sm ${
+                      className={`p-3 rounded-xl flex flex-col justify-between gap-1.5 transition-all shadow-sm ${
                         p.is_ready
-                          ? 'bg-[#14223b] border-[#1e3557] hover:border-cyan-500/40'
-                          : 'bg-[#101b2e]/80 border-[#1a2d47] opacity-60'
+                          ? 'bg-[#14223b]'
+                          : 'bg-[#101b2e]/80 opacity-60'
                       }`}
                     >
                       <div className="flex items-center justify-between">

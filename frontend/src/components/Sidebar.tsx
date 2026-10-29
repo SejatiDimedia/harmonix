@@ -55,20 +55,18 @@ const SidebarComponent: React.FC<SidebarProps> = ({
     <>
       {/* Mobile backdrop */}
       <div
-        className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-30 transition-opacity duration-200 md:hidden no-print print:hidden ${
-          isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
-        }`}
+        className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-30 transition-opacity duration-200 md:hidden no-print print:hidden ${isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+          }`}
         onClick={onCloseMobile}
       />
 
       {/* Sidebar container */}
       <aside
-        className={`fixed md:static inset-y-0 left-0 z-40 w-72 bg-[#0f1a2e] border-r border-[#1e3557] flex flex-col transition-transform duration-200 ease-in-out shrink-0 no-print print:hidden ${
-          isOpen ? 'translate-x-0' : '-translate-x-full md:hidden'
-        }`}
+        className={`fixed md:static inset-y-0 left-0 z-40 w-72 bg-[#0f1a2e] border-r border-white/[0.06] flex flex-col transition-transform duration-200 ease-in-out shrink-0 no-print print:hidden ${isOpen ? 'translate-x-0' : '-translate-x-full md:hidden'
+          }`}
       >
         {/* Header Action */}
-        <div className="p-3 border-b border-[#1e3557] flex items-center gap-2">
+        <div className="p-3 border-b border-white/[0.06] flex items-center gap-2">
           <button
             type="button"
             onClick={onNewChat}
@@ -118,11 +116,10 @@ const SidebarComponent: React.FC<SidebarProps> = ({
                 <div
                   key={s.session_id}
                   onClick={() => !isEditing && onSelectSession(s.session_id)}
-                  className={`group relative flex items-center justify-between p-2.5 rounded-xl cursor-pointer transition text-xs border ${
-                    isActive
-                      ? 'bg-[#14223b] text-[#f8fafc] border-clay-500/40 shadow-sm'
-                      : 'text-[#94a3b8] hover:bg-[#14223b]/60 hover:text-[#f8fafc] border-transparent'
-                  }`}
+                  className={`group relative flex items-center justify-between p-2.5 rounded-xl cursor-pointer transition text-xs ${isActive
+                      ? 'bg-[#14223b] text-[#f8fafc] shadow-sm font-medium'
+                      : 'text-[#94a3b8] hover:bg-[#14223b]/60 hover:text-[#f8fafc]'
+                    }`}
                 >
                   {isEditing ? (
                     <form
@@ -168,9 +165,8 @@ const SidebarComponent: React.FC<SidebarProps> = ({
                     <>
                       <div className="flex items-start gap-2.5 min-w-0 flex-1 pr-1">
                         <MessageSquare
-                          className={`w-4 h-4 mt-0.5 shrink-0 ${
-                            isActive ? 'text-clay-400' : 'text-[#94a3b8] group-hover:text-clay-400'
-                          }`}
+                          className={`w-4 h-4 mt-0.5 shrink-0 ${isActive ? 'text-clay-400' : 'text-[#94a3b8] group-hover:text-clay-400'
+                            }`}
                         />
                         <div className="min-w-0 flex-1">
                           <div className="font-medium truncate leading-tight">

@@ -138,18 +138,18 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
   const shortModelName = formatModelNameShort(activeModel) || activeModel;
 
   return (
-    <div className="border-t border-[#1e3557] bg-[#080f1d] p-4 shrink-0">
+    <div className="border-t border-white/[0.06] bg-[#080f1d] p-4 shrink-0">
       <div className="max-w-4xl mx-auto relative">
         <form
           onSubmit={(e) => {
             e.preventDefault();
             handleFormSubmit();
           }}
-          className="relative bg-[#0f1a2e] border border-[#1e3557] focus-within:border-clay-500/80 rounded-2xl shadow-xl transition-all"
+          className="relative bg-[#0f1a2e] border border-white/[0.08] focus-within:border-[#008cd0]/80 rounded-2xl shadow-xl transition-all"
         >
           {/* Active Uploaded Tables Bar */}
           {uploadedTables.length > 0 && (
-            <div className="px-3.5 pt-2.5 pb-2 flex items-center gap-1.5 overflow-x-auto text-xs font-mono scrollbar-none border-b border-[#162742]">
+            <div className="px-3.5 pt-2.5 pb-2 flex items-center gap-1.5 overflow-x-auto text-xs font-mono scrollbar-none border-b border-white/[0.04]">
               <span className="text-[#94a3b8] text-[11px] flex items-center gap-1 shrink-0 mr-1 select-none">
                 <FileSpreadsheet className="w-3.5 h-3.5 text-clay-400" />
                 <span className="font-sans font-medium text-[#f8fafc]">Dataset Aktif:</span>
@@ -163,7 +163,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
                 return (
                   <div
                     key={tbl.table_name}
-                    className="group inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-lg bg-[#14223b] hover:bg-[#182a47] border border-[#1e3557] hover:border-[#008cd0]/60 text-[#f8fafc] transition shrink-0"
+                    className="group inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-lg bg-[#14223b] hover:bg-[#182a47] text-[#f8fafc] transition shrink-0 shadow-sm"
                   >
                     <button
                       type="button"
@@ -214,7 +214,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
           />
 
           {/* Toolbar */}
-          <div className="flex items-center justify-between px-3 pb-2.5 pt-1 border-t border-[#162742]">
+          <div className="flex items-center justify-between px-3 pb-2.5 pt-1 border-t border-white/[0.04]">
             {/* Left Controls: File Upload, Model Picker & Engine Toggle */}
             <div className="flex items-center gap-2 relative">
               {/* Hidden File Input */}
@@ -234,7 +234,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
                 disabled={isUploading || isLoading}
                 onClick={() => fileInputRef.current?.click()}
                 aria-label="Unggah file data CSV atau Excel"
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-mono bg-[#14223b] hover:bg-[#182a47] border border-[#1e3557] text-[#f8fafc] hover:text-white transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-mono bg-[#14223b] hover:bg-[#182a47] text-[#f8fafc] hover:text-white transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
                 title="Unggah CSV atau Excel (.xlsx, .xls) untuk dianalisis bersama database warehouse (Maks 10 file, 15MB/file)"
               >
                 {isUploading ? (
@@ -254,7 +254,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
                 aria-label={`Pilih model analitik. Model saat ini: ${activeProvider.toUpperCase()} (${activeModel})`}
                 aria-haspopup="dialog"
                 aria-expanded={isPopoverOpen}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-mono bg-[#14223b] hover:bg-[#182a47] border border-[#1e3557] text-[#f8fafc] hover:text-white transition cursor-pointer"
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-mono bg-[#14223b] hover:bg-[#182a47] text-[#f8fafc] hover:text-white transition cursor-pointer shadow-sm"
                 title={`Model Aktif: ${activeProvider.toUpperCase()} (${activeModel})`}
               >
                 <span className="w-1.5 h-1.5 rounded-full bg-clay-400" />
@@ -281,7 +281,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
               />
 
               {/* Engine Toggle */}
-              <div role="group" aria-label="Pilihan Engine Orchestrator" className="hidden md:flex items-center bg-[#14223b] border border-[#1e3557] rounded-xl p-0.5 text-xs font-mono select-none">
+              <div role="group" aria-label="Pilihan Engine Orchestrator" className="hidden md:flex items-center bg-[#14223b] rounded-xl p-0.5 text-xs font-mono select-none shadow-sm">
                 <button
                   type="button"
                   onClick={() => onSetEngine('manual')}

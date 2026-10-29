@@ -242,11 +242,11 @@ const SingleChartCanvas: React.FC<SingleChartProps> = ({
       className={
         hideHeader
           ? 'relative w-full h-64 md:h-72'
-          : 'rounded-xl border border-[#1e3557] bg-[#0f1a2e] p-4 overflow-hidden shadow-sm'
+          : 'rounded-xl border border-white/[0.06] bg-[#0f1a2e] p-4 overflow-hidden shadow-sm'
       }
     >
       {!hideHeader && (
-        <div className="flex items-center justify-between mb-3 pb-2.5 border-b border-[#1e3557]">
+        <div className="flex items-center justify-between mb-3 pb-2.5 border-b border-white/[0.04]">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-clay-500" />
             <span className="text-xs font-medium text-[#f8fafc] font-sans">
@@ -254,14 +254,14 @@ const SingleChartCanvas: React.FC<SingleChartProps> = ({
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-[#14223b] text-clay-400 border border-[#1e3557]">
+            <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-[#14223b] text-clay-400">
               {spec.chart_type}
             </span>
             {onPinChart && (
               <button
                 type="button"
                 onClick={() => onPinChart(spec)}
-                className="flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded bg-[#14223b] hover:bg-clay-600/30 text-[#f8fafc] hover:text-clay-300 border border-[#1e3557] hover:border-clay-500/50 transition cursor-pointer"
+                className="flex items-center gap-1 text-[11px] font-mono px-2.5 py-1 rounded-lg bg-[#14223b] hover:bg-clay-600/30 text-[#f8fafc] hover:text-clay-300 transition cursor-pointer shadow-sm"
                 title="Sematkan grafik ini ke Live Dashboard"
               >
                 <Pin className="w-3 h-3 text-clay-400" />

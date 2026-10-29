@@ -19,7 +19,7 @@ const WelcomeHeroComponent: React.FC<WelcomeHeroProps> = ({ onSelectPrompt }) =>
         <img
           src="/static/logo.png?v=2"
           alt="Harmonix Logo"
-          className="w-16 h-16 rounded-2xl mx-auto shadow-xl border border-[#1e3557] p-0.5 object-cover"
+          className="w-16 h-16 rounded-2xl mx-auto shadow-xl object-cover"
         />
       </div>
 
@@ -38,7 +38,7 @@ const WelcomeHeroComponent: React.FC<WelcomeHeroProps> = ({ onSelectPrompt }) =>
             key={idx}
             type="button"
             onClick={() => onSelectPrompt(prompt)}
-            className="group flex items-start justify-between gap-3 p-3.5 rounded-xl bg-[#0f1a2e] hover:bg-[#14223b] border border-[#1e3557] hover:border-[#25416c] transition shadow-sm cursor-pointer"
+            className="group flex items-start justify-between gap-3 p-3.5 rounded-xl bg-[#0f1a2e] hover:bg-[#14223b] transition shadow-sm hover:shadow-md cursor-pointer"
           >
             <span className="text-xs text-[#94a3b8] group-hover:text-[#f8fafc] leading-relaxed font-sans transition">
               {prompt}
