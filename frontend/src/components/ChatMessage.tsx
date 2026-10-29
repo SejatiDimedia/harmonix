@@ -74,11 +74,26 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
 
           {/* Recalled Long-Term Memories Badge (FR-17) */}
           {turn.memories_recalled && turn.memories_recalled.length > 0 && (
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#0c1e33] text-xs font-mono text-[#00d2ee] shadow-sm select-none">
-              <Brain className="w-3.5 h-3.5 text-[#00d2ee] shrink-0" />
-              <span>
-                Memori Pengalaman: Memanfaatkan {turn.memories_recalled.length} kueri terverifikasi sebelumnya ({Math.round((turn.memories_recalled[0].similarity || 0.8) * 100)}% kecocokan)
-              </span>
+            <div className="flex flex-col gap-1.5 p-2.5 rounded-xl bg-[#0c1e33]/80 border border-[#00d2ee]/20 text-xs font-mono text-[#00d2ee] shadow-sm select-none">
+              <div className="flex items-center gap-2">
+                <Brain className="w-4 h-4 text-[#00d2ee] shrink-0" />
+                <span className="font-semibold">
+                  Memori Pengalaman (pgvector): {turn.memories_recalled.length} kueri terverifikasi digunakan
+                </span>
+              </div>
+              <div className="pl-6 text-[11px] text-slate-300 flex flex-col gap-1">
+                {turn.memories_recalled.map((m, idx) => (
+                  <div key={idx} className="flex items-baseline gap-1.5">
+                    <span className="text-[#00d2ee] font-bold">›</span>
+                    <span className="truncate max-w-[420px] text-slate-200" title={m.question_text}>
+                      "{m.question_text}"
+                    </span>
+                    <span className="text-[#00d2ee]/90 text-[10px] ml-auto shrink-0 font-medium">
+                      ({Math.round((m.similarity || 0.8) * 100)}% mirip)
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
