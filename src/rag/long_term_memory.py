@@ -187,7 +187,7 @@ async def seed_golden_memories_if_empty() -> None:
 async def retrieve_relevant_memories(
     query: str,
     limit: int = 2,
-    min_similarity: float = 0.60,
+    min_similarity: float = 0.75,
 ) -> list[LongTermMemoryItem]:
     """Retrieve semantically similar past successful queries or preferences using pgvector.
 

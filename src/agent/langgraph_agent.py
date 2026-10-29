@@ -190,7 +190,7 @@ class LangGraphAgent:
             recalled_memories = await retrieve_relevant_memories(
                 query=state["user_query"],
                 limit=2,
-                min_similarity=0.60,
+                min_similarity=0.75,
             )
         except Exception:
             pass

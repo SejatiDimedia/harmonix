@@ -113,7 +113,7 @@ class ManualAgentLoop:
                 recalled_memories = await retrieve_relevant_memories(
                     query=user_query,
                     limit=2,
-                    min_similarity=0.60,
+                    min_similarity=0.75,
                 )
                 if recalled_memories:
                     logger.info("Recalled %d long-term memories via pgvector for query: '%s'", len(recalled_memories), user_query[:40])
