@@ -145,44 +145,25 @@ Harmonix beroperasi **100% Gratis (USD 0,00)** tanpa biaya kartu kredit:
 
 ## 🚀 Panduan Memulai Cepat (Quickstart)
 
-### 1. Prasyarat
-- Python 3.11+
-- Docker & Docker Compose
-
-### 2. Setup Virtual Environment
+### ⚡ Jalankan Semua Layanan dengan 1 Perintah (Rekomendasi)
+Cukup jalankan satu perintah berikut di terminal:
 ```bash
-# Clone repositori
-git clone https://github.com/SejatiDimedia/harnessly.git
-cd harnessly
+./run.sh
+```
+*atau jika menggunakan make:*
+```bash
+make run
+```
+Skrip otomatis memeriksa & membuka Docker Desktop jika belum aktif, menjalankan database PostgreSQL di port `5433`, mengaktifkan virtual environment, menjalankan 9Router (jika tersedia), menyalakan server FastAPI di port `8000`, dan membuka peramban di `http://localhost:8000`.
 
-# Buat virtual environment & install dependensi
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -e .
+Untuk menghentikan seluruh layanan:
+```bash
+./stop.sh  # atau: make stop
 ```
 
-### 3. Jalankan Database PostgreSQL (Docker)
-Jalankan kontainer PostgreSQL 16 + pgvector beserta data sintetis e-commerce Olist:
-```bash
-docker compose up -d
-```
-*Database otomatis aktif pada host port `5433` dengan skema `analytics` yang terisi penuh.*
+---
 
-### 4. Konfigurasi Environment (`.env`)
-Salin file konfigurasi:
-```bash
-cp .env.example .env
-```
-Pilih provider yang diinginkan:
-- **Mode Pengujian Offline / Zero-Cost (Default):** `LLM_PROVIDER=mock`
-- **Mode Ollama Lokal (100% Offline):** `LLM_PROVIDER=ollama`
-- **Mode Google Gemini (Free Tier):** `LLM_PROVIDER=gemini` dan isi `GEMINI_API_KEY=...`
-- **Mode Groq Cloud (Free Tier):** `LLM_PROVIDER=groq` dan isi `GROQ_API_KEY=...`
-
-### 5. Jalankan Server FastAPI & Web UI
-```bash
-uvicorn src.api.main:app --reload --port 8000
-```
+### 🛠 Menjalankan Secara Manual (Step-by-Step)
 Buka browser Anda di **[http://localhost:8000](http://localhost:8000)** untuk berinteraksi langsung melalui Web Chat UI & Live Metrics Dashboard!
 
 > **Pengembangan Frontend (Opsional):**
