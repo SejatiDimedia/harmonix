@@ -199,17 +199,38 @@ class LangGraphAgent:
         except Exception:
             pass
 
+        session_id = state.get("session_id")
+        compacted_summary = None
+        past_turns = []
+        if session_id:
+            try:
+                from src.agent.compaction import get_or_update_session_compaction
+                compacted_summary, past_turns = await get_or_update_session_compaction(
+                    session_id=session_id,
+                    llm=self.llm,
+                )
+            except Exception as e:
+                logger.warning("Could not process session compaction for %s in LangGraph: %s", session_id, e)
+                try:
+                    from src.agent.state import get_session_history
+                    past_turns = await get_session_history(session_id=session_id)
+                except Exception:
+                    past_turns = []
+
         system_prompt = await build_analyst_system_prompt(
-            session_id=state.get("session_id"),
+            session_id=session_id,
             recalled_memories=recalled_memories,
+            compacted_summary=compacted_summary,
         )
         state["recalled_memories"] = recalled_memories
         messages: list[dict[str, Any]] = [{"role": "system", "content": system_prompt}]
 
-        # Inject multi-turn short-term memory
-        chat_history = state.get("chat_history") or []
-        for turn in chat_history[-5:]:
-            messages.append({"role": turn.get("role", "user"), "content": turn.get("content", "")})
+        # Inject multi-turn short-term memory (compacted or raw)
+        if past_turns:
+            messages.extend(past_turns)
+        elif state.get("chat_history"):
+            for turn in state["chat_history"][-5:]:
+                messages.append({"role": turn.get("role", "user"), "content": turn.get("content", "")})
 
         messages.append({"role": "user", "content": state["user_query"]})
         state["messages"] = messages

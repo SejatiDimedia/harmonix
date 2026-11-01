@@ -206,12 +206,33 @@ PEDOMAN PENILAIAN STATUS:
 async def build_analyst_system_prompt(
     session_id: str | None = None,
     recalled_memories: list[Any] | None = None,
+    compacted_summary: str | None = None,
 ) -> str:
-    """Construct dynamic system prompt, injecting uploaded session tables and pgvector long-term memories."""
+    """Construct dynamic system prompt, injecting uploaded session tables, pgvector long-term memories, and FR-14 compacted session context."""
     base_prompt = BASE_ANALYST_SYSTEM_PROMPT
     sections = [base_prompt]
 
-    # 1. Inject Recalled Long-Term Memories (FR-17 Few-Shot Guidance)
+    # 1. Inject Compacted Session Context (FR-14 Conversation Compaction)
+    if not compacted_summary and session_id:
+        try:
+            from src.agent.state import get_session_compacted_summary
+            summary_text, _ = await get_session_compacted_summary(session_id)
+            compacted_summary = summary_text
+        except Exception:
+            pass
+
+    if compacted_summary and compacted_summary.strip():
+        compaction_section = (
+            "\n\nRINGKASAN KONTEKS PERCAKAPAN SEBELUMNYA DALAM SESI INI (FR-14 SESSION COMPACTION):\n"
+            "Sistem auto-compaction merangkum kesepakatan, filter bisnis, dan temuan analitik dari percakapan sebelumnya di sesi ini:\n"
+            f"{compacted_summary.strip()}\n\n"
+            "ATURAN KONTEKS SESI:\n"
+            "1. Pertahankan konsistensi filter, entitas, dan definisi yang sudah disepakati di atas kecuali pengguna secara eksplisit meminta perubahan.\n"
+            "2. Anda dapat merujuk kembali angka-angka kunci di atas jika pengguna menanyakan perbandingan (misal: 'dibandingkan periode sebelumnya')."
+        )
+        sections.append(compaction_section)
+
+    # 2. Inject Recalled Long-Term Memories (FR-17 Few-Shot Guidance)
     if recalled_memories and len(recalled_memories) > 0:
         memory_lines = []
         for idx, m in enumerate(recalled_memories, 1):

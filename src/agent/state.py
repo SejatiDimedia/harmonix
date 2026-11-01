@@ -81,14 +81,25 @@ async def init_task_state_table() -> None:
             );
         """))
 
-        # Table 3: Session Metadata & Custom Titles (FR-33 & Session Renaming)
+        # Table 3: Session Metadata & Custom Titles (FR-33, Session Renaming & FR-14 Compaction)
         await session.execute(text("""
             CREATE TABLE IF NOT EXISTS analytics.chat_sessions (
                 session_id VARCHAR(100) PRIMARY KEY,
                 title VARCHAR(255) NOT NULL,
+                compacted_summary TEXT,
+                compacted_turn_count INT DEFAULT 0,
+                last_compacted_at TIMESTAMP,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
+        """))
+
+        # Migration: Ensure FR-14 compaction columns exist on older chat_sessions schemas
+        await session.execute(text("""
+            ALTER TABLE analytics.chat_sessions
+            ADD COLUMN IF NOT EXISTS compacted_summary TEXT,
+            ADD COLUMN IF NOT EXISTS compacted_turn_count INT DEFAULT 0,
+            ADD COLUMN IF NOT EXISTS last_compacted_at TIMESTAMP;
         """))
 
         # Index on session_id for multi-turn short-term memory lookup (FR-16)
@@ -347,13 +358,15 @@ async def get_session_details(session_id: str) -> dict[str, Any] | None:
         return None
     await init_task_state_table()
     async with get_db_session() as session:
-        # Check custom title first
+        # Check custom title and compacted context (FR-14)
         title_res = await session.execute(
-            text("SELECT title FROM analytics.chat_sessions WHERE session_id = :session_id;"),
+            text("SELECT title, compacted_summary, compacted_turn_count FROM analytics.chat_sessions WHERE session_id = :session_id;"),
             {"session_id": session_id},
         )
         custom_row = title_res.fetchone()
         custom_title = custom_row[0] if custom_row else None
+        compacted_summary = custom_row[1] if custom_row else None
+        compacted_turn_count = custom_row[2] if custom_row else 0
 
         query = text("""
             SELECT task_id, status, user_query, final_result, analyst_provider, analyst_model, created_at, updated_at
@@ -401,10 +414,55 @@ async def get_session_details(session_id: str) -> dict[str, Any] | None:
             "session_id": session_id,
             "title": title[:100],
             "total_turns": len(turns),
+            "compacted_summary": compacted_summary,
+            "compacted_turn_count": compacted_turn_count or 0,
             "active_provider": active_provider,
             "active_model": active_model,
             "turns": turns,
         }
+
+
+async def get_session_compacted_summary(session_id: str) -> tuple[str | None, int]:
+    """Retrieve existing compacted conversation summary and turn count for a session (FR-14)."""
+    if not session_id:
+        return None, 0
+    await init_task_state_table()
+    async with get_db_session() as session:
+        query = text("""
+            SELECT compacted_summary, COALESCE(compacted_turn_count, 0)
+            FROM analytics.chat_sessions
+            WHERE session_id = :session_id;
+        """)
+        res = await session.execute(query, {"session_id": session_id})
+        row = res.fetchone()
+        if row and row[0]:
+            return row[0], int(row[1])
+        return None, 0
+
+
+async def save_session_compaction(session_id: str, summary: str, turn_count: int) -> None:
+    """Persist compacted summary of older conversation turns into PostgreSQL (FR-14)."""
+    if not session_id or not summary.strip():
+        return
+    await init_task_state_table()
+    async with get_db_session() as session:
+        query = text("""
+            INSERT INTO analytics.chat_sessions (session_id, title, compacted_summary, compacted_turn_count, last_compacted_at, updated_at)
+            VALUES (:session_id, 'Percakapan', :summary, :turn_count, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            ON CONFLICT (session_id)
+            DO UPDATE SET 
+                compacted_summary = :summary,
+                compacted_turn_count = :turn_count,
+                last_compacted_at = CURRENT_TIMESTAMP,
+                updated_at = CURRENT_TIMESTAMP;
+        """)
+        await session.execute(query, {
+            "session_id": session_id,
+            "summary": summary.strip(),
+            "turn_count": turn_count,
+        })
+        await session.commit()
+        logger.info("Persisted FR-14 compacted summary for session %s (up to turn %d).", session_id, turn_count)
 
 
 async def rename_session(session_id: str, new_title: str) -> bool:

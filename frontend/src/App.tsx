@@ -661,6 +661,23 @@ export const App: React.FC = () => {
                   <WelcomeHero onSelectPrompt={handleSendMessage} />
                 ) : (
                   <>
+                    {sessionDetailsData?.compacted_summary && (
+                      <div className="bg-[#0f172a]/90 border border-sky-900/40 rounded-xl p-3.5 text-xs text-slate-300 shadow-sm backdrop-blur-sm animate-fade-in">
+                        <div className="flex items-center justify-between font-medium text-sky-400 mb-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm">🧠</span>
+                            <span className="font-semibold tracking-wide">Konteks Sesi Terpadu (FR-14 Auto-Compaction)</span>
+                            <span className="px-2 py-0.5 rounded-full text-[10px] bg-sky-950 text-sky-300 border border-sky-800/50">
+                              {sessionDetailsData.compacted_turn_count || 0} turn dirangkum
+                            </span>
+                          </div>
+                        </div>
+                        <div className="whitespace-pre-line leading-relaxed text-slate-300 font-sans text-xs bg-[#0b1120]/80 p-3 rounded-lg border border-slate-800/80">
+                          {sessionDetailsData.compacted_summary}
+                        </div>
+                      </div>
+                    )}
+
                     {turns.map((turn, idx) => (
                       <ChatMessage
                         key={turn.task_id || idx}

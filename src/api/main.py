@@ -477,6 +477,30 @@ async def update_session_title(session_id: str, payload: RenameSessionInput):
     return {"status": "updated", "session_id": session_id, "title": clean_title[:150]}
 
 
+@app.get("/v1/sessions/{session_id}/summary", tags=["Sessions"])
+async def get_session_summary_endpoint(session_id: str):
+    """Retrieve active conversation compaction summary for a session (FR-14)."""
+    from src.agent.state import get_session_compacted_summary
+    summary_text, turn_count = await get_session_compacted_summary(session_id)
+    return {
+        "session_id": session_id,
+        "has_compacted_context": bool(summary_text),
+        "compacted_summary": summary_text,
+        "compacted_turn_count": turn_count,
+    }
+
+
+@app.post("/v1/sessions/{session_id}/compact", tags=["Sessions"])
+async def trigger_session_compaction_endpoint(session_id: str):
+    """Manually trigger or update conversation compaction for a session (FR-14)."""
+    from src.agent.compaction import force_compact_session
+    from src.llm.model_registry import ModelRegistry
+    registry = ModelRegistry.get_instance()
+    llm = registry.create_analyst_llm()
+    result = await force_compact_session(session_id=session_id, llm=llm)
+    return result
+
+
 # ==============================================================================
 # Live BI Dashboard Canvas Endpoints (FR-37)
 # ==============================================================================

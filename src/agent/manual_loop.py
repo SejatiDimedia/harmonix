@@ -123,19 +123,31 @@ class ManualAgentLoop:
             except Exception as mem_err:
                 logger.warning("Could not recall long-term memories: %s", mem_err)
 
+            compacted_summary = None
+            past_turns = []
+            # Load short-term memory with FR-14 Auto-Compaction for long sessions
+            if session_id:
+                try:
+                    from src.agent.compaction import get_or_update_session_compaction
+                    compacted_summary, past_turns = await get_or_update_session_compaction(
+                        session_id=session_id,
+                        llm=self.llm,
+                    )
+                except Exception as e:
+                    logger.warning("Could not process session compaction for %s: %s. Falling back to raw history.", session_id, e)
+                    try:
+                        past_turns = await get_session_history(session_id=session_id)
+                    except Exception:
+                        past_turns = []
+
             system_prompt = await build_analyst_system_prompt(
                 session_id=session_id,
                 recalled_memories=recalled_memories,
+                compacted_summary=compacted_summary,
             )
             messages = [{"role": "system", "content": system_prompt}]
-            # Load short-term conversation memory from session if available (FR-16)
-            if session_id:
-                try:
-                    past_turns = await get_session_history(session_id=session_id)
-                    if past_turns:
-                        messages.extend(past_turns)
-                except Exception as e:
-                    logger.warning("Could not load session history for %s: %s", session_id, e)
+            if past_turns:
+                messages.extend(past_turns)
 
             if chat_history:
                 messages.extend(chat_history)

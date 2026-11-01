@@ -4,7 +4,7 @@ Proyek portofolio AI Agent Engineer (Python Backend): agent text-to-SQL tahan pr
 
 | **Atribut** | **Keterangan**                                                              |
 |-------------|-----------------------------------------------------------------------------|
-| Versi       | 1.8 (Automated Data Health & Anomaly Profiling Engine FR-41, WCAG 2.1 AA Compliant, Harmonix Brand Identity) |
+| Versi       | 1.9 (Conversation Compaction & Context Summarization Engine FR-14, Automated Data Health FR-41, Harmonix Brand) |
 | Tanggal     | 28 Oktober 2026                                                             |
 | Status      | Disetujui (Fitur Aktif & Roadmap)                                          |
 | Pemilik     | Pengembang proyek (portofolio)                                              |
@@ -125,7 +125,7 @@ Prioritas: **P0** (wajib untuk MVP), **P1** (penting), **P2** (nice to have).
 | FR-11  | Retrieval skema sebagai tool (just-in-time), bukan memasukkan seluruh skema ke prompt.                                                                     | P0            |
 | FR-12  | Knowledge base dokumen bisnis (glosarium metrik, definisi "pelanggan aktif", dll.) dengan chunking, metadata, hybrid search (dense embedding lokal FastEmbed/Ollama + BM25), dan reranking (zero API cost). | P1            |
 | FR-13  | Jawaban akhir menyertakan sitasi: SQL yang dipakai dan dokumen definisi metrik yang dirujuk.                                                               | P0            |
-| FR-14  | Compaction/summarization percakapan panjang agar agent tidak kehilangan konteks atau berhenti dini.                                                        | P1            |
+| FR-14  | Conversation Compaction & Summarization Engine: Mencegah hilangnya konteks atau context window overflow pada percakapan panjang (> 4 turn). Turn-turn terdahulu otomatis dirangkum secara padat (Sasaran Analisis, Filter/Asumsi Disepakati, Temuan Angka Kunci) dan disematkan ke system prompt, sementara 3 turn terakhir dipertahankan verbatim. Dilengkapi persistensi di PostgreSQL (`analytics.chat_sessions.compacted_summary`) dan heuristic fallback offline (zero API cost). | P1            |
 | FR-15  | Prompt caching untuk system prompt dan skema yang stabil.                                                                                                  | P1            |
 
 ### 5.4 Memory dan State

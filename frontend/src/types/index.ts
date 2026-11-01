@@ -137,6 +137,8 @@ export interface ChatSessionDetail {
   session_id: string;
   title: string;
   total_turns: number;
+  compacted_summary?: string | null;
+  compacted_turn_count?: number;
   active_provider?: string;
   active_model?: string;
   turns: ChatTurn[];
