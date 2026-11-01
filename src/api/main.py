@@ -494,7 +494,7 @@ async def get_session_summary_endpoint(session_id: str):
 async def trigger_session_compaction_endpoint(session_id: str):
     """Manually trigger or update conversation compaction for a session (FR-14)."""
     from src.agent.compaction import force_compact_session
-    from src.llm.model_registry import ModelRegistry
+    from src.llm.registry import ModelRegistry
     registry = ModelRegistry.get_instance()
     llm = registry.create_analyst_llm()
     result = await force_compact_session(session_id=session_id, llm=llm)
