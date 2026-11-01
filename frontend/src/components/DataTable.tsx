@@ -2,6 +2,7 @@ import React from 'react';
 import { Pin, Download } from 'lucide-react';
 import { TableData } from '../types';
 import { exportTableToCSV } from '../utils/exportUtils';
+import { formatTableCellValue } from '../utils/formatters';
 
 interface DataTableProps {
   tables: TableData[];
@@ -72,18 +73,24 @@ export const DataTable: React.FC<DataTableProps> = ({ tables, onPinTable }) => {
                       rIdx % 2 === 0 ? 'bg-[#0f1a2e]' : 'bg-[#111e33]'
                     } hover:bg-[#162742] transition`}
                   >
-                    {row.map((val, cellIdx) => (
-                      <td
-                        key={cellIdx}
-                        className="p-2.5 border-b border-white/[0.03] text-[#f8fafc] font-mono text-[11px] tabular-nums whitespace-normal break-words max-w-xs leading-relaxed"
-                      >
-                        {val !== null && val !== undefined ? (
-                          String(val)
-                        ) : (
-                          <span className="text-[#94a3b8] italic font-sans text-[10px]">NULL</span>
-                        )}
-                      </td>
-                    ))}
+                    {row.map((val, cellIdx) => {
+                      const colName = t.columns?.[cellIdx];
+                      const { formatted, isNumeric } = formatTableCellValue(val, colName);
+                      return (
+                        <td
+                          key={cellIdx}
+                          className={`p-2.5 border-b border-white/[0.03] text-[#f8fafc] font-mono text-[11px] tabular-nums whitespace-normal break-words max-w-xs leading-relaxed ${
+                            isNumeric ? 'text-[#38bdf8] font-medium' : ''
+                          }`}
+                        >
+                          {val !== null && val !== undefined ? (
+                            formatted
+                          ) : (
+                            <span className="text-[#94a3b8] italic font-sans text-[10px]">NULL</span>
+                          )}
+                        </td>
+                      );
+                    })}
                   </tr>
                 ))}
               </tbody>

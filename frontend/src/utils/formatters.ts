@@ -417,3 +417,75 @@ export function formatPseudoTableToMarkdown(content?: string): string {
   return output.join('\n');
 }
 
+/**
+ * Intelligently formats table cell values for human readability (thousands separators, currency, percentages).
+ */
+export function formatTableCellValue(
+  val: any,
+  colName?: string
+): { formatted: string; isNumeric: boolean } {
+  if (val === null || val === undefined) {
+    return { formatted: 'NULL', isNumeric: false };
+  }
+  if (typeof val === 'boolean') {
+    return { formatted: val ? 'Ya' : 'Tidak', isNumeric: false };
+  }
+
+  const strVal = String(val).trim();
+  if (strVal === '') {
+    return { formatted: '-', isNumeric: false };
+  }
+
+  const cleanCol = (colName || '').toLowerCase().trim();
+
+  // If column indicates an ID, code, phone, or postal code, keep raw
+  const isIdCol = /(_id|^id$|uuid|code|kode|phone|telepon|zip|postal|nik|resi)\b/i.test(cleanCol);
+  if (isIdCol) {
+    return { formatted: strVal, isNumeric: false };
+  }
+
+  // Check if value is a valid numeric representation
+  const isNum = typeof val === 'number' || (/^-?\d+(?:\.\d+)?$/.test(strVal) && !isNaN(Number(strVal)));
+  if (!isNum) {
+    return { formatted: strVal, isNumeric: false };
+  }
+
+  const num = typeof val === 'number' ? val : Number(strVal);
+
+  // Avoid formatting years (e.g. 2023, 2024) as "2.023"
+  const isYearCol = /^(?:tahun|year)$/i.test(cleanCol);
+  if (isYearCol && Number.isInteger(num) && num >= 1900 && num <= 2100) {
+    return { formatted: String(num), isNumeric: true };
+  }
+
+  // Percentage formatting if column indicates percentage
+  const isPercentCol = /(?:persen|percent|pct|rate|ratio|margin)\b/i.test(cleanCol);
+  if (isPercentCol) {
+    if (Math.abs(num) > 0 && Math.abs(num) < 1) {
+      const pctVal = (num * 100).toLocaleString('id-ID', { minimumFractionDigits: 1, maximumFractionDigits: 2 });
+      return { formatted: `${pctVal}%`, isNumeric: true };
+    }
+    const pctVal = num.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+    return { formatted: `${pctVal}%`, isNumeric: true };
+  }
+
+  // Count / Quantity indicators take precedence to avoid prefixing Rp on order counts
+  const isCountCol = /^(?:total_orders|order_count|total_items|item_count|qty|quantity|kuantitas|jumlah_|total_customers|customer_count|frekuensi|frequency)\b/i.test(cleanCol);
+
+  // Currency formatting if column indicates monetary / financial metric
+  const isCurrencyCol =
+    !isCountCol &&
+    /(?:sales_value|payment_value|order_value|total_sales|total_payment|total_belanja|avg_payment|average_payment|harga|price|revenue|pendapatan|omzet|gaji|biaya|cost|freight|nominal)/i.test(cleanCol);
+
+  const isInt = Number.isInteger(num);
+  const formattedNum = isInt
+    ? num.toLocaleString('id-ID')
+    : num.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  if (isCurrencyCol) {
+    return { formatted: `Rp ${formattedNum}`, isNumeric: true };
+  }
+
+  return { formatted: formattedNum, isNumeric: true };
+}
+

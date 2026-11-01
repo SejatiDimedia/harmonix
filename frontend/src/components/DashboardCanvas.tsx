@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { DashboardWidget, ChartSpec, TableData } from '../types';
 import { DataChart } from './DataChart';
-import { formatSQL, getChartDescriptiveTitle } from '../utils/formatters';
+import { formatSQL, getChartDescriptiveTitle, formatTableCellValue } from '../utils/formatters';
 import { exportTableToCSV, triggerExecutivePDFPrint } from '../utils/exportUtils';
 
 interface DashboardCanvasProps {
@@ -355,14 +355,20 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                                 className={`${rIdx % 2 === 0 ? 'bg-[#0f1a2e]' : 'bg-[#111e33]'
                                   } print:bg-white print:even:bg-gray-50/70 hover:bg-[#14223b] transition`}
                               >
-                                {row.map((val, cellIdx) => (
-                                  <td
-                                    key={cellIdx}
-                                    className="p-2.5 border-b border-white/[0.03] print:border-gray-200 text-[#f8fafc] print:text-gray-800 font-mono text-[11px] print:bg-transparent"
-                                  >
-                                    {val !== null && val !== undefined ? String(val) : '-'}
-                                  </td>
-                                ))}
+                                {row.map((val, cellIdx) => {
+                                  const colName = w.table_data?.columns?.[cellIdx];
+                                  const { formatted, isNumeric } = formatTableCellValue(val, colName);
+                                  return (
+                                    <td
+                                      key={cellIdx}
+                                      className={`p-2.5 border-b border-white/[0.03] print:border-gray-200 text-[#f8fafc] print:text-gray-800 font-mono text-[11px] print:bg-transparent ${
+                                        isNumeric ? 'text-[#38bdf8] font-medium' : ''
+                                      }`}
+                                    >
+                                      {val !== null && val !== undefined ? formatted : '-'}
+                                    </td>
+                                  );
+                                })}
                               </tr>
                             ))}
                           </tbody>
