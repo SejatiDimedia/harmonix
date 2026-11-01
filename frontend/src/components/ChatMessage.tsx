@@ -304,9 +304,6 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
             )}
           </div>
 
-          {/* Data Auditor verdict */}
-          {turn.audit_result && <AuditorGate verdict={turn.audit_result} />}
-
           {/* Follow-up suggestions */}
           {turn.follow_up_suggestions && turn.follow_up_suggestions.length > 0 && (
             <FollowUpChips
