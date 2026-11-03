@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 
 from src.llm.provider import BaseLLMProvider, get_llm_provider
 
-logger = logging.getLogger("harnessly.judge")
+logger = logging.getLogger("harmonix.judge")
 
 
 class JudgeEvaluationResult(BaseModel):

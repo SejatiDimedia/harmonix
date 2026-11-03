@@ -1,1 +1,1 @@
-"""Test suite for Harnessly."""
+"""Test suite for Harmonix."""

@@ -156,6 +156,7 @@ class ManualAgentLoop:
         total_tokens = 0
         prompt_tokens = 0
         completion_tokens = 0
+        cached_tokens = 0
         executed_sqls: list[str] = []
         captured_tables: list[TableData] = []
         captured_charts: list[ChartSpec] = []
@@ -399,6 +400,7 @@ class ManualAgentLoop:
             total_tokens += llm_response.usage.total_tokens
             prompt_tokens += llm_response.usage.prompt_tokens
             completion_tokens += llm_response.usage.completion_tokens
+            cached_tokens += getattr(llm_response.usage, "cached_tokens", 0)
 
             # If LLM returned text content, stream tokens and record TTFT (OB-02)
             if llm_response.content:
@@ -658,6 +660,7 @@ class ManualAgentLoop:
                         total_tokens += synth_resp.usage.total_tokens
                         prompt_tokens += synth_resp.usage.prompt_tokens
                         completion_tokens += synth_resp.usage.completion_tokens
+                        cached_tokens += getattr(synth_resp.usage, "cached_tokens", 0)
                         yield {
                             "event": "token",
                             "data": {"delta": synth_resp.content},
@@ -690,6 +693,7 @@ class ManualAgentLoop:
             total_tokens=total_tokens,
             prompt_tokens=prompt_tokens,
             completion_tokens=completion_tokens,
+            cached_tokens=cached_tokens,
             step_count=step,
         )
 
@@ -728,16 +732,17 @@ class ManualAgentLoop:
                 tables=captured_tables,
                 charts=captured_charts,
             )
-            self.term_logger.log_audit_verdict(
-                status=audit_verdict.status.value,
-                confidence=audit_verdict.confidence_score,
-                badge=audit_verdict.badge,
-                critique=audit_verdict.critique,
-            )
-            yield {
-                "event": "audit_step",
-                "data": audit_verdict.model_dump(),
-            }
+            if audit_verdict:
+                self.term_logger.log_audit_verdict(
+                    status=audit_verdict.status.value,
+                    confidence=audit_verdict.confidence_score,
+                    badge=audit_verdict.badge,
+                    critique=audit_verdict.critique,
+                )
+                yield {
+                    "event": "audit_step",
+                    "data": audit_verdict.model_dump(),
+                }
 
         final_response = AgentFinalResponse(
             answer_text=clean_answer,
@@ -750,6 +755,7 @@ class ManualAgentLoop:
                 "total_tokens": total_tokens,
                 "prompt_tokens": prompt_tokens,
                 "completion_tokens": completion_tokens,
+                "cached_tokens": cached_tokens,
             },
             metrics=task_metrics.model_dump(),
             follow_up_suggestions=follow_up_suggestions,
@@ -803,3 +809,11 @@ class ManualAgentLoop:
             "event": "final_result",
             "data": final_response.model_dump(),
         }
+
+    # Alias for interface parity with LangGraph agent
+    run_stream = run
+
+
+# Backwards compatibility alias
+DataAnalystAgent = ManualAgentLoop
+

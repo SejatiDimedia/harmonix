@@ -46,8 +46,8 @@ def test_create_openrouter_provider_with_headers():
 
     headers = provider._headers()
     assert "Content-Type" in headers
-    assert headers["HTTP-Referer"] == "https://github.com/SejatiDimedia/harnessly"
-    assert headers["X-Title"] == "Harnessly AI Data Analyst"
+    assert headers["HTTP-Referer"] == "https://github.com/SejatiDimedia/harmonix"
+    assert headers["X-Title"] == "Harmonix AI Data Analyst"
 
 
 def test_create_gemini_provider():
@@ -76,8 +76,10 @@ def test_auditor_model_diversity_selection():
         # Since GROQ_API_KEY is present in .env
         auditor_llm = get_auditor_provider()
         assert isinstance(auditor_llm, OpenAICompatibleProvider)
-        if settings.groq_api_key:
+        if settings.groq_api_key and not settings.groq_api_key.startswith("gsk_abc"):
             assert "groq.com" in auditor_llm.base_url
+        elif settings.gemini_api_key:
+            assert "generativelanguage.googleapis.com" in auditor_llm.base_url
     finally:
         settings.llm_provider = original_llm_provider
         settings.auditor_provider = original_auditor_provider

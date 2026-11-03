@@ -189,14 +189,14 @@ Jalankan evaluasi benchmark otomatis pada dataset 45 kasus:
 ```bash
 python -m src.eval.runner --max-cases 45
 ```
-Laporan evaluasi terbaru otomatis diperbarui di [`data/eval_report_latest.json`](file:///Users/timurdianradhasejati/Programming/Code/AI/harnessly/data/eval_report_latest.json).
+Laporan evaluasi terbaru otomatis diperbarui di [`data/eval_report_latest.json`](file:///Users/timurdianradhasejati/Programming/Code/AI/Harmonix/data/eval_report_latest.json).
 
 ---
 
 ## 📁 Struktur Repositori
 
 ```
-harnessly/
+Harmonix/
 ├── .github/workflows/ci.yml       # 2-Tier GitHub Actions CI workflow
 ├── data/
 │   ├── eval_dataset.json          # Benchmark dataset 45 kasus analitik & adversarial

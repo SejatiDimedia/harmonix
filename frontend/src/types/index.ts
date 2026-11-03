@@ -126,6 +126,9 @@ export interface ChatTurn {
     total_latency_ms?: number;
     ttft_ms?: number;
     total_tokens?: number;
+    cached_tokens?: number;
+    prompt_tokens?: number;
+    completion_tokens?: number;
   };
   follow_up_suggestions?: string[];
   audit_result?: AuditVerdict;

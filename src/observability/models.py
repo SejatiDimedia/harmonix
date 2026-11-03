@@ -38,13 +38,14 @@ class TraceSpan(BaseModel):
 
 
 class TaskMetrics(BaseModel):
-    """Aggregated operational metrics for a completed agent task (OB-02)."""
+    """Aggregated operational metrics for a completed agent task (OB-02, FR-15)."""
     task_id: str
     total_latency_ms: float = 0.0
     ttft_ms: float | None = None
     total_tokens: int = 0
     prompt_tokens: int = 0
     completion_tokens: int = 0
+    cached_tokens: int = 0
     estimated_cost_usd: float = 0.00
     step_count: int = 0
     tool_calls_count: int = 0

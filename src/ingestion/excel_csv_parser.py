@@ -22,7 +22,7 @@ from sqlalchemy import text
 
 from src.db.connection import get_db_session
 
-logger = logging.getLogger("harnessly.ingestion")
+logger = logging.getLogger("harmonix.ingestion")
 
 MAX_FILE_SIZE_BYTES = 15 * 1024 * 1024  # 15 MB
 MAX_FILES_PER_BATCH = 10
@@ -458,6 +458,12 @@ async def process_file_and_create_tables(
             )
 
         await db.commit()
+        # FR-15: Invalidate prompt schema cache for this session
+        try:
+            from src.agent.caching import invalidate_session_schema_cache
+            invalidate_session_schema_cache(session_id)
+        except Exception:
+            pass
 
     return created_summaries
 
@@ -539,6 +545,13 @@ async def cleanup_session_uploaded_tables(session_id: str) -> int:
             {"session_id": session_id},
         )
         await session.commit()
+
+        # FR-15: Invalidate prompt schema cache for this session
+        try:
+            from src.agent.caching import invalidate_session_schema_cache
+            invalidate_session_schema_cache(session_id)
+        except Exception:
+            pass
 
     logger.info("Dropped %d uploaded tables for session %s.", dropped_count, session_id)
     return dropped_count

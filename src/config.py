@@ -84,6 +84,10 @@ class Settings(BaseSettings):
     agent_total_timeout_seconds: int = Field(default=120, description="Maximum duration for entire task")
     agent_max_token_budget: int = Field(default=200000, description="Token budget per task")
     agent_terminal_logs: bool = Field(default=True, description="Enable real-time visual execution logs in the terminal")
+    enable_prompt_caching: bool = Field(
+        default=True,
+        description="Enable prompt caching headers and deterministic prefix ordering for LLM requests (FR-15)",
+    )
 
     # SQL Guardrail Parameters
     sql_max_row_limit: int = Field(default=100, description="Maximum rows returned by SQL query")

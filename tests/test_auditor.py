@@ -13,7 +13,7 @@ async def test_auditor_greeting_heuristic_pass():
     auditor = DataAuditorAgent(llm=MockLLMProvider())
     verdict = await auditor.audit(
         user_query="Halo, siapa kamu?",
-        answer_text="Halo! Saya Harnessly, AI Data Analyst.",
+        answer_text="Halo! Saya Harmonix, AI Data Analyst.",
         executed_sqls=[],
         tables=[],
     )
@@ -168,7 +168,7 @@ async def test_manual_loop_yields_audit_step_and_attaches_result():
     custom_auditor = DataAuditorAgent(llm=mock_auditor_llm)
 
     analyst_llm = MockLLMProvider(canned_responses=[
-        LLMResponse(content="Halo! Saya adalah AI Data Analyst Harnessly.")
+        LLMResponse(content="Halo! Saya adalah AI Data Analyst Harmonix.")
     ])
 
     loop = ManualAgentLoop(llm=analyst_llm, auditor=custom_auditor)

@@ -136,6 +136,14 @@ async def test_manual_agent_loop_emergency_synthesis_on_step_limit():
 
     mock_llm = MockLLMProvider(canned_responses=[resp1, resp2, synth_resp])
     agent = ManualAgentLoop(llm=mock_llm, max_steps=2)
+    from unittest.mock import AsyncMock
+    agent.tools["run_sql"].execute = AsyncMock(return_value={
+        "status": "success",
+        "sanitized_query": "SELECT 100 AS pendapatan;",
+        "columns": ["pendapatan"],
+        "rows": [[100]],
+        "row_count": 1,
+    })
 
     events = []
     async for event in agent.run(user_query="Berapa total pendapatan bersih?"):

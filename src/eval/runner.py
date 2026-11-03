@@ -15,7 +15,7 @@ from src.agent.manual_loop import ManualAgentLoop
 from src.tools.guardrails import SQLGuardrail, SQLValidationError
 from src.tools.sandbox import CalculateTool
 
-logger = logging.getLogger("harnessly.eval")
+logger = logging.getLogger("harmonix.eval")
 
 
 class EvalCaseResult(BaseModel):
@@ -234,7 +234,7 @@ class EvalRunner:
 
 async def main():
     """CLI entrypoint to run evaluation benchmark."""
-    parser = argparse.ArgumentParser(description="Harnessly Evaluation Benchmark Runner")
+    parser = argparse.ArgumentParser(description="Harmonix Evaluation Benchmark Runner")
     parser.add_argument("--dataset", default="data/eval_dataset.json", help="Path to evaluation dataset JSON")
     parser.add_argument("--max-cases", type=int, default=None, help="Limit number of test cases")
     args = parser.parse_args()
@@ -242,7 +242,7 @@ async def main():
     runner = EvalRunner(dataset_path=args.dataset)
     report = await runner.run_suite(max_cases=args.max_cases)
     print("\n" + "=" * 60)
-    print(f"HARNESSLY EVALUATION BENCHMARK REPORT")
+    print(f"HARMONIX EVALUATION BENCHMARK REPORT")
     print("=" * 60)
     print(f"Total Cases:     {report.total_cases}")
     print(f"Passed Cases:    {report.passed_cases}")

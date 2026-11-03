@@ -208,29 +208,29 @@ async def build_analyst_system_prompt(
     recalled_memories: list[Any] | None = None,
     compacted_summary: str | None = None,
 ) -> str:
-    """Construct dynamic system prompt, injecting uploaded session tables, pgvector long-term memories, and FR-14 compacted session context."""
+    """Construct dynamic system prompt with deterministic prefix ordering (FR-15 Prompt Caching).
+    
+    Deterministic Order for Maximal Prefix Cache Hits:
+    1. Static Base Analyst System Prompt (rules, quality profile, schema, verification)
+    2. Session Uploaded Tables Schema (cached in-memory for bit-exact stability)
+    3. Long-Term Memories (pgvector few-shot guidance)
+    4. Compacted Session History (FR-14 summary)
+    """
     base_prompt = BASE_ANALYST_SYSTEM_PROMPT
     sections = [base_prompt]
 
-    # 1. Inject Compacted Session Context (FR-14 Conversation Compaction)
-    if not compacted_summary and session_id:
+    # 1. Inject Session Uploaded Tables Schema (FR-15: Cached in memory for prefix stability)
+    if session_id:
         try:
-            from src.agent.state import get_session_compacted_summary
-            summary_text, _ = await get_session_compacted_summary(session_id)
-            compacted_summary = summary_text
-        except Exception:
+            from src.agent.caching import get_cached_session_schema_prompt
+            from src.ingestion.excel_csv_parser import get_session_uploaded_tables
+            uploaded_tables = await get_session_uploaded_tables(session_id)
+            if uploaded_tables:
+                schema_section = get_cached_session_schema_prompt(session_id, uploaded_tables)
+                if schema_section:
+                    sections.append(schema_section)
+        except Exception as schema_err:
             pass
-
-    if compacted_summary and compacted_summary.strip():
-        compaction_section = (
-            "\n\nRINGKASAN KONTEKS PERCAKAPAN SEBELUMNYA DALAM SESI INI (FR-14 SESSION COMPACTION):\n"
-            "Sistem auto-compaction merangkum kesepakatan, filter bisnis, dan temuan analitik dari percakapan sebelumnya di sesi ini:\n"
-            f"{compacted_summary.strip()}\n\n"
-            "ATURAN KONTEKS SESI:\n"
-            "1. Pertahankan konsistensi filter, entitas, dan definisi yang sudah disepakati di atas kecuali pengguna secara eksplisit meminta perubahan.\n"
-            "2. Anda dapat merujuk kembali angka-angka kunci di atas jika pengguna menanyakan perbandingan (misal: 'dibandingkan periode sebelumnya')."
-        )
-        sections.append(compaction_section)
 
     # 2. Inject Recalled Long-Term Memories (FR-17 Few-Shot Guidance)
     if recalled_memories and len(recalled_memories) > 0:
@@ -263,44 +263,24 @@ async def build_analyst_system_prompt(
         )
         sections.append(memory_section)
 
-    if not session_id:
-        return "".join(sections)
+    # 3. Inject Compacted Session Context (FR-14 Conversation Compaction)
+    if not compacted_summary and session_id:
+        try:
+            from src.agent.state import get_session_compacted_summary
+            summary_text, _ = await get_session_compacted_summary(session_id)
+            compacted_summary = summary_text
+        except Exception:
+            pass
 
-    try:
-        from src.ingestion.excel_csv_parser import get_session_uploaded_tables
-        uploaded_tables = await get_session_uploaded_tables(session_id)
-        if uploaded_tables:
-            table_sections = []
-            for t in uploaded_tables:
-                cols_str = ", ".join(f"{c.name} ({c.data_type})" for c in t.columns)
-                samples_str = ""
-                sample_items = [f"{c.name}: {c.sample_values}" for c in t.columns if c.sample_values]
-                if sample_items:
-                    samples_str = f"    Contoh Nilai: {'; '.join(sample_items[:4])}"
+    if compacted_summary and compacted_summary.strip():
+        compaction_section = (
+            "\n\nRINGKASAN KONTEKS PERCAKAPAN SEBELUMNYA DALAM SESI INI (FR-14 SESSION COMPACTION):\n"
+            "Sistem auto-compaction merangkum kesepakatan, filter bisnis, dan temuan analitik dari percakapan sebelumnya di sesi ini:\n"
+            f"{compacted_summary.strip()}\n\n"
+            "ATURAN KONTEKS SESI:\n"
+            "1. Pertahankan konsistensi filter, entitas, dan definisi yang sudah disepakati di atas kecuali pengguna secara eksplisit meminta perubahan.\n"
+            "2. Anda dapat merujuk kembali angka-angka kunci di atas jika pengguna menanyakan perbandingan (misal: 'dibandingkan periode sebelumnya')."
+        )
+        sections.append(compaction_section)
 
-                table_sections.append(
-                    f"- `analytics.\"{t.table_name}\"`\n"
-                    f"    Sumber: File '{t.original_filename}', Sheet: '{t.sheet_name}' ({t.row_count} baris)\n"
-                    f"    Kolom: {cols_str}\n"
-                    f"{samples_str}"
-                )
-
-            dynamic_section = (
-                "\n\nTABEL DATA EKSTERNAL DARI FILE PENGGUNA (SESSION UPLOADED TABLES):\n"
-                "Pengguna telah mengunggah file data spreadsheet (CSV/Excel) ke dalam sesi percakapan ini.\n"
-                "Tabel-tabel fisik dinamis berikut TELAH DIBUAT di skema `analytics` PostgreSQL dan SIAP DI-QUERY / DI-JOIN:\n"
-                + "\n".join(table_sections)
-                + "\n\nPANDUAN & ATURAN ANALISIS DATA SPREADSHEET (POLA KONDISI -> TINDAKAN -> LAPORAN):\n"
-                "1. LANGKAH 0 - KENALI DATA: Tentukan peran tiap tabel dari strukturnya (detail vs master vs ringkasan). Seluruh kalkulasi wajib dihitung dari tabel detail, tabel ringkasan hanya pembanding. Jika berbeda, uraikan selisihnya per kelompok tanpa menebak penyebabnya.\n"
-                "2. LANGKAH 1 - PROFIL KUALITAS DATA: Jalankan pemeriksaan untuk 8 jenis masalah (duplikat ID, kolom tipe campur, angka tersimpan teks, variasi kategori, nilai di luar rentang wajar/negatif pada SETIAP kolom numerik, kunci tanpa pasangan/kosong, nilai kosong pada kolom hitung, baris uji coba/dummy). Tampilkan jumlah baris terdampak termasuk jika nol.\n"
-                "3. LANGKAH 2 - KEPUTUSAN PEMBERSIHAN: Jangan pernah membuang atau mengubah baris tanpa melaporkan jumlah, alasan, dan beberapa contoh barisnya. Analisis level entitas hanya memakai baris dengan kunci valid.\n"
-                "4. TANGGAL TEKS: Tentukan urutan tanggal dari bukti data (>12), jangan biarkan konversi otomatis menebak. Jika ambigu, tanyakan ke pengguna atau nyatakan asumsi.\n"
-                "5. LANGKAH 3 - PERHITUNGAN KODE NYATA: Hitung lewat kode/query SQL nyata dan tampilkan tabel langsung dari hasil eksekusi, jangan mengetik ulang dengan tangan. Ikuti definisi metrik persis sesuai pertanyaan.\n"
-                "6. LANGKAH 4 - VERIFIKASI SEBELUM MENJAWAB: Verifikasi jumlah bagian = total, total baris awal = baris valid + baris dikecualikan, dan bandingkan dua sumber jika ada serta laporkan selisihnya per kelompok.\n"
-                "7. FORMAT JAWABAN: Wajib memuat (1) Jawaban langsung di awal, (2) Log data temuan & tindakan per jenis masalah, (3) Asumsi yang dipakai, (4) Hasil verifikasi, (5) Label [Dugaan] untuk penjelasan sebab yang tidak terbukti oleh data."
-            )
-            sections.append(dynamic_section)
-
-        return "".join(sections)
-    except Exception:
-        return "".join(sections)
+    return "".join(sections)

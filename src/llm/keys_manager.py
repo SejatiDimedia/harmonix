@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field
 
 from src.config import settings
 
-logger = logging.getLogger("harnessly.keys_manager")
+logger = logging.getLogger("harmonix.keys_manager")
 ENV_FILE_PATH = Path(".env")
 
 

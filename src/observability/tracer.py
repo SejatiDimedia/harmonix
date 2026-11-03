@@ -24,6 +24,7 @@ async def init_traces_table() -> None:
                 total_latency_ms NUMERIC NOT NULL,
                 ttft_ms NUMERIC,
                 total_tokens INT DEFAULT 0,
+                cached_tokens INT DEFAULT 0,
                 step_count INT DEFAULT 0,
                 tool_calls_count INT DEFAULT 0,
                 tool_errors_count INT DEFAULT 0,
@@ -32,6 +33,9 @@ async def init_traces_table() -> None:
                 metrics JSONB NOT NULL DEFAULT '{}'::jsonb,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
+        """))
+        await session.execute(text("""
+            ALTER TABLE analytics.agent_traces ADD COLUMN IF NOT EXISTS cached_tokens INT DEFAULT 0;
         """))
         await session.execute(text("""
             CREATE INDEX IF NOT EXISTS idx_agent_traces_task_id ON analytics.agent_traces(task_id);
@@ -110,6 +114,7 @@ class AgentTracer:
         total_tokens: int = 0,
         prompt_tokens: int = 0,
         completion_tokens: int = 0,
+        cached_tokens: int = 0,
         step_count: int = 0,
     ) -> TaskMetrics:
         """Finalize trace metrics, persist locally to PostgreSQL, and sync to Langfuse if configured."""
@@ -127,6 +132,7 @@ class AgentTracer:
             total_tokens=total_tokens,
             prompt_tokens=prompt_tokens,
             completion_tokens=completion_tokens,
+            cached_tokens=cached_tokens,
             estimated_cost_usd=0.00,  # 100% Zero-Cost Baseline
             step_count=step_count,
             tool_calls_count=tool_calls_count,
@@ -144,14 +150,15 @@ class AgentTracer:
                 await session.execute(
                     text("""
                         INSERT INTO analytics.agent_traces 
-                        (task_id, total_latency_ms, ttft_ms, total_tokens, step_count, tool_calls_count, tool_errors_count, status, spans, metrics)
-                        VALUES (:task_id, :latency, :ttft, :tokens, :steps, :tools, :errors, :status, CAST(:spans AS JSONB), CAST(:metrics AS JSONB));
+                        (task_id, total_latency_ms, ttft_ms, total_tokens, cached_tokens, step_count, tool_calls_count, tool_errors_count, status, spans, metrics)
+                        VALUES (:task_id, :latency, :ttft, :tokens, :cached_tokens, :steps, :tools, :errors, :status, CAST(:spans AS JSONB), CAST(:metrics AS JSONB));
                     """),
                     {
                         "task_id": self.task_id,
                         "latency": total_latency_ms,
                         "ttft": self.ttft_ms,
                         "tokens": total_tokens,
+                        "cached_tokens": cached_tokens,
                         "steps": step_count,
                         "tools": tool_calls_count,
                         "errors": tool_errors_count,
@@ -161,7 +168,7 @@ class AgentTracer:
                     },
                 )
                 await session.commit()
-            logger.info("Saved trace for %s in PostgreSQL (%d spans, %sms)", self.task_id, len(self.spans), total_latency_ms)
+            logger.info("Saved trace for %s in PostgreSQL (%d spans, %sms, %d cached tokens)", self.task_id, len(self.spans), total_latency_ms, cached_tokens)
         except Exception as e:
             logger.warning("Could not persist trace to PostgreSQL: %s", e)
 
@@ -183,7 +190,7 @@ class AgentTracer:
                     "type": "trace-create",
                     "body": {
                         "id": self.task_id,
-                        "name": "harnessly_agent_task",
+                        "name": "harmonix_agent_task",
                         "metadata": metrics.model_dump(),
                     },
                 }

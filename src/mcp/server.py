@@ -1,4 +1,4 @@
-"""Custom Model Context Protocol (MCP) Database Server for Harnessly (FR-10).
+"""Custom Model Context Protocol (MCP) Database Server for Harmonix (FR-10).
 
 Exposes guarded database access (schema inspection, AST-validated SQL query execution,
 PII masking, local hybrid glossary search, and safe sandbox calculation) via standard MCP protocol.

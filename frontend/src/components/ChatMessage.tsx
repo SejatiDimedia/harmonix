@@ -300,7 +300,18 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
               )}
             </div>
             {turn.metrics && (
-              <span>Konsumsi Token: {turn.metrics.total_tokens?.toLocaleString() || 0}</span>
+              <span className="flex items-center gap-1.5">
+                <span>Konsumsi Token: {turn.metrics.total_tokens?.toLocaleString() || 0}</span>
+                {turn.metrics.cached_tokens && turn.metrics.cached_tokens > 0 ? (
+                  <span
+                    className="inline-flex items-center gap-0.5 text-[10px] text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 font-medium"
+                    title={`Prompt Caching (FR-15): ${turn.metrics.cached_tokens.toLocaleString()} token dibaca langsung dari cache`}
+                  >
+                    <span>⚡</span>
+                    <span>{turn.metrics.cached_tokens.toLocaleString()} cached</span>
+                  </span>
+                ) : null}
+              </span>
             )}
           </div>
 

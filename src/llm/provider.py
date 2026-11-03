@@ -27,10 +27,11 @@ class ToolCall(BaseModel):
 
 
 class LLMUsage(BaseModel):
-    """Token usage tracking for budget control."""
+    """Token usage tracking for budget control and prompt cache efficiency (FR-15, FR-29)."""
     prompt_tokens: int = 0
     completion_tokens: int = 0
     total_tokens: int = 0
+    cached_tokens: int = 0
 
 
 class LLMResponse(BaseModel):
@@ -107,7 +108,7 @@ class MockLLMProvider(BaseLLMProvider):
         if is_greeting and not any(m.get("role") == "tool" for m in messages):
             return LLMResponse(
                 content=(
-                    "Halo! Saya **Harnessly**, asisten AI Data Analyst Anda untuk database PostgreSQL analitik.\n\n"
+                    "Halo! Saya **Harmonix**, asisten AI Data Analyst Anda untuk database PostgreSQL analitik.\n\n"
                     "Saya dapat membantu Anda mengeksplorasi data, misalnya:\n"
                     "- *Berapa total pesanan dan pendapatan berdasarkan status transaksi?*\n"
                     "- *Kategori produk apa yang memiliki variasi terbanyak?*\n"
@@ -197,7 +198,7 @@ class MockLLMProvider(BaseLLMProvider):
                         arguments={"query": query},
                     )
                 ],
-                usage=LLMUsage(prompt_tokens=250, completion_tokens=40, total_tokens=290),
+                usage=LLMUsage(prompt_tokens=250, completion_tokens=40, total_tokens=290, cached_tokens=150),
                 model="mock-agent-model",
             )
 
@@ -239,7 +240,7 @@ class MockLLMProvider(BaseLLMProvider):
         return LLMResponse(
             content=final_content,
             tool_calls=[],
-            usage=LLMUsage(prompt_tokens=350, completion_tokens=60, total_tokens=410),
+            usage=LLMUsage(prompt_tokens=350, completion_tokens=60, total_tokens=410, cached_tokens=250),
             model="mock-agent-model",
         )
 
@@ -272,11 +273,13 @@ class OpenAICompatibleProvider(BaseLLMProvider):
         api_key: str | None,
         model: str,
         default_headers: dict[str, str] | None = None,
+        provider_name: str = "openai",
     ):
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key or "not-needed"
         self.model = model
         self.default_headers = default_headers or {}
+        self.provider_name = provider_name
 
     def _headers(self) -> dict[str, str]:
         headers = {"Content-Type": "application/json"}
@@ -293,9 +296,23 @@ class OpenAICompatibleProvider(BaseLLMProvider):
         temperature: float = 0.0,
     ) -> LLMResponse:
         url = f"{self.base_url}/chat/completions"
+
+        # FR-15: Apply prompt cache control headers/structure if enabled
+        effective_messages = messages
+        if getattr(settings, "enable_prompt_caching", True):
+            try:
+                from src.agent.caching import apply_prompt_cache_control
+                effective_messages = apply_prompt_cache_control(
+                    messages,
+                    provider=self.provider_name,
+                    model=self.model,
+                )
+            except Exception as cache_err:
+                logger.debug("Prompt cache control formatting bypassed: %s", cache_err)
+
         payload: dict[str, Any] = {
             "model": self.model,
-            "messages": messages,
+            "messages": effective_messages,
             "temperature": temperature,
             "stream": False,
         }
@@ -379,10 +396,19 @@ class OpenAICompatibleProvider(BaseLLMProvider):
                 ).strip()
 
             usage_data = data.get("usage", {})
+            cached_tokens = 0
+            if getattr(settings, "enable_prompt_caching", True):
+                try:
+                    from src.agent.caching import extract_cached_tokens
+                    cached_tokens = extract_cached_tokens(data)
+                except Exception:
+                    pass
+
             usage = LLMUsage(
                 prompt_tokens=usage_data.get("prompt_tokens", 0),
                 completion_tokens=usage_data.get("completion_tokens", 0),
                 total_tokens=usage_data.get("total_tokens", 0),
+                cached_tokens=cached_tokens,
             )
 
             return LLMResponse(
@@ -399,9 +425,23 @@ class OpenAICompatibleProvider(BaseLLMProvider):
         temperature: float = 0.0,
     ) -> AsyncIterator[str]:
         url = f"{self.base_url}/chat/completions"
+
+        # FR-15: Apply prompt cache control headers/structure if enabled
+        effective_messages = messages
+        if getattr(settings, "enable_prompt_caching", True):
+            try:
+                from src.agent.caching import apply_prompt_cache_control
+                effective_messages = apply_prompt_cache_control(
+                    messages,
+                    provider=self.provider_name,
+                    model=self.model,
+                )
+            except Exception as cache_err:
+                logger.debug("Prompt cache control formatting bypassed in stream: %s", cache_err)
+
         payload: dict[str, Any] = {
             "model": self.model,
-            "messages": messages,
+            "messages": effective_messages,
             "temperature": temperature,
             "stream": True,
         }

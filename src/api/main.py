@@ -43,7 +43,7 @@ from src.rag.glossary import seed_glossary_if_empty
 from src.tools.database import RunSQLTool
 
 logging.basicConfig(level=settings.log_level)
-logger = logging.getLogger("harnessly.api")
+logger = logging.getLogger("harmonix.api")
 
 
 from src.observability.metrics import get_system_metrics_summary

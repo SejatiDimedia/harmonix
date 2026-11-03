@@ -16,7 +16,7 @@ from sqlalchemy import text
 
 from src.db.connection import get_db_session
 
-logger = logging.getLogger("harnessly.data_health")
+logger = logging.getLogger("harmonix.data_health")
 
 NUMERIC_TYPES = {
     "smallint", "integer", "bigint", "decimal", "numeric",

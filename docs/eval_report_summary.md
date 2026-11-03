@@ -21,7 +21,7 @@ Dataset benchmark terdiri dari **45 kasus uji terstandarisasi** yang mencakup 6 
 
 ## 2. Hasil Pengujian vs Target Metrik PRD
 
-Evaluasi dijalankan menggunakan runner otomatis [`src/eval/runner.py`](file:///Users/timurdianradhasejati/Programming/Code/AI/harnessly/src/eval/runner.py) dan diuji secara independen melalui LLM-as-a-Judge ([`src/eval/judge.py`](file:///Users/timurdianradhasejati/Programming/Code/AI/harnessly/src/eval/judge.py)):
+Evaluasi dijalankan menggunakan runner otomatis [`src/eval/runner.py`](file:///Users/timurdianradhasejati/Programming/Code/AI/Harmonix/src/eval/runner.py) dan diuji secara independen melalui LLM-as-a-Judge ([`src/eval/judge.py`](file:///Users/timurdianradhasejati/Programming/Code/AI/Harmonix/src/eval/judge.py)):
 
 | Metrik Evaluasi | Target MVP | Target Akhir PRD | **Hasil Capaian Harnessly** | Status |
 | :--- | :--- | :--- | :--- | :--- |
@@ -50,7 +50,7 @@ Dari 45 kasus uji, terdapat 4 kasus kegagalan awal pada tahap pengembangan yang 
 
 ## 4. Kebijakan CI/CD Release Gate (2-Tier Evaluation)
 
-Untuk mencegah terjadinya regresi performa atau kebocoran keamanan saat rilis kode baru, repositori menerapkan alur **GitHub Actions 2-Tier** ([`.github/workflows/ci.yml`](file:///Users/timurdianradhasejati/Programming/Code/AI/harnessly/.github/workflows/ci.yml)):
+Untuk mencegah terjadinya regresi performa atau kebocoran keamanan saat rilis kode baru, repositori menerapkan alur **GitHub Actions 2-Tier** ([`.github/workflows/ci.yml`](file:///Users/timurdianradhasejati/Programming/Code/AI/Harmonix/.github/workflows/ci.yml)):
 
 *   **Tier 1: PR Gate (Fast Integration & Safety Tests)**:
     - Berjalan di setiap Pull Request / Commit.
