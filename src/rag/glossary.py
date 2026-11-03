@@ -27,7 +27,7 @@ class MetricGlossaryItem(BaseModel):
 
 
 class MetricSearchResult(BaseModel):
-    """Result item returned by hybrid search with relevance scoring."""
+    """Result item returned by hybrid search with relevance scoring and cross-encoder rerank score."""
     metric_name: str
     business_definition: str
     calculation_formula: str
@@ -36,6 +36,7 @@ class MetricSearchResult(BaseModel):
     dense_score: float = 0.0
     bm25_score: float = 0.0
     rrf_score: float = 0.0
+    rerank_score: float | None = None
 
 
 # ==============================================================================
@@ -167,10 +168,15 @@ async def seed_glossary_if_empty() -> None:
 # Hybrid Search (Dense Vector + BM25 via Reciprocal Rank Fusion)
 # ==============================================================================
 
-async def hybrid_search_glossary(query_text: str, top_k: int = 3) -> list[MetricSearchResult]:
-    """Execute hybrid search combining vector semantic similarity and BM25 full-text search.
+async def hybrid_search_glossary(
+    query_text: str,
+    top_k: int = 3,
+    use_reranker: bool = True,
+) -> list[MetricSearchResult]:
+    """Execute 2-stage hybrid search combining vector similarity, BM25 FTS, and Cross-Encoder reranking (FR-12).
 
-    Uses Reciprocal Rank Fusion (RRF) with constant k=60 to rank candidates fairly.
+    Stage 1: Dense Vector + BM25 Full-Text merged with Reciprocal Rank Fusion (RRF k=60).
+    Stage 2: Cross-Encoder (FlashRank) reranks candidate passages to produce final top-k metrics.
     """
     cleaned_query = query_text.strip()
     if not cleaned_query:
@@ -244,6 +250,43 @@ async def hybrid_search_glossary(query_text: str, top_k: int = 3) -> list[Metric
 
     # Sort by RRF score descending
     sorted_items = sorted(candidates.values(), key=lambda x: x["rrf_score"], reverse=True)
+
+    # Stage 2: Cross-Encoder Reranking (FR-12)
+    if use_reranker and sorted_items:
+        try:
+            from src.rag.reranker import get_reranker
+            reranker = get_reranker()
+            rerank_docs = [
+                {
+                    "name": item["name"],
+                    "definition": item["definition"],
+                    "formula": item["formula"],
+                    "sql": item["sql"],
+                    "tables": item["tables"],
+                    "dense_score": item["dense_score"],
+                    "bm25_score": item["bm25_score"],
+                    "rrf_score": item["rrf_score"],
+                    "text": f"{item['name']}: {item['definition']} Formula: {item['formula']}",
+                }
+                for item in sorted_items
+            ]
+            reranked_docs = reranker.rerank(cleaned_query, rerank_docs, top_k=top_k)
+            return [
+                MetricSearchResult(
+                    metric_name=d["name"],
+                    business_definition=d["definition"],
+                    calculation_formula=d["formula"],
+                    sql_expression=d["sql"],
+                    relevant_tables=d["tables"],
+                    dense_score=round(d["dense_score"], 4),
+                    bm25_score=round(d["bm25_score"], 4),
+                    rrf_score=round(d["rrf_score"], 5),
+                    rerank_score=d.get("rerank_score"),
+                )
+                for d in reranked_docs
+            ]
+        except Exception as re_err:
+            logger.warning("Stage-2 Cross-Encoder Reranker fallback to RRF: %s", re_err)
 
     results = []
     for item in sorted_items[:top_k]:

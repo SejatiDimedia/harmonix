@@ -84,9 +84,20 @@ class Settings(BaseSettings):
     agent_total_timeout_seconds: int = Field(default=120, description="Maximum duration for entire task")
     agent_max_token_budget: int = Field(default=200000, description="Token budget per task")
     agent_terminal_logs: bool = Field(default=True, description="Enable real-time visual execution logs in the terminal")
+    # Prompt Caching settings (FR-15)
     enable_prompt_caching: bool = Field(
         default=True,
         description="Enable prompt caching headers and deterministic prefix ordering for LLM requests (FR-15)",
+    )
+
+    # RAG Reranker settings (FR-12)
+    rag_enable_reranker: bool = Field(
+        default=True,
+        description="Enable Cross-Encoder reranking for RAG glossary search (FR-12)",
+    )
+    rag_reranker_model: str = Field(
+        default="ms-marco-TinyBERT-L-2-v2",
+        description="FlashRank model name for local cross-encoder reranking",
     )
 
     # SQL Guardrail Parameters

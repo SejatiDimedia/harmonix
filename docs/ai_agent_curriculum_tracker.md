@@ -9,12 +9,12 @@ Dokumen ini adalah **panduan belajar teknis & pelacak implementasi produksi (*pr
 | No | Pilar Utama | Total Topik | Sudah Ada (✅) | Parsial (⚠️) | Belum Ada (❌) | Cakupan (%) |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: |
 | **1** | **Fondasi: Cara Kerja Agent** | 4 | 4 | 0 | 0 | **100%** |
-| **2** | **Context Engineering** | 5 | 4 | 1 | 0 | **85%** |
+| **2** | **Context Engineering** | 5 | 5 | 0 | 0 | **100%** |
 | **3** | **Protokol dan Integrasi** | 5 | 3 | 0 | 2 | **60%** |
 | **4** | **Evaluasi dan Observability** | 4 | 4 | 0 | 0 | **100%** |
 | **5** | **Keamanan dan Keandalan** | 4 | 3 | 1 | 0 | **85%** |
 | **6** | **Rekayasa Produksi** | 5 | 3 | 1 | 1 | **70%** |
-| **TOTAL** | **Semua Pilar** | **27** | **21** | **3** | **3** | **~85%** |
+| **TOTAL** | **Semua Pilar** | **27** | **22** | **2** | **3** | **~89%** |
 
 ---
 
@@ -138,13 +138,16 @@ Dokumen ini adalah **panduan belajar teknis & pelacak implementasi produksi (*pr
 
 ---
 
-### 2.5 RAG yang Baik (Hybrid Search, Reciprocal Rank Fusion, Agentic Search & Reranking)
-- **Status:** `[PARSIAL] ⚠️` *(Hybrid Search & Agentic Search SUDAH ✅; Reranking BELUM ❌)*
+### 2.5 RAG yang Baik (Hybrid Search, Reciprocal Rank Fusion, Agentic Search & FlashRank Cross-Encoder Reranking)
+- **Status:** `[SUDAH] ✅` *(Terimplementasi penuh: FR-12 P1)*
 - **Lokasi Kode:**
-  - Hybrid Search (Dense + BM25 RRF): [`src/rag/glossary.py#L170-L245`](file:///Users/timurdianradhasejati/Programming/Code/AI/Harmonix/src/rag/glossary.py#L170-L245)
-  - Tool Agentic Search: [`src/tools/glossary.py#L15-L65`](file:///Users/timurdianradhasejati/Programming/Code/AI/Harmonix/src/tools/glossary.py#L15-L65)
-- **Konsep:** Pencarian definisi bisnis menggabungkan dua dunia: *Dense Vector Search* (menangkap makna semantik) dan *BM25 Full-Text Search* PostgreSQL (menangkap kecocokan kata kunci eksak). Hasil keduanya digabungkan menggunakan algoritma **Reciprocal Rank Fusion (RRF)** ($K=60$).
-- **Kekurangan Saat Ini:** Hasil top kandidat dari RRF belum dilewatkan ke model *Cross-Encoder Reranker* (misal `FlashRank` lokal) untuk melakukan pemeringkatan ulang tingkat lanjut (*second-stage reranking*).
+  - 2-Stage Hybrid Retrieval & RRF: [`src/rag/glossary.py#L170-L270`](file:///Users/timurdianradhasejati/Programming/Code/AI/harnessly/src/rag/glossary.py#L170-L270)
+  - Cross-Encoder Reranker Engine: [`src/rag/reranker.py#L1-L120`](file:///Users/timurdianradhasejati/Programming/Code/AI/harnessly/src/rag/reranker.py#L1-L120)
+  - Tool Agentic Search: [`src/tools/glossary.py#L15-L65`](file:///Users/timurdianradhasejati/Programming/Code/AI/harnessly/src/tools/glossary.py#L15-L65)
+  - Unit Test Suite (5/5 Passed): [`tests/test_rag_reranker.py`](file:///Users/timurdianradhasejati/Programming/Code/AI/harnessly/tests/test_rag_reranker.py)
+- **Konsep:** Sistem pencarian dokumen pengetahuan bisnis menggunakan arsitektur *two-stage retrieval*:
+  1. **Stage 1 (Retrieval & Fusion):** Menggabungkan *Dense Vector Search* (vektor semantik via `FastEmbed` `bge-small-en-v1.5`) dan *BM25 Full-Text Search* PostgreSQL (kata kunci eksak) menggunakan algoritma **Reciprocal Rank Fusion (RRF)** ($K=60$) untuk mengumpulkan 10 kandidat teratas.
+  2. **Stage 2 (Cross-Encoder Precision Reranking):** Menggunakan model Cross-Encoder lokal tanpa GPU (`FlashRank` dengan model `ms-marco-TinyBERT-L-2-v2` ONNX) untuk menghitung interaksi *cross-attention* penuh antara query pengguna dan pasangan teks metrik, menyaring noise dan menempatkan metrik paling presisi pada peringkat 1-3 dengan atribut `rerank_score` (100% Zero-Cost & offline).
 
 ---
 
@@ -344,17 +347,19 @@ Dokumen ini adalah **panduan belajar teknis & pelacak implementasi produksi (*pr
 Untuk melengkapi 100% materi AI Agent Engineer ke dalam portofolio ini, berikut adalah urutan implementasi yang direkomendasikan:
 
 ```
-[Tahap 1: Cepat & Berdampak Tinggi]
-1. FR-15: Prompt Caching Header pada System Prompt & Skema (Gemini / OpenRouter / Anthropic)
-2. FR-12: Cross-Encoder Reranker Ringan (FlashRank) pada RAG Glosarium Bisnis
+[Tahap 1: Context Engineering Selesai Penuh (100%)]
+✅ FR-14: Conversation Compaction & Summarization Engine (PostgreSQL & Heuristic Fallback)
+✅ FR-15: Deterministic Prefix Structuring & Multi-Provider Prompt Caching Engine
+✅ FR-12: Two-Stage Hybrid Search & FlashRank Cross-Encoder Reranker
 
-[Tahap 2: Peningkatan Daya Nalar & Skema]
-3. FR-18: Dedicated Working Memory / Scratchpad Tool untuk Agent
-4. FR-04: Sub-Agent Swarm (Pemisahan Planner Agent vs SQL Execution Agent via LangGraph)
+[Tahap 2: Peningkatan Daya Nalar & Skema State]
+1. FR-18: Dedicated Working Memory / Scratchpad Tool untuk Agent (Persistensi Rencana Kerja Sementara)
+2. FR-04: Sub-Agent Swarm (Pemisahan Planner Agent vs SQL Execution Agent via LangGraph)
 
 [Tahap 3: Infrastruktur Skala Besar]
-5. FR-26: Docker Container Air-Gapped Sandbox untuk Eksekusi Python Tool
-6. Distributed Task Queue (Celery / Redis Queue) untuk Background Tasks
+3. FR-26: Docker Container Air-Gapped Sandbox untuk Eksekusi Python Tool
+4. Distributed Task Queue (Celery / Redis Queue) untuk Background Long Tasks
+5. Batch API Integration (Pemrosesan Asinkronus Massal 24 Jam)
 ```
 
 ---
