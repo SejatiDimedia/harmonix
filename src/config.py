@@ -90,6 +90,24 @@ class Settings(BaseSettings):
         description="Enable prompt caching headers and deterministic prefix ordering for LLM requests (FR-15)",
     )
 
+    # Sandbox settings (FR-26 Air-gapped Docker execution for Python calculations)
+    sandbox_docker_enabled: bool = Field(
+        default=True,
+        description="Enable air-gapped Docker sandbox container if Docker daemon is running (FR-26)",
+    )
+    sandbox_docker_image: str = Field(
+        default="python:3.13-slim",
+        description="Docker image used for isolated air-gapped execution",
+    )
+    sandbox_memory_limit: str = Field(
+        default="128m",
+        description="Memory limit for container execution",
+    )
+    sandbox_cpu_limit: str = Field(
+        default="0.5",
+        description="CPU limit for container execution",
+    )
+
     # RAG Reranker settings (FR-12)
     rag_enable_reranker: bool = Field(
         default=True,

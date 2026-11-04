@@ -111,3 +111,64 @@ async def test_calculate_tool_bare_expression_and_aliases():
     assert res2["status"] == "success"
     assert res2["result"] == 42.6
 
+
+@pytest.mark.asyncio
+async def test_calculate_tool_returns_sandbox_metadata():
+    """Verify CalculateTool returns execution isolation metadata (FR-26)."""
+    tool = CalculateTool(timeout_seconds=2.0)
+    output = await tool.execute(code="result = 100 * 2.5")
+    assert output["status"] == "success"
+    assert output["result"] == 250.0
+    assert "sandbox_type" in output
+    assert output["network_isolated"] is True
+    assert "duration_ms" in output
+
+
+@pytest.mark.asyncio
+async def test_docker_air_gapped_sandbox_flags():
+    """Verify DockerAirGappedSandbox builds command with --network none, memory ceiling, and cap-drop."""
+    from unittest.mock import AsyncMock, patch
+    from src.tools.sandbox import DockerAirGappedSandbox
+
+    mock_proc = AsyncMock()
+    mock_proc.communicate.return_value = (b'{"status": "success", "result": 42}', b"")
+    mock_proc.returncode = 0
+
+    with patch("asyncio.create_subprocess_exec", return_value=mock_proc) as mock_exec:
+        res = await DockerAirGappedSandbox.execute(
+            runner_script="print('hello')",
+            timeout_seconds=3.0,
+            image="python:3.13-slim",
+            memory_limit="128m",
+            cpu_limit="0.5",
+        )
+        assert res["status"] == "success"
+        assert res["result"] == 42
+        assert res["sandbox_type"] == "docker_air_gapped"
+        assert res["network_isolated"] is True
+
+        called_args = mock_exec.call_args[0]
+        assert called_args[0] == "docker"
+        assert called_args[1] == "run"
+        assert "--network" in called_args
+        network_idx = called_args.index("--network")
+        assert called_args[network_idx + 1] == "none"
+        assert "--memory" in called_args
+        assert "--read-only" in called_args
+        assert "--cap-drop" in called_args
+
+
+@pytest.mark.asyncio
+async def test_sandbox_manager_fallback():
+    """Verify SandboxManager gracefully falls back to SubprocessASTSandbox when Docker is unavailable."""
+    from unittest.mock import AsyncMock, patch
+    from src.tools.sandbox import DockerAirGappedSandbox, SandboxManager
+
+    with patch.object(DockerAirGappedSandbox, "is_docker_available", AsyncMock(return_value=False)):
+        res = await SandboxManager.execute("result = 5 + 7", timeout_seconds=2.0)
+        assert res["status"] == "success"
+        assert res["result"] == 12
+        assert res["sandbox_type"] == "subprocess_ast"
+        assert res["network_isolated"] is True
+
+

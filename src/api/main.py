@@ -4,7 +4,7 @@ import json
 import logging
 from pathlib import Path
 from typing import Literal
-from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi import FastAPI, HTTPException, UploadFile, File, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
@@ -516,6 +516,68 @@ async def trigger_session_compaction_endpoint(session_id: str):
     llm = registry.create_analyst_llm()
     result = await force_compact_session(session_id=session_id, llm=llm)
     return result
+
+
+# ==============================================================================
+# Batch Processing API (FR-42, Pilar 6.4)
+# ==============================================================================
+
+from src.batch.engine import BatchProcessingEngine, CreateBatchRequest
+
+@app.post("/v1/batch", tags=["Batch Analytics"])
+async def submit_batch_job(payload: CreateBatchRequest):
+    """Submit a bulk batch of natural language analytical questions for background processing (FR-42)."""
+    record = await BatchProcessingEngine.create_batch(
+        queries=payload.queries,
+        engine=payload.engine,
+        concurrency_limit=payload.concurrency_limit,
+    )
+    return record.model_dump()
+
+
+@app.get("/v1/batch/{batch_id}", tags=["Batch Analytics"])
+async def get_batch_status(batch_id: str):
+    """Check progress and execution status of a batch analytics job."""
+    record = BatchProcessingEngine.get_batch(batch_id)
+    if not record:
+        raise HTTPException(status_code=404, detail=f"Batch job '{batch_id}' not found.")
+    return record.model_dump()
+
+
+@app.get("/v1/batch/{batch_id}/results", tags=["Batch Analytics"])
+async def get_batch_results(
+    batch_id: str,
+    format: Literal["json", "jsonl", "csv"] = "json",
+):
+    """Download results of a completed batch job in JSON, JSONL, or CSV format."""
+    record = BatchProcessingEngine.get_batch(batch_id)
+    if not record:
+        raise HTTPException(status_code=404, detail=f"Batch job '{batch_id}' not found.")
+
+    if format == "jsonl":
+        jsonl_content = BatchProcessingEngine.export_jsonl(batch_id)
+        return Response(
+            content=jsonl_content,
+            media_type="application/x-ndjson",
+            headers={"Content-Disposition": f"attachment; filename={batch_id}_results.jsonl"},
+        )
+    elif format == "csv":
+        csv_content = BatchProcessingEngine.export_csv(batch_id)
+        return Response(
+            content=csv_content,
+            media_type="text/csv",
+            headers={"Content-Disposition": f"attachment; filename={batch_id}_results.csv"},
+        )
+
+    return record.model_dump()
+
+
+@app.get("/v1/batch", tags=["Batch Analytics"])
+async def list_all_batches():
+    """List all submitted batch analytics jobs."""
+    jobs = BatchProcessingEngine.list_batches()
+    return {"total": len(jobs), "batches": [j.model_dump() for j in jobs]}
+
 
 
 # ==============================================================================
