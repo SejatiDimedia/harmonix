@@ -419,6 +419,7 @@ async def get_session_details(session_id: str) -> dict[str, Any] | None:
                 "metrics": f_dict.get("metrics"),
                 "memories_recalled": f_dict.get("memories_recalled", []),
                 "working_memory": f_dict.get("working_memory") or raw_w_mem or {},
+                "execution_plan": f_dict.get("execution_plan"),
                 "created_at": c_at.isoformat() if c_at else None,
             })
 

@@ -109,6 +109,10 @@ class AgentFinalResponse(BaseModel):
         default_factory=dict,
         description="Working memory scratchpad notes recorded during task execution (FR-18)",
     )
+    execution_plan: dict[str, Any] | None = Field(
+        default=None,
+        description="Planner-Executor sub-task breakdown and execution status (FR-04)",
+    )
     total_steps: int = 0
     token_usage: dict[str, int] = Field(default_factory=dict)
     metrics: dict[str, Any] | None = None

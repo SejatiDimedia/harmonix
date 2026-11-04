@@ -19,6 +19,7 @@ STATIC_INDEX_PATH = STATIC_DIR / "index.html"
 from src.agent.auditor import DataAuditorAgent
 from src.agent.langgraph_agent import LangGraphAgent
 from src.agent.manual_loop import ManualAgentLoop
+from src.agent.planner_executor import PlannerExecutorAgent
 from src.agent.models import AgentTaskStatus
 from src.agent.state import (
     get_task_record,
@@ -108,9 +109,9 @@ class ChatRequest(BaseModel):
     query: str = Field(..., description="User analytics question in natural language (Indonesian or English)")
     task_id: str | None = Field(default=None, description="Optional custom task tracking ID")
     session_id: str | None = Field(default=None, description="Optional conversation session ID")
-    engine: Literal["manual", "langgraph"] = Field(
+    engine: Literal["manual", "langgraph", "swarm"] = Field(
         default="manual",
-        description="Orchestrator engine: 'manual' (ManualAgentLoop) or 'langgraph' (LangGraphAgent)",
+        description="Orchestrator engine: 'manual' (ManualAgentLoop), 'langgraph' (LangGraphAgent), or 'swarm' (PlannerExecutorAgent)",
     )
     provider: str | None = Field(default=None, description="Optional runtime LLM provider override")
     model: str | None = Field(default=None, description="Optional runtime LLM model override")
@@ -230,7 +231,14 @@ async def chat_stream(request: ChatRequest):
     )
     custom_auditor = DataAuditorAgent(llm=auditor_llm)
 
-    if request.engine == "langgraph":
+    if request.engine == "swarm":
+        agent_runner = PlannerExecutorAgent(llm=analyst_llm, auditor=custom_auditor)
+        stream_iter = agent_runner.run_stream(
+            user_query=request.query,
+            task_id=request.task_id,
+            session_id=request.session_id,
+        )
+    elif request.engine == "langgraph":
         agent_runner = LangGraphAgent(llm=analyst_llm, auditor=custom_auditor)
         stream_iter = agent_runner.run_stream(
             user_query=request.query,
@@ -391,8 +399,17 @@ async def resume_task_stream(task_id: str, request: ResumeTaskRequest | None = N
     auditor_llm = registry.create_auditor_llm()
     custom_auditor = DataAuditorAgent(llm=auditor_llm)
 
-    is_langgraph = task_id.startswith("langgraph_")
-    if is_langgraph:
+    if task_id.startswith("swarm_"):
+        agent = PlannerExecutorAgent(llm=analyst_llm, auditor=custom_auditor)
+        agent_iter = agent.run_stream(
+            user_query=record.user_query,
+            task_id=task_id,
+            session_id=record.session_id,
+            resume_messages=resume_messages,
+            initial_step=record.current_step,
+            is_approved=(decision == "approved"),
+        )
+    elif is_langgraph:
         from src.agent.langgraph_agent import LangGraphAgent
         agent = LangGraphAgent(llm=analyst_llm, auditor=custom_auditor)
         agent_iter = agent.run_stream(
