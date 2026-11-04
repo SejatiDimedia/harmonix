@@ -27,6 +27,7 @@ from src.agent.models import (
 )
 from src.agent.prompts import BASE_ANALYST_SYSTEM_PROMPT, build_analyst_system_prompt
 from src.agent.state import save_task_checkpoint
+from src.agent.scratchpad import WorkingMemoryManager
 from src.agent.suggestions import get_smart_suggestions
 from src.config import settings
 from src.llm.provider import BaseLLMProvider, MockLLMProvider, ToolCall, get_llm_provider
@@ -37,6 +38,7 @@ from src.tools.glossary import SearchGlossaryTool
 from src.tools.guardrails import SQLGuardrail, SQLValidationError
 from src.tools.pii import PIIMasker
 from src.tools.sandbox import CalculateTool
+from src.tools.scratchpad import ScratchpadTool
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +69,7 @@ class LangGraphAgentState(TypedDict, total=False):
     error: str | None
     status: str
     recalled_memories: list[Any]
+    working_memory: dict[str, str]
 
 
 class LangGraphAgent:
@@ -91,6 +94,7 @@ class LangGraphAgent:
             RunSQLTool(),
             CalculateTool(),
             MakeChartTool(),
+            ScratchpadTool(),
         ]
         self.tools: dict[str, BaseTool] = {t.name: t for t in tool_instances}
         self.openai_tools = [t.to_openai_schema() for t in tool_instances]
@@ -217,12 +221,17 @@ class LangGraphAgent:
                 except Exception:
                     past_turns = []
 
+        if "scratchpad" in self.tools and isinstance(self.tools["scratchpad"], ScratchpadTool):
+            self.tools["scratchpad"].set_context(task_id=state["task_id"], session_id=session_id)
+
         system_prompt = await build_analyst_system_prompt(
             session_id=session_id,
             recalled_memories=recalled_memories,
             compacted_summary=compacted_summary,
+            task_id=state["task_id"],
         )
         state["recalled_memories"] = recalled_memories
+        state["working_memory"] = WorkingMemoryManager.get_or_create(state["task_id"], session_id).to_dict()
         messages: list[dict[str, Any]] = [{"role": "system", "content": system_prompt}]
 
         # Inject multi-turn short-term memory (compacted or raw)
@@ -469,6 +478,8 @@ class LangGraphAgent:
                 result = await tool.execute(**tool_args)
                 dur_ms = round((time.perf_counter() - t0) * 1000, 1)
                 self.term_logger.log_tool_result(tool_name=tool_name, observation=result, duration_ms=dur_ms)
+                if tool_name == "scratchpad":
+                    state["working_memory"] = WorkingMemoryManager.get_or_create(state["task_id"]).to_dict()
                 obs = str(result)
 
             tool_content = json.dumps(result, ensure_ascii=False) if isinstance(result, (dict, list)) else str(obs)
@@ -641,6 +652,7 @@ class LangGraphAgent:
             token_usage={"total_tokens": final_state.get("current_step", 0) * 80},
             follow_up_suggestions=follow_up_suggestions,
             memories_recalled=final_state.get("recalled_memories") or [],
+            working_memory=WorkingMemoryManager.get_or_create(tid, sid).to_dict(),
         )
 
     async def run_stream(
@@ -833,6 +845,7 @@ class LangGraphAgent:
 
         recalled_memories = final_state.get("recalled_memories") or []
         cached_toks = int(total_toks * 0.6) if total_toks > 100 else 0
+        final_working_memory = WorkingMemoryManager.get_or_create(tid, sid).to_dict()
         final_response = AgentFinalResponse(
             answer_text=clean_answer,
             sql_queries=final_state.get("sql_queries", []),
@@ -852,6 +865,7 @@ class LangGraphAgent:
             follow_up_suggestions=follow_up_suggestions,
             audit_result=audit_verdict,
             memories_recalled=recalled_memories,
+            working_memory=final_working_memory,
         )
 
         # FR-17: Auto-learn and store verified queries in long-term memory
@@ -884,6 +898,7 @@ class LangGraphAgent:
                 final_result=final_response.model_dump(),
                 analyst_provider=getattr(self.llm, "provider_name", getattr(self.llm, "provider", None)),
                 analyst_model=getattr(self.llm, "model", None),
+                working_memory=final_working_memory,
             )
         except Exception as e:
             logger.warning("LangGraph completion save failed: %s", e)

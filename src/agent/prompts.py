@@ -113,6 +113,8 @@ PANDUAN OPERASIONAL TOOL & FORMAT PENYAJIAN:
 5. Jawaban Akhir & Format Penyajian (WAJIB FORMAT TABEL MARKDOWN):
    - Sajikan temuan kunci berdasarkan baris data nyata yang dikembalikan oleh tool `run_sql`.
    - Sebutkan angka-angka konkret hasil perhitungan dari tabel.
+6. Working Memory & Scratchpad Notes (FR-18):
+   - Jika analisis membutuhkan investigasi mendalam, banyak langkah kueri, atau pengecekan anomali data, panggil tool `scratchpad` untuk mencatat rencana kerja, hipotesis awal, temuan perantara, dan checklist verifikasi agar tidak kehilangan jejak.
    - Jelaskan metrik dan rumus yang digunakan secara transparan.
    - ATURAN FORMAT PENYAJIAN TABEL (WAJIB MARKDOWN TABLE):
      * DILARANG KERAS menyajikan perbandingan angka, peringkat/ranking, data multi-periode, atau metrik kuantitatif dalam bentuk teks biasa berkolom atau spasi yang disejajarkan manual!
@@ -207,6 +209,7 @@ async def build_analyst_system_prompt(
     session_id: str | None = None,
     recalled_memories: list[Any] | None = None,
     compacted_summary: str | None = None,
+    task_id: str | None = None,
 ) -> str:
     """Construct dynamic system prompt with deterministic prefix ordering (FR-15 Prompt Caching).
     
@@ -215,6 +218,7 @@ async def build_analyst_system_prompt(
     2. Session Uploaded Tables Schema (cached in-memory for bit-exact stability)
     3. Long-Term Memories (pgvector few-shot guidance)
     4. Compacted Session History (FR-14 summary)
+    5. Active Working Memory / Scratchpad (FR-18 dynamic task execution state)
     """
     base_prompt = BASE_ANALYST_SYSTEM_PROMPT
     sections = [base_prompt]
@@ -282,5 +286,15 @@ async def build_analyst_system_prompt(
             "2. Anda dapat merujuk kembali angka-angka kunci di atas jika pengguna menanyakan perbandingan (misal: 'dibandingkan periode sebelumnya')."
         )
         sections.append(compaction_section)
+
+    # 4. Inject Active Working Memory / Scratchpad (FR-18 Dynamic Execution State)
+    if task_id:
+        try:
+            from src.agent.scratchpad import WorkingMemoryManager
+            scratchpad_section = WorkingMemoryManager.format_for_prompt(task_id)
+            if scratchpad_section:
+                sections.append(scratchpad_section)
+        except Exception:
+            pass
 
     return "".join(sections)

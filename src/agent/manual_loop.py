@@ -32,6 +32,7 @@ from src.agent.suggestions import get_smart_suggestions
 from src.config import settings
 from src.llm.provider import BaseLLMProvider, MockLLMProvider, ToolCall, get_llm_provider
 from src.observability.models import SpanStatus, SpanType
+from src.agent.scratchpad import WorkingMemoryManager
 from src.observability.tracer import AgentTracer
 from src.rag.long_term_memory import retrieve_relevant_memories, store_successful_query
 from src.tools.base import BaseTool
@@ -40,6 +41,7 @@ from src.tools.database import GetSchemaTool, RunSQLTool
 from src.tools.glossary import SearchGlossaryTool
 from src.tools.pii import PIIMasker
 from src.tools.sandbox import CalculateTool
+from src.tools.scratchpad import ScratchpadTool
 
 logger = logging.getLogger(__name__)
 
@@ -72,6 +74,7 @@ class ManualAgentLoop:
             RunSQLTool(),
             CalculateTool(),
             MakeChartTool(),
+            ScratchpadTool(),
         ]
         self.tools: dict[str, BaseTool] = {t.name: t for t in tool_instances}
         self.openai_tools = [t.to_openai_schema() for t in tool_instances]
@@ -95,6 +98,10 @@ class ManualAgentLoop:
         """Run the manual agent loop and yield streaming SSE events."""
         task_id = task_id or f"task_{uuid.uuid4().hex[:8]}"
         start_time = time.perf_counter()
+
+        # Configure task context for stateful tools (e.g. FR-18 Scratchpad)
+        if "scratchpad" in self.tools and isinstance(self.tools["scratchpad"], ScratchpadTool):
+            self.tools["scratchpad"].set_context(task_id=task_id, session_id=session_id)
 
         # Initialize Observability Tracer (OB-01, OB-02)
         tracer = AgentTracer(task_id=task_id)
@@ -144,6 +151,7 @@ class ManualAgentLoop:
                 session_id=session_id,
                 recalled_memories=recalled_memories,
                 compacted_summary=compacted_summary,
+                task_id=task_id,
             )
             messages = [{"role": "system", "content": system_prompt}]
             if past_turns:
@@ -304,6 +312,7 @@ class ManualAgentLoop:
                     messages=messages,
                     user_query=user_query,
                     session_id=session_id,
+                    working_memory=WorkingMemoryManager.get_or_create(task_id).to_dict(),
                 )
             except Exception as e:
                 logger.debug("Running checkpoint save: %s", e)
@@ -542,6 +551,7 @@ class ManualAgentLoop:
                                 pending_approval=approval_payload,
                                 analyst_provider=getattr(self.llm, "provider_name", getattr(self.llm, "provider", None)),
                                 analyst_model=getattr(self.llm, "model", None),
+                                working_memory=WorkingMemoryManager.get_or_create(task_id).to_dict(),
                             )
                         except Exception as e:
                             logger.warning("Approval checkpoint save failed: %s", e)
@@ -744,6 +754,8 @@ class ManualAgentLoop:
                     "data": audit_verdict.model_dump(),
                 }
 
+        final_working_memory = WorkingMemoryManager.get_or_create(task_id).to_dict()
+
         final_response = AgentFinalResponse(
             answer_text=clean_answer,
             sql_queries=executed_sqls,
@@ -761,6 +773,7 @@ class ManualAgentLoop:
             follow_up_suggestions=follow_up_suggestions,
             audit_result=audit_verdict,
             memories_recalled=recalled_memories,
+            working_memory=final_working_memory,
         )
 
         # FR-17: Auto-learn and store verified queries in long-term memory (Maker-Checker approved)
@@ -792,6 +805,7 @@ class ManualAgentLoop:
                 final_result=final_response.model_dump(),
                 analyst_provider=getattr(self.llm, "provider_name", getattr(self.llm, "provider", None)),
                 analyst_model=getattr(self.llm, "model", None),
+                working_memory=final_working_memory,
             )
         except Exception as e:
             logger.warning("Completion checkpoint save failed: %s", e)

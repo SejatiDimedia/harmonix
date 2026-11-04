@@ -32,6 +32,7 @@ class TaskRecord(BaseModel):
     error_message: str | None = None
     analyst_provider: str | None = None
     analyst_model: str | None = None
+    working_memory: dict[str, Any] = Field(default_factory=dict)
     created_at: datetime | None = None
     updated_at: datetime | None = None
 
@@ -63,11 +64,12 @@ async def init_task_state_table() -> None:
             );
         """))
 
-        # Migration: Ensure session-scoped model routing columns exist on older schemas
+        # Migration: Ensure session-scoped model routing and working memory columns exist
         await session.execute(text("""
             ALTER TABLE analytics.agent_tasks
             ADD COLUMN IF NOT EXISTS analyst_provider VARCHAR(50),
-            ADD COLUMN IF NOT EXISTS analyst_model VARCHAR(100);
+            ADD COLUMN IF NOT EXISTS analyst_model VARCHAR(100),
+            ADD COLUMN IF NOT EXISTS working_memory JSONB DEFAULT '{}'::jsonb;
         """))
 
         # Table 2: Step-by-Step Checkpoints (Audit Trail & Time-Travel)
@@ -128,6 +130,7 @@ async def save_task_checkpoint(
     error_message: str | None = None,
     analyst_provider: str | None = None,
     analyst_model: str | None = None,
+    working_memory: dict[str, Any] | None = None,
 ) -> None:
     """Save or update task execution state and append a step checkpoint."""
     await init_task_state_table()
@@ -135,13 +138,14 @@ async def save_task_checkpoint(
     messages_json = json.dumps(messages, ensure_ascii=False)
     pending_json = json.dumps(pending_approval, ensure_ascii=False) if pending_approval else None
     result_json = json.dumps(final_result, ensure_ascii=False) if final_result else None
+    memory_json = json.dumps(working_memory, ensure_ascii=False) if working_memory is not None else None
 
     async with get_db_session() as session:
         # 1. Upsert into agent_tasks
         upsert_query = text("""
             INSERT INTO analytics.agent_tasks 
-            (task_id, session_id, status, current_step, user_query, messages, pending_approval, final_result, error_message, analyst_provider, analyst_model, updated_at)
-            VALUES (:task_id, :session_id, :status, :current_step, :user_query, CAST(:messages AS JSONB), CAST(:pending_approval AS JSONB), CAST(:final_result AS JSONB), :error_message, :analyst_provider, :analyst_model, CURRENT_TIMESTAMP)
+            (task_id, session_id, status, current_step, user_query, messages, pending_approval, final_result, error_message, analyst_provider, analyst_model, working_memory, updated_at)
+            VALUES (:task_id, :session_id, :status, :current_step, :user_query, CAST(:messages AS JSONB), CAST(:pending_approval AS JSONB), CAST(:final_result AS JSONB), :error_message, :analyst_provider, :analyst_model, COALESCE(CAST(:working_memory AS JSONB), '{}'::jsonb), CURRENT_TIMESTAMP)
             ON CONFLICT (task_id) DO UPDATE SET
                 session_id = COALESCE(EXCLUDED.session_id, analytics.agent_tasks.session_id),
                 status = EXCLUDED.status,
@@ -152,6 +156,7 @@ async def save_task_checkpoint(
                 error_message = EXCLUDED.error_message,
                 analyst_provider = COALESCE(EXCLUDED.analyst_provider, analytics.agent_tasks.analyst_provider),
                 analyst_model = COALESCE(EXCLUDED.analyst_model, analytics.agent_tasks.analyst_model),
+                working_memory = CASE WHEN EXCLUDED.working_memory IS NOT NULL AND EXCLUDED.working_memory != '{}'::jsonb THEN EXCLUDED.working_memory ELSE analytics.agent_tasks.working_memory END,
                 updated_at = CURRENT_TIMESTAMP;
         """)
 
@@ -169,6 +174,7 @@ async def save_task_checkpoint(
                 "error_message": error_message,
                 "analyst_provider": analyst_provider,
                 "analyst_model": analyst_model,
+                "working_memory": memory_json,
             },
         )
 
@@ -201,7 +207,7 @@ async def get_task_record(task_id: str) -> TaskRecord | None:
     async with get_db_session() as session:
         query = text("""
             SELECT task_id, session_id, status, current_step, max_steps, user_query, 
-                   messages, pending_approval, final_result, error_message, analyst_provider, analyst_model, created_at, updated_at
+                   messages, pending_approval, final_result, error_message, analyst_provider, analyst_model, working_memory, created_at, updated_at
             FROM analytics.agent_tasks
             WHERE task_id = :task_id;
         """)
@@ -209,6 +215,9 @@ async def get_task_record(task_id: str) -> TaskRecord | None:
         row = res.fetchone()
         if not row:
             return None
+
+        raw_memory = row[12]
+        working_mem = raw_memory if isinstance(raw_memory, dict) else (json.loads(raw_memory) if raw_memory else {})
 
         return TaskRecord(
             task_id=row[0],
@@ -223,8 +232,9 @@ async def get_task_record(task_id: str) -> TaskRecord | None:
             error_message=row[9],
             analyst_provider=row[10],
             analyst_model=row[11],
-            created_at=row[12],
-            updated_at=row[13],
+            working_memory=working_mem,
+            created_at=row[13],
+            updated_at=row[14],
         )
 
 
@@ -369,7 +379,7 @@ async def get_session_details(session_id: str) -> dict[str, Any] | None:
         compacted_turn_count = custom_row[2] if custom_row else 0
 
         query = text("""
-            SELECT task_id, status, user_query, final_result, analyst_provider, analyst_model, created_at, updated_at
+            SELECT task_id, status, user_query, final_result, analyst_provider, analyst_model, created_at, updated_at, working_memory
             FROM analytics.agent_tasks
             WHERE session_id = :session_id
             ORDER BY created_at ASC;
@@ -386,12 +396,13 @@ async def get_session_details(session_id: str) -> dict[str, Any] | None:
         active_model = None
 
         for r in rows:
-            tid, st, u_query, f_res, a_prov, a_mod, c_at, u_at = r
+            tid, st, u_query, f_res, a_prov, a_mod, c_at, u_at, w_mem = r
             if a_prov:
                 active_provider = a_prov
             if a_mod:
                 active_model = a_mod
             f_dict = f_res if isinstance(f_res, dict) else (json.loads(f_res) if f_res else {})
+            raw_w_mem = w_mem if isinstance(w_mem, dict) else (json.loads(w_mem) if w_mem else {})
             turns.append({
                 "task_id": tid,
                 "status": st,
@@ -407,6 +418,7 @@ async def get_session_details(session_id: str) -> dict[str, Any] | None:
                 "audit_result": f_dict.get("audit_result"),
                 "metrics": f_dict.get("metrics"),
                 "memories_recalled": f_dict.get("memories_recalled", []),
+                "working_memory": f_dict.get("working_memory") or raw_w_mem or {},
                 "created_at": c_at.isoformat() if c_at else None,
             })
 

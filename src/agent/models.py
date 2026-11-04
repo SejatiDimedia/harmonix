@@ -105,6 +105,10 @@ class AgentFinalResponse(BaseModel):
         default_factory=list,
         description="Past successful queries or preferences recalled via pgvector (FR-17)",
     )
+    working_memory: dict[str, str] = Field(
+        default_factory=dict,
+        description="Working memory scratchpad notes recorded during task execution (FR-18)",
+    )
     total_steps: int = 0
     token_usage: dict[str, int] = Field(default_factory=dict)
     metrics: dict[str, Any] | None = None
