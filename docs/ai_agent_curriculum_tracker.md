@@ -371,10 +371,13 @@ Dokumen ini adalah **panduan belajar teknis & pelacak implementasi produksi (*pr
 
 ---
 
-### 6.3 Distributed Task Queue & Background Worker
-- **Status:** `[PARSIAL] ⚠️`
-- **Konsep:** Menangani task komputasi analitik berdurasi panjang menggunakan antrian terdistribusi (seperti Celery + Redis atau Temporal) agar proses tidak membebani web thread server.
-- **Kondisi Saat Ini:** Task saat ini dijalankan sebagai coroutine `asyncio` latar belakang di memori FastAPI. Untuk skala ribuan pengguna simultan dengan eksekusi query berat, penambahan Redis Queue (RQ) atau Celery adalah langkah rekayasa produksi berikutnya.
+### 6.3 Distributed Task Queue & Background Worker Architecture (FR-43)
+- **Status:** `[PARSIAL] ⚠️` *(Terdokumentasi di PRD.md: FR-43 Target Prioritas Utama Selanjutnya)*
+- **Konsep:** Menangani task komputasi analitik berdurasi panjang dan Batch API secara terisolasi menggunakan antrian terdistribusi agar proses tidak membebani web thread server FastAPI.
+- **Kondisi Saat Ini:** Task saat ini dijalankan sebagai coroutine `asyncio` latar belakang di memori FastAPI (`BatchProcessingEngine`).
+- **Target Implementasi Produksi (FR-43):**
+  1. *Dual-Adapter Queue*: PostgreSQL native (`FOR UPDATE SKIP LOCKED` transactional queue - 100% Zero Cost tanpa service ekstra) serta Redis Queue (RQ) untuk scaling horizontal multi-worker.
+  2. *Dedicated Worker Process*: Skrip CLI `python -m src.queue.worker` dengan heartbeat, auto-retry exponential backoff, dan Dead-Letter Queue (DLQ).
 
 ---
 
@@ -424,7 +427,10 @@ Untuk melengkapi 100% materi AI Agent Engineer ke dalam portofolio ini, berikut 
 [Tahap 3: Infrastruktur Skala Besar & Keamanan Tingkat Tinggi (Hampir 100%)]
 ✅ FR-26: Docker Container Air-Gapped Sandbox untuk Eksekusi Python Tool (AST Subprocess Fallback)
 ✅ FR-42: Asynchronous Batch Processing Engine & Bulk Analytics API (JSONL & CSV Export)
-1. Distributed Task Queue (Celery / Redis Queue) untuk Background Long Tasks (Opsional Multi-Worker)
+🎯 FR-43: Distributed Task Queue & Independent Background Worker Architecture (Target Utama Pilar 6.3)
+⏳ FR-44: Bulk Analytics Web Runner & Batch Dashboard UI (Antarmuka Pengguna Batch)
+⏳ FR-45: Dynamic External Model Context Protocol (MCP) Client Integration (Pilar 3.1)
+⏳ FR-46: Autonomous Session Reflection & Knowledge Distillation Engine (Pilar 2.4)
 ```
 
 ---
