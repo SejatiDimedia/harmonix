@@ -1,4 +1,22 @@
-export type EngineType = 'manual' | 'langgraph';
+export type EngineType = 'manual' | 'langgraph' | 'swarm';
+
+export interface SubTaskSpec {
+  id: number;
+  role: 'sql_specialist' | 'calc_specialist' | 'chart_specialist' | 'general_analyst' | string;
+  title: string;
+  instruction: string;
+  expected_output: string;
+  status?: 'pending' | 'running' | 'completed' | 'failed' | 'skipped' | string;
+  result_summary?: string | null;
+  duration_ms?: number;
+}
+
+export interface ExecutionPlan {
+  goal: string;
+  complexity_level?: string;
+  reasoning?: string;
+  tasks: SubTaskSpec[];
+}
 
 export interface TableData {
   columns: string[];
@@ -134,6 +152,7 @@ export interface ChatTurn {
   audit_result?: AuditVerdict;
   memories_recalled?: LongTermMemoryItem[];
   working_memory?: Record<string, string>;
+  execution_plan?: ExecutionPlan;
   created_at?: string;
 }
 

@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
-import { Loader2, Brain, Database, ChevronDown, Copy, Check, Pencil, RotateCcw, FileText } from 'lucide-react';
+import { Loader2, Brain, Database, ChevronDown, Copy, Check, Pencil, RotateCcw, FileText, Layers } from 'lucide-react';
 import { ChatTurn, ChartSpec, TableData } from '../types';
 import { SQLBox } from './SQLBox';
 import { DataTable } from './DataTable';
@@ -35,12 +35,14 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
   const [copiedAnswer, setCopiedAnswer] = useState(false);
 
   const workingMemoryKeys = turn.working_memory ? Object.keys(turn.working_memory) : [];
+  const hasPlan = Boolean(turn.execution_plan && turn.execution_plan.tasks && turn.execution_plan.tasks.length > 0);
 
   const hasDataFlow = Boolean(
     (turn.sql_queries && turn.sql_queries.length > 0) ||
     (turn.tables && turn.tables.length > 0) ||
     (turn.memories_recalled && turn.memories_recalled.length > 0) ||
-    (workingMemoryKeys.length > 0)
+    (workingMemoryKeys.length > 0) ||
+    hasPlan
   );
 
   const handleCopyQuery = () => {
@@ -210,6 +212,12 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
                         {workingMemoryKeys.length} Catatan Kerja
                       </span>
                     )}
+                    {hasPlan && (
+                      <span className="text-[10px] text-purple-300 bg-[#261538] border border-purple-700/40 px-2 py-0.5 rounded-full font-mono flex items-center gap-1">
+                        <Layers className="w-2.5 h-2.5 text-purple-400" />
+                        {turn.execution_plan?.tasks.length} Sub-Agent
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -225,6 +233,56 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
 
               {showDataFlow && (
                 <div className="mt-2.5 space-y-3 pt-1 border-t border-white/[0.04]">
+                  {/* Sub-Agent Swarm / Planner-Executor Plan (FR-04) */}
+                  {hasPlan && (
+                    <div className="flex flex-col gap-2 p-3 rounded-xl bg-[#19132d]/90 border border-purple-500/30 text-xs font-mono shadow-sm">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-purple-300 font-semibold">
+                          <Layers className="w-3.5 h-3.5 text-purple-400" />
+                          <span>Rencana & Delegasi Sub-Agent (FR-04 Swarm)</span>
+                        </div>
+                        <span className="text-[10px] text-purple-300/90 bg-purple-950/60 px-2 py-0.5 rounded border border-purple-700/40 uppercase">
+                          {turn.execution_plan?.complexity_level || 'multi-agent'}
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-slate-300 italic">
+                        🎯 Sasaran: "{turn.execution_plan?.goal}"
+                      </div>
+                      <div className="grid grid-cols-1 gap-2 mt-1">
+                        {turn.execution_plan?.tasks.map((task) => {
+                          const roleLabel =
+                            task.role === 'sql_specialist'
+                              ? '🔍 SQL Specialist'
+                              : task.role === 'calc_specialist'
+                              ? '🔢 Quantitative Specialist'
+                              : task.role === 'chart_specialist'
+                              ? '📊 Chart Specialist'
+                              : '🤖 General Analyst';
+                          return (
+                            <div key={task.id} className="p-2.5 rounded-lg bg-[#0e0a1c] border border-white/[0.04] text-[11px] flex flex-col gap-1">
+                              <div className="flex items-center justify-between">
+                                <span className="font-semibold text-purple-200">
+                                  #{task.id} {task.title}
+                                </span>
+                                <span className="text-[10px] text-purple-400 font-mono">
+                                  {roleLabel}
+                                </span>
+                              </div>
+                              <div className="text-slate-400 text-[11px] font-sans">
+                                {task.instruction}
+                              </div>
+                              {task.result_summary && (
+                                <div className="text-emerald-400 text-[10px] font-mono mt-0.5 truncate">
+                                  ✓ {task.result_summary}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Recalled Long-Term Memories Badge (FR-17) */}
                   {turn.memories_recalled && turn.memories_recalled.length > 0 && (
                     <div className="flex flex-col gap-1.5 p-2.5 rounded-xl bg-[#0c1e33]/80 border border-[#00d2ee]/20 text-xs font-mono text-[#00d2ee] shadow-sm select-none">

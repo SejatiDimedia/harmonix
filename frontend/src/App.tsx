@@ -295,6 +295,13 @@ export const App: React.FC = () => {
                 sensitive_columns: data.sensitive_columns || [],
               });
               setStreamingStatus('Menunggu Persetujuan Operator');
+            } else if (event === 'plan_created') {
+              setStreamingStatus(`🎯 Swarm Plan: ${data.tasks_count} sub-tugas dirancang oleh Planner`);
+            } else if (event === 'subagent_start') {
+              const roleTitle = data.role === 'sql_specialist' ? 'SQL Specialist' : (data.role === 'calc_specialist' ? 'Calc Specialist' : (data.role === 'chart_specialist' ? 'Chart Specialist' : data.role));
+              setStreamingStatus(`🤖 [${roleTitle}] Menjalankan: ${data.title}`);
+            } else if (event === 'subagent_complete') {
+              setStreamingStatus(`✅ Sub-Agent ${data.role} selesai (${data.duration_ms}ms)`);
             } else if (event === 'audit_step') {
               const st = (data.status || 'auditing').toLowerCase();
               if (st === 'auditing') {
@@ -322,6 +329,7 @@ export const App: React.FC = () => {
                 audit_result: data.audit_result,
                 memories_recalled: data.memories_recalled,
                 working_memory: data.working_memory,
+                execution_plan: data.execution_plan,
               };
               appendTurn(completedTurn);
               setStreamingTurn(null);
@@ -414,6 +422,7 @@ export const App: React.FC = () => {
             audit_result: data.audit_result,
             memories_recalled: data.memories_recalled,
             working_memory: data.working_memory,
+            execution_plan: data.execution_plan,
           };
           appendTurn(completedTurn);
           setStreamingTurn(null);
@@ -502,6 +511,7 @@ export const App: React.FC = () => {
             audit_result: data.audit_result,
             memories_recalled: data.memories_recalled,
             working_memory: data.working_memory,
+            execution_plan: data.execution_plan,
           };
           appendTurn(completedTurn);
           setStreamingTurn(null);
