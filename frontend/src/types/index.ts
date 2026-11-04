@@ -133,6 +133,7 @@ export interface ChatTurn {
   follow_up_suggestions?: string[];
   audit_result?: AuditVerdict;
   memories_recalled?: LongTermMemoryItem[];
+  working_memory?: Record<string, string>;
   created_at?: string;
 }
 

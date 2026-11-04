@@ -128,13 +128,26 @@ Dokumen ini adalah **panduan belajar teknis & pelacak implementasi produksi (*pr
 
 ---
 
-### 2.4 Long-Running Task: Compaction, Checkpoints & Resume
-- **Status:** `[SUDAH] ✅` (Compaction, Checkpoint, Resume), `[PARSIAL] ⚠️` (Dedicated Working Scratchpad)
+### 2.4 Long-Running Task: Compaction, Checkpoints, Resume & Dedicated Working Memory (FR-18)
+- **Status:** `[SUDAH] ✅` *(100% Lengkap: Compaction, Checkpoint, Resume & Working Memory Scratchpad Engine)*
 - **Lokasi Kode:**
-  - Auto-Compaction: [`src/agent/compaction.py#L1-L180`](file:///Users/timurdianradhasejati/Programming/Code/AI/Harmonix/src/agent/compaction.py#L1-L180)
-  - Checkpoint Engine: [`src/agent/state.py#L73-L180`](file:///Users/timurdianradhasejati/Programming/Code/AI/Harmonix/src/agent/state.py#L73-L180)
-  - Endpoint Resume: [`src/api/main.py#L330-L410`](file:///Users/timurdianradhasejati/Programming/Code/AI/Harmonix/src/api/main.py#L330-L410)
-- **Konsep:** Pada sesi multi-turn panjang, pesan-pesan lama otomatis dirangkum (*compaction*) menjadi ringkasan konteks eksekutif 3 pilar (Sasaran Analisis, Filter yang Disepakati, Temuan Angka Kunci). Setiap langkah agen disimpan di `analytics.task_checkpoints` sehingga saat persetujuan manusia (*human approval*) atau kegagalan jaringan terjadi, tugas dapat dilanjutkan tanpa mengulang dari langkah 0.
+  - Working Memory Manager & Persistence: [`src/agent/scratchpad.py#L1-L226`](file:///Users/timurdianradhasejati/Programming/Code/AI/harnessly/src/agent/scratchpad.py#L1-L226)
+  - Scratchpad Tool (`set`, `append`, `get`, `list`, `clear`): [`src/tools/scratchpad.py#L1-L96`](file:///Users/timurdianradhasejati/Programming/Code/AI/harnessly/src/tools/scratchpad.py#L1-L96)
+  - Checkpoint Engine & Database Persistence: [`src/agent/state.py#L48-L180`](file:///Users/timurdianradhasejati/Programming/Code/AI/harnessly/src/agent/state.py#L48-L180)
+  - System Prompt Ingestion (Preserving Prefix Cache): [`src/agent/prompts.py#L285-L298`](file:///Users/timurdianradhasejati/Programming/Code/AI/harnessly/src/agent/prompts.py#L285-L298)
+  - Auto-Compaction: [`src/agent/compaction.py#L1-L180`](file:///Users/timurdianradhasejati/Programming/Code/AI/harnessly/src/agent/compaction.py#L1-L180)
+  - Endpoint Resume: [`src/api/main.py#L330-L410`](file:///Users/timurdianradhasejati/Programming/Code/AI/harnessly/src/api/main.py#L330-L410)
+  - Frontend Scratchpad Visual Card: [`frontend/src/components/ChatMessage.tsx#L250-L285`](file:///Users/timurdianradhasejati/Programming/Code/AI/harnessly/frontend/src/components/ChatMessage.tsx#L250-L285)
+  - Unit Test Suite (5/5 Passed): [`tests/test_scratchpad.py`](file:///Users/timurdianradhasejati/Programming/Code/AI/harnessly/tests/test_scratchpad.py)
+- **Konsep & Arsitektur 3 Lapis Memori:**
+  1. *Short-Term Memory*: Riwayat turn percakapan sesi di PostgreSQL (`analytics.agent_tasks`) untuk memelihara alur tanya-jawab.
+  2. *Long-Term Memory*: Pengalaman kueri SQL sukses masa lalu yang di-index di tabel pgvector (`analytics.long_term_memories`).
+  3. *Working Memory (Whiteboard / Scratchpad)*: Papan catatan kerja aktif berbasis state dan disk eksternal (`data/scratchpads/{task_id}.json`) untuk melacak rencana eksekusi, hipotesis anomali data, dan angka kalkulasi perantara selama analisis multi-langkah.
+- **Alur Kerja Teknis Working Memory:**
+  1. Pada saat menghadapi tugas analisis data mendalam atau investigasi kueri bertahap, agen analis memanggil tool `scratchpad` dengan action `set` atau `append`.
+  2. `WorkingMemoryManager` mencatat topik (misal: `plan`, `hypotheses`, `interim_calc`) secara in-memory dan secara bersamaan mempersistensikannya ke berkas fisik `data/scratchpads/{task_id}.json` serta kolom JSONB `analytics.agent_tasks.working_memory`.
+  3. Pada giliran reasoning berikutnya, catatan kerja ini secara otomatis diformat dan disuntikkan di bagian akhir prompt sistem (`build_analyst_system_prompt`) sehingga agen tidak kehilangan jejak rencana tanpa merusak cache prefix bagian statis.
+  4. Pengguna di antarmuka web dapat membuka accordion *"Flow Pengambilan Data"* untuk memeriksa kartu interaktif *"Catatan Kerja Agen (Scratchpad)"* lengkap dengan setiap topik dan hipotesis yang sedang diuji oleh agen.
 
 ---
 
@@ -351,10 +364,10 @@ Untuk melengkapi 100% materi AI Agent Engineer ke dalam portofolio ini, berikut 
 ✅ FR-14: Conversation Compaction & Summarization Engine (PostgreSQL & Heuristic Fallback)
 ✅ FR-15: Deterministic Prefix Structuring & Multi-Provider Prompt Caching Engine
 ✅ FR-12: Two-Stage Hybrid Search & FlashRank Cross-Encoder Reranker
+✅ FR-18: Dedicated Working Memory / Scratchpad Engine untuk Long-Running Tasks (File & State Persist)
 
 [Tahap 2: Peningkatan Daya Nalar & Skema State]
-1. FR-18: Dedicated Working Memory / Scratchpad Tool untuk Agent (Persistensi Rencana Kerja Sementara)
-2. FR-04: Sub-Agent Swarm (Pemisahan Planner Agent vs SQL Execution Agent via LangGraph)
+1. FR-04: Sub-Agent Swarm (Pemisahan Planner Agent vs SQL Execution Agent via LangGraph)
 
 [Tahap 3: Infrastruktur Skala Besar]
 3. FR-26: Docker Container Air-Gapped Sandbox untuk Eksekusi Python Tool

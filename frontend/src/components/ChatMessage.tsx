@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
-import { Loader2, Brain, Database, ChevronDown, Copy, Check, Pencil, RotateCcw } from 'lucide-react';
+import { Loader2, Brain, Database, ChevronDown, Copy, Check, Pencil, RotateCcw, FileText } from 'lucide-react';
 import { ChatTurn, ChartSpec, TableData } from '../types';
 import { SQLBox } from './SQLBox';
 import { DataTable } from './DataTable';
@@ -34,10 +34,13 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
   const [copiedQuery, setCopiedQuery] = useState(false);
   const [copiedAnswer, setCopiedAnswer] = useState(false);
 
+  const workingMemoryKeys = turn.working_memory ? Object.keys(turn.working_memory) : [];
+
   const hasDataFlow = Boolean(
     (turn.sql_queries && turn.sql_queries.length > 0) ||
     (turn.tables && turn.tables.length > 0) ||
-    (turn.memories_recalled && turn.memories_recalled.length > 0)
+    (turn.memories_recalled && turn.memories_recalled.length > 0) ||
+    (workingMemoryKeys.length > 0)
   );
 
   const handleCopyQuery = () => {
@@ -201,6 +204,12 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
                         Memori pgvector
                       </span>
                     )}
+                    {workingMemoryKeys.length > 0 && (
+                      <span className="text-[10px] text-amber-300 bg-[#241a08] border border-amber-700/40 px-2 py-0.5 rounded-full font-mono flex items-center gap-1">
+                        <FileText className="w-2.5 h-2.5 text-amber-400" />
+                        {workingMemoryKeys.length} Catatan Kerja
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -235,6 +244,34 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
                             <span className="text-[#00d2ee]/90 text-[10px] ml-auto shrink-0 font-medium">
                               ({Math.round((m.similarity || 0.8) * 100)}% mirip)
                             </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Working Memory / Scratchpad (FR-18) */}
+                  {turn.working_memory && workingMemoryKeys.length > 0 && (
+                    <div className="flex flex-col gap-2 p-3 rounded-xl bg-[#141d2e]/90 border border-amber-500/25 text-xs font-mono shadow-sm">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-amber-300 font-semibold">
+                          <FileText className="w-3.5 h-3.5 text-amber-400" />
+                          <span>Catatan Kerja Agen (Working Memory / Scratchpad - FR-18)</span>
+                        </div>
+                        <span className="text-[10px] text-amber-400/90 bg-amber-950/60 px-2 py-0.5 rounded border border-amber-700/40">
+                          {workingMemoryKeys.length} topik aktif
+                        </span>
+                      </div>
+                      <div className="space-y-2 mt-1">
+                        {workingMemoryKeys.map((key) => (
+                          <div key={key} className="p-2.5 rounded-lg bg-[#0b1220] border border-white/[0.04] text-[11px]">
+                            <div className="text-amber-400 font-semibold mb-1 uppercase tracking-wide text-[10px] flex items-center gap-1.5">
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                              {key}
+                            </div>
+                            <div className="text-slate-300 whitespace-pre-wrap leading-relaxed font-sans text-xs">
+                              {turn.working_memory![key]}
+                            </div>
                           </div>
                         ))}
                       </div>
