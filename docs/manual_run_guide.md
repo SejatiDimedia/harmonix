@@ -10,6 +10,7 @@ Pastikan lingkungan lokal Anda telah terpasang:
 * **Python**: Versi `3.11` ke atas (direkomendasikan Python 3.12 atau 3.13).
 * **Docker Desktop / Docker Engine**: Untuk menjalankan PostgreSQL 16 dengan ekstensi `pgvector`.
 * **Node.js & npm** (opsional): Versi `18+` (hanya jika ingin memodifikasi atau menjalankan dev server frontend Vite secara independen).
+* **9Router** (opsional): Smart Local AI Gateway untuk unified model routing, 3-tier fallback, dan kompresi token RTK di port 20128.
 * **Git**: Untuk manajemen repositori kode.
 
 ---
@@ -40,7 +41,7 @@ Harmonix membaca konfigurasi dari berkas `.env` di *root* direktori.
    DB_SCHEMA=analytics
    DATABASE_URL=postgresql+asyncpg://harmonix_user:harmonix_pass@127.0.0.1:5433/harmonix_db
 
-   # Pilihan Provider LLM: "ollama", "gemini", "groq", "openrouter", "mock"
+   # Pilihan Provider LLM: "ollama", "gemini", "groq", "openrouter", "9router", "mock"
    LLM_PROVIDER=ollama
 
    # Jika menggunakan Google Gemini (Free Tier)
@@ -54,6 +55,16 @@ Harmonix membaca konfigurasi dari berkas `.env` di *root* direktori.
    # Jika menggunakan Ollama (100% Offline Lokal)
    OLLAMA_BASE_URL=http://localhost:11434/v1
    OLLAMA_MODEL=qwen2.5-coder:7b
+
+   # Jika menggunakan OpenRouter (Free Tier Models)
+   OPENROUTER_API_KEY=your_openrouter_key
+   OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
+   OPENROUTER_MODEL=nvidia/nemotron-3.5-lightning:free
+
+   # Jika menggunakan 9Router (Smart Local Gateway di port 20128)
+   NINEROUTER_BASE_URL=http://localhost:20128/v1
+   NINEROUTER_API_KEY=sk-8abbefea34ddc0cc-npg38u-a6649356 # Atau biarkan auto-detect dari ~/.9router/db/data.sqlite
+   NINEROUTER_MODEL=ag/gemini-3.8-flash # Atau claude-3-7-sonnet, deepseek-r1, gpt-4o
    ```
 
 > [!TIP]
@@ -87,7 +98,52 @@ Harmonix memerlukan PostgreSQL 16 dengan ekstensi `pgvector` dan skema analitik 
 
 ---
 
-## 🐍 4. Langkah 3: Setup Virtual Environment Python
+## 🔀 4. Langkah Tambahan: Menjalankan 9Router Smart Gateway (Opsional)
+
+Jika Anda memilih menggunakan **9Router** (`LLM_PROVIDER=9router`) sebagai gateway AI lokal:
+
+### Apa itu 9Router?
+9Router adalah CLI smart AI gateway lokal berbasis Node.js yang berjalan di port **`20128`** (`http://localhost:20128/v1`). 9Router bertindak sebagai proxy kompatibel OpenAI yang menghubungkan Harmonix ke beragam model (Claude 3.7 Sonnet, DeepSeek R1, GPT-4o, Gemini) dengan fitur:
+* **Unified Model Routing**: Mengakses seluruh provider cloud dan lokal lewat satu endpoint standar di `http://localhost:20128/v1`.
+* **Smart 3-Tier Fallback**: Otomatis mengalihkan ke model cadangan jika provider utama mengalami rate limit atau downtime.
+* **Kompresi Token RTK**: Mengoptimalkan prompt dan context data analitik untuk menghemat biaya dan latensi.
+* **Auto-Discovery Kunci API**: Harmonix otomatis membaca kredensial aktif 9Router dari database lokal `~/.9router/db/data.sqlite` jika `NINEROUTER_API_KEY` tidak diisi manual.
+
+### 1. Periksa Ketersediaan 9Router:
+Pastikan binary `9router` terpasang di sistem:
+```bash
+which 9router
+```
+*(Di lingkungan macOS dengan Laravel Herd / NVM, binary biasanya berada di: `~/Library/Application Support/Herd/config/nvm/versions/node/<versi>/bin/9router`)*.
+
+### 2. Jalankan 9Router:
+Buka terminal baru atau jalankan sebagai daemon latar belakang:
+* **Mode Latar Belakang (Background Daemon):**
+  ```bash
+  9router -n -l --skip-update >/dev/null 2>&1 &
+  ```
+* **Mode Interaktif (Foreground / Debug):**
+  ```bash
+  9router -n -l --skip-update
+  ```
+  *Keterangan parameter:*
+  * `-n` (*non-interactive*): Menghindari prompt terminal yang menahan proses.
+  * `-l` (*local gateway*): Menjalankan server gateway lokal pada port `20128`.
+  * `--skip-update`: Melewati pengecekan update otomatis saat startup agar proses inisialisasi instan.
+
+### 3. Verifikasi Status 9Router:
+Pastikan port 20128 aktif dan daftar model terhubung:
+```bash
+# Periksa status port
+lsof -i :20128
+
+# Periksa endpoint model
+curl http://localhost:20128/v1/models
+```
+
+---
+
+## 🐍 5. Langkah 3: Setup Virtual Environment Python
 
 1. **Buat virtual environment (jika belum ada):**
    ```bash
@@ -112,7 +168,7 @@ Harmonix memerlukan PostgreSQL 16 dengan ekstensi `pgvector` dan skema analitik 
 
 ---
 
-## 🚀 5. Langkah 4: Menjalankan Server Backend FastAPI
+## 🚀 6. Langkah 4: Menjalankan Server Backend FastAPI
 
 Setelah database aktif dan dependensi terpasang, jalankan server API Harmonix menggunakan Uvicorn:
 
@@ -140,7 +196,7 @@ curl http://localhost:8000/health
 
 ---
 
-## 🖥️ 6. Langkah 5: Mengakses & Menjalankan Frontend Web UI
+## 🖥️ 7. Langkah 5: Mengakses & Menjalankan Frontend Web UI
 
 Harmonix menyediakan antarmuka web modern bergaya Claude AI dengan Live Streaming SSE, kanvas BI Dashboard, visualisasi Chart.js, dan Human-in-the-Loop modal.
 
@@ -175,7 +231,7 @@ Jika Anda sedang aktif mengembangkan komponen UI:
 
 ---
 
-## 📊 7. Langkah 6 (Opsional): Seeding Data Demo Eksekutif
+## 📊 8. Langkah 6 (Opsional): Seeding Data Demo Eksekutif
 
 Jika Anda ingin langsung mencoba kanvas Live BI Dashboard yang sudah terisi widget (Line chart tren omzet bulanan, Doughnut status pengiriman, Bar kategori produk terlaris, dan tabel audit):
 
@@ -187,7 +243,7 @@ Setelah skrip selesai, buka tab **Dashboard** di Web UI untuk melihat widget rea
 
 ---
 
-## 🧪 8. Langkah 7: Menjalankan Test Suite & Benchmark Evaluasi
+## 🧪 9. Langkah 7: Menjalankan Test Suite & Benchmark Evaluasi
 
 ### Menjalankan Unit & Integration Tests (185+ Test)
 Jalankan seluruh test suite menggunakan pytest:
@@ -216,7 +272,7 @@ Hasil evaluasi akan otomatis diperbarui di file artefak `data/eval_report_latest
 
 ---
 
-## 🔌 9. Menjalankan MCP Server (Model Context Protocol)
+## 🔌 10. Menjalankan MCP Server (Model Context Protocol)
 
 Harmonix menyediakan server MCP resmi berstandar terbuka (`src/mcp/server.py`) yang mengekspos database melalui protokol MCP untuk digunakan oleh **Claude Desktop** atau **Cursor**.
 
@@ -245,39 +301,54 @@ Tambahkan konfigurasi berikut pada file `claude_desktop_config.json` Anda:
 
 ---
 
-## 🛑 10. Menghentikan Layanan
+## 🛑 11. Menghentikan Layanan
 
 Untuk menghentikan seluruh layanan setelah selesai bekerja:
 
 1. **Hentikan server FastAPI:**
-   Tekan `Ctrl + C` pada jendela terminal tempat Uvicorn berjalan.
+   Tekan `Ctrl + C` pada jendela terminal tempat Uvicorn berjalan, atau:
+   ```bash
+   lsof -ti :8000 | xargs kill -9
+   ```
 
-2. **Hentikan container database PostgreSQL:**
+2. **Hentikan 9Router gateway (jika aktif):**
+   ```bash
+   lsof -ti :20128 | xargs kill -9
+   ```
+
+3. **Hentikan container database PostgreSQL:**
    ```bash
    docker compose down
    ```
 
-3. **Mereset database dan menghapus volume (jika ingin memulai ulang dari nol):**
+4. **Mereset database dan menghapus volume (jika ingin memulai ulang dari nol):**
    ```bash
    docker compose down -v
    ```
 
 ---
 
-## 🛠️ 11. Troubleshooting Masalah Umum
+## 🛠️ 12. Troubleshooting Masalah Umum
 
-### 1. Port 8000 atau Port 5433 Sudah Digunakan (`Address already in use`)
+### 1. Port 8000, 5433, atau 20128 Sudah Digunakan (`Address already in use`)
 * Cari proses yang sedang memakai port:
   ```bash
   lsof -i :8000
   lsof -i :5433
+  lsof -i :20128
   ```
 * Hentikan proses terkait:
   ```bash
-  kill -9 <PID>
+  lsof -ti :8000 | xargs kill -9
+  lsof -ti :20128 | xargs kill -9
   ```
 
-### 2. Database Error: `password authentication failed for user "harmonix_user"`
+### 2. 9Router Tidak Terdeteksi di `http://localhost:20128`
+* Pastikan gateway 9Router sudah dijalankan: `9router -n -l --skip-update &`.
+* Periksa apakah port 20128 aktif: `lsof -i :20128`.
+* Jika 9Router belum terpasang atau tidak aktif, Anda dapat langsung beralih ke provider lain (Ollama, Gemini, Groq, atau Mock) kapan saja tanpa restart melalui UI modal di header Harmonix.
+
+### 3. Database Error: `password authentication failed for user "harmonix_user"`
 * Jika Anda sebelumnya pernah menjalankan container dengan kredensial lama, volume PostgreSQL `pgdata` mungkin masih menyimpan database lama.
 * Solusi: Hapus volume lama dan inisialisasi ulang:
   ```bash
@@ -285,8 +356,8 @@ Untuk menghentikan seluruh layanan setelah selesai bekerja:
   docker compose up -d
   ```
 
-### 3. Docker Daemon Tidak Berjalan
+### 4. Docker Daemon Tidak Berjalan
 * Pastikan aplikasi Docker Desktop sudah dibuka di komputer Anda sebelum menjalankan `docker compose up -d`.
 
-### 4. FastEmbed Model Download Error
+### 5. FastEmbed Model Download Error
 * Saat pertama kali hybrid search dijalankan, FastEmbed mengunduh model embedding ONNX (`BAAI/bge-small-en-v1.5`) ke direktori cache lokal `~/.cache/fastembed/`. Pastikan koneksi internet aktif pada eksekusi pertama.
