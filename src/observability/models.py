@@ -65,6 +65,9 @@ class SystemMetricsSummary(BaseModel):
     p95_latency_ms: float = 0.0
     avg_ttft_ms: float = 0.0
     total_tokens_consumed: int = 0
+    total_prompt_tokens: int = 0
+    total_completion_tokens: int = 0
+    total_cached_tokens: int = 0
     total_estimated_cost_usd: float = 0.00
     tool_failure_rate_percentage: float = 0.0
     drift_detected: bool = False

@@ -246,7 +246,6 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                   <div className="flex items-start justify-between gap-3 pb-3 border-b border-white/[0.04] print:bg-gray-50/80 print:p-4 print:pb-3 print:border-b print:border-gray-200">
                     <div className="space-y-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="no-print w-2 h-2 rounded-full bg-clay-500 shrink-0" />
                         <span className="print-only hidden inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-900 text-white font-mono text-[10px] font-bold shrink-0">
                           {idx + 1}
                         </span>

@@ -44,6 +44,9 @@ export interface MetricSummary {
   p50_latency_ms: number;
   p95_latency_ms: number;
   total_tokens_consumed: number;
+  total_prompt_tokens?: number;
+  total_completion_tokens?: number;
+  total_cached_tokens?: number;
   drift_detected: boolean;
   drift_reasons?: string[];
 }

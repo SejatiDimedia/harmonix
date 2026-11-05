@@ -284,12 +284,9 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
                           {p.provider.toUpperCase()}
                         </span>
                         {p.is_ready ? (
-                          <span className="relative flex h-2 w-2">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-60" />
-                            <span className="relative inline-flex rounded-full h-2 w-2 bg-[#00d2ee]" />
-                          </span>
+                          <span className="text-[10px] font-mono font-medium text-cyan-400">SIAP</span>
                         ) : (
-                          <span className="w-2 h-2 rounded-full bg-slate-500" />
+                          <span className="text-[10px] font-mono font-medium text-slate-500">OFFLINE</span>
                         )}
                       </div>
                       <span className={`text-[11px] truncate font-mono ${p.is_ready ? 'text-cyan-300/80' : 'text-[#64748b]'}`}>
@@ -303,7 +300,6 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
               {/* Section 1: Data Analyst Agent */}
               <div className="space-y-3 pt-4 border-t border-[#1e3557]">
                 <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-clay-500" />
                   <h4 className="text-sm font-medium text-[#f8fafc]">
                     Model Primary Analyst (Text-to-SQL)
                   </h4>
@@ -356,7 +352,6 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
               {/* Section 2: Data Auditor Agent */}
               <div className="space-y-3 pt-4 border-t border-[#1e3557]">
                 <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-indigo-500" />
                   <h4 className="text-sm font-medium text-[#f8fafc]">
                     Model Data Auditor (Verifikasi Silang)
                   </h4>
@@ -440,7 +435,6 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
                         : 'bg-[#14223b] border-[#1e3557] text-[#94a3b8]'
                     }`}
                   >
-                    <span className={`w-1.5 h-1.5 rounded-full ${groqInfo?.is_set ? 'bg-[#00d2ee]' : 'bg-slate-500'}`} />
                     <span>{groqInfo?.is_set ? `Aktif (${groqInfo.masked_key})` : 'Belum Diisi'}</span>
                   </span>
                 </div>
@@ -492,7 +486,6 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
                         : 'bg-[#14223b] border-[#1e3557] text-[#94a3b8]'
                     }`}
                   >
-                    <span className={`w-1.5 h-1.5 rounded-full ${geminiInfo?.is_set ? 'bg-[#00d2ee]' : 'bg-slate-500'}`} />
                     <span>{geminiInfo?.is_set ? `Aktif (${geminiInfo.masked_key})` : 'Belum Diisi'}</span>
                   </span>
                 </div>
@@ -544,7 +537,6 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
                         : 'bg-[#14223b] border-[#1e3557] text-[#94a3b8]'
                     }`}
                   >
-                    <span className={`w-1.5 h-1.5 rounded-full ${openrouterInfo?.is_set ? 'bg-[#00d2ee]' : 'bg-slate-500'}`} />
                     <span>{openrouterInfo?.is_set ? `Aktif (${openrouterInfo.masked_key})` : 'Belum Diisi'}</span>
                   </span>
                 </div>

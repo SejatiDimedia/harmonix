@@ -758,6 +758,9 @@ export const App: React.FC = () => {
       <MetricsModal
         isOpen={isMetricsOpen}
         metrics={metricsData || null}
+        sessionTitle={sessionDetailsData?.title}
+        sessionId={currentSessionId || undefined}
+        turns={turns}
         onClose={() => setIsMetricsOpen(false)}
       />
 

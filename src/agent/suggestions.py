@@ -120,7 +120,8 @@ def clean_latex_math_to_unicode(text: str) -> str:
     def to_sub(m):
         base, sub = m.group(1), m.group(2)
         return base + "".join(SUBSCRIPT_MAP.get(c, c) for c in sub)
-    s = re.sub(r"([a-zA-Z0-9\)])_\{?([0-9\+\-aeoxijnt]+)\}?", to_sub, s)
+    # Require explicit curly braces _{sub} to prevent corrupting database identifiers like prod_e04 or order_1
+    s = re.sub(r"([a-zA-Z0-9\)])_\{([0-9\+\-aeoxijnt]+)\}", to_sub, s)
 
     # 9. LaTeX Text & Formatting unwrappers
     s = re.sub(r"\\(?:text|mathrm|mathbf|textit|textsf|textbf|operatorname)\{\s*([^}]+)\s*\}", r"\1", s)

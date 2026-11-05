@@ -27,7 +27,10 @@ async def get_system_metrics_summary() -> SystemMetricsSummary:
                 COALESCE(AVG(ttft_ms), 0) as avg_ttft,
                 COALESCE(SUM(total_tokens), 0) as total_tokens,
                 COALESCE(SUM(tool_calls_count), 0) as total_tools,
-                COALESCE(SUM(tool_errors_count), 0) as total_tool_errors
+                COALESCE(SUM(tool_errors_count), 0) as total_tool_errors,
+                COALESCE(SUM(CASE WHEN metrics->>'prompt_tokens' ~ '^[0-9]+$' THEN (metrics->>'prompt_tokens')::int ELSE 0 END), 0) as total_prompt_tokens,
+                COALESCE(SUM(CASE WHEN metrics->>'completion_tokens' ~ '^[0-9]+$' THEN (metrics->>'completion_tokens')::int ELSE 0 END), 0) as total_completion_tokens,
+                COALESCE(SUM(cached_tokens), 0) as total_cached_tokens
             FROM analytics.agent_traces;
         """)
 
@@ -47,6 +50,9 @@ async def get_system_metrics_summary() -> SystemMetricsSummary:
         total_tokens = int(row[7])
         total_tools = int(row[8])
         total_tool_errors = int(row[9])
+        total_prompt_tokens = int(row[10])
+        total_completion_tokens = int(row[11])
+        total_cached_tokens = int(row[12])
 
         success_rate = round((success_count / total_requests) * 100, 2) if total_requests > 0 else 0.0
         tool_failure_rate = (
@@ -72,6 +78,9 @@ async def get_system_metrics_summary() -> SystemMetricsSummary:
             p95_latency_ms=p95_latency,
             avg_ttft_ms=avg_ttft,
             total_tokens_consumed=total_tokens,
+            total_prompt_tokens=total_prompt_tokens,
+            total_completion_tokens=total_completion_tokens,
+            total_cached_tokens=total_cached_tokens,
             total_estimated_cost_usd=0.00,  # 100% Zero-Cost Baseline
             tool_failure_rate_percentage=tool_failure_rate,
             drift_detected=len(drift_reasons) > 0,

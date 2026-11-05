@@ -505,7 +505,7 @@ async def resume_task_stream(task_id: str, request: ResumeTaskRequest | None = N
             initial_step=record.current_step,
             is_approved=(decision == "approved"),
         )
-    elif is_langgraph:
+    elif task_id.startswith("langgraph_") or task_id.startswith("lg_"):
         from src.agent.langgraph_agent import LangGraphAgent
         agent = LangGraphAgent(llm=analyst_llm, auditor=custom_auditor)
         agent_iter = agent.run_stream(

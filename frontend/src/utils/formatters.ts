@@ -213,7 +213,8 @@ export function cleanLatexMathToUnicode(text?: string): string {
     return `${base}${converted}`;
   });
 
-  s = s.replace(/([a-zA-Z0-9\)])_\{?([0-9\+\-aeoxijnt]+)\}?/g, (_match, base, sub) => {
+  // Require explicit curly braces _{sub} to prevent corrupting database identifiers like prod_e04 or order_1
+  s = s.replace(/([a-zA-Z0-9\)])_\{([0-9\+\-aeoxijnt]+)\}/g, (_match, base, sub) => {
     const converted = sub.split('').map((c: string) => SUBSCRIPT_MAP[c] || c).join('');
     return `${base}${converted}`;
   });

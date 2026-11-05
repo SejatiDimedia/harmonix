@@ -191,7 +191,6 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
                       className="flex items-center gap-1.5 cursor-pointer text-left focus:outline-none"
                       title={`Klik untuk melihat detail kesehatan data & skema kolom (${tbl.columns.length} kolom)`}
                     >
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
                       <span className="text-[#f8fafc] font-medium font-sans truncate max-w-[120px] sm:max-w-[180px]">
                         {displayName}
                       </span>
@@ -277,7 +276,6 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
                 className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-mono bg-[#14223b] hover:bg-[#182a47] text-[#f8fafc] hover:text-white transition cursor-pointer shadow-sm"
                 title={`Model Aktif: ${activeProvider.toUpperCase()} (${activeModel})`}
               >
-                <span className="w-1.5 h-1.5 rounded-full bg-clay-400" />
                 <span className="truncate max-w-[120px] sm:max-w-[180px]">
                   {activeProvider.toUpperCase()}: {shortModelName}
                 </span>

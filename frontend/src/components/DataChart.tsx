@@ -248,7 +248,6 @@ const SingleChartCanvas: React.FC<SingleChartProps> = ({
       {!hideHeader && (
         <div className="flex items-center justify-between mb-3 pb-2.5 border-b border-white/[0.04]">
           <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-clay-500" />
             <span className="text-xs font-medium text-[#f8fafc] font-sans">
               {spec.title || 'Visualisasi Data'}
             </span>

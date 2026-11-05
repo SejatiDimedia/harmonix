@@ -341,8 +341,7 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
                       <div className="space-y-2 mt-1">
                         {workingMemoryKeys.map((key) => (
                           <div key={key} className="p-2.5 rounded-lg bg-[#080d18] border border-white/[0.04] text-[11px]">
-                            <div className="text-slate-300 font-semibold mb-1 uppercase tracking-wide text-[10px] flex items-center gap-1.5 font-mono">
-                              <span className="w-1.5 h-1.5 rounded-full bg-clay-400"></span>
+                            <div className="text-slate-300 font-semibold mb-1 uppercase tracking-wide text-[10px] font-mono">
                               {formatMemoryKey(key)}
                             </div>
                             <div className="text-slate-300 whitespace-pre-wrap leading-relaxed font-sans text-xs">
@@ -417,8 +416,20 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
               )}
             </div>
             {turn.metrics && (
-              <span className="flex items-center gap-1.5 text-slate-400">
+              <span
+                className="flex items-center gap-1.5 text-slate-400 select-text"
+                title={
+                  turn.metrics.prompt_tokens || turn.metrics.completion_tokens
+                    ? `Input (Prompt): ${(turn.metrics.prompt_tokens || 0).toLocaleString('id-ID')} token\nOutput (Completion): ${(turn.metrics.completion_tokens || 0).toLocaleString('id-ID')} token`
+                    : undefined
+                }
+              >
                 <span>{turn.metrics.total_tokens?.toLocaleString('id-ID') || 0} token</span>
+                {turn.metrics.prompt_tokens && turn.metrics.completion_tokens ? (
+                  <span className="text-[10px] text-slate-500 font-mono">
+                    ({turn.metrics.prompt_tokens.toLocaleString('id-ID')} in / {turn.metrics.completion_tokens.toLocaleString('id-ID')} out)
+                  </span>
+                ) : null}
                 {turn.metrics.cached_tokens && turn.metrics.cached_tokens > 0 ? (
                   <span
                     className="inline-flex items-center gap-0.5 text-[10px] text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 font-medium"

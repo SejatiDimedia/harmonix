@@ -73,11 +73,9 @@ export const ModelPickerPopover: React.FC<ModelPickerPopoverProps> = ({
             <div key={p.provider} className="border-b border-white/[0.04] pb-2 last:border-b-0 last:pb-0">
               <div className="px-3 py-1 flex items-center justify-between text-[10px] font-mono font-medium text-[#94a3b8] uppercase tracking-wider select-none">
                 <span>{p.display_name}</span>
-                <span
-                  className={`w-1.5 h-1.5 rounded-full ${
-                    p.is_ready ? 'bg-emerald-400' : 'bg-amber-500'
-                  }`}
-                />
+                <span className={`text-[9px] ${p.is_ready ? 'text-emerald-400' : 'text-slate-500'}`}>
+                  {p.is_ready ? 'SIAP' : 'OFFLINE'}
+                </span>
               </div>
 
               <div className="space-y-0.5 mt-1">

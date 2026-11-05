@@ -88,7 +88,7 @@ const NavbarComponent: React.FC<NavbarProps> = ({
       {/* Right: Health Badge & Observability Trigger */}
       <div className="flex items-center gap-2">
         <div
-          className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono bg-[#0f1a2e] text-[#94a3b8] select-none"
+          className="hidden md:flex items-center px-2.5 py-1 rounded-full text-[11px] font-mono bg-[#0f1a2e] text-[#94a3b8] select-none"
           title={
             health
               ? `Provider: ${health.llm_provider} | Database: ${health.database_connected ? 'Connected' : 'Disconnected'
@@ -96,17 +96,9 @@ const NavbarComponent: React.FC<NavbarProps> = ({
               : 'Memuat status...'
           }
         >
-          <span
-            className={`w-1.5 h-1.5 rounded-full ${health?.status === 'healthy'
-              ? 'bg-emerald-400'
-              : health?.status === 'degraded'
-                ? 'bg-amber-400'
-                : 'bg-rose-400'
-              }`}
-          />
-          <span>
+          {/* <span>
             {health ? `${health.llm_provider.toUpperCase()} (${health.status})` : 'CHECKING...'}
-          </span>
+          </span> */}
         </div>
 
         <button
