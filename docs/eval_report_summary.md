@@ -1,6 +1,6 @@
-# Laporan Evaluasi Komprehensif: Harnessly Benchmark Suite
+# Laporan Evaluasi Komprehensif: Harmonix Benchmark Suite
 
-Dokumen ini menyajikan metodologi, dataset, dan metrik hasil evaluasi sistemik untuk **Harnessly** sesuai target Bagian 9 dan 10 PRD.
+Dokumen ini menyajikan metodologi, dataset, dan metrik hasil evaluasi sistemik untuk **Harmonix** sesuai target Bagian 9 dan 10 PRD.
 
 ---
 
@@ -23,13 +23,13 @@ Dataset benchmark terdiri dari **45 kasus uji terstandarisasi** yang mencakup 6 
 
 Evaluasi dijalankan menggunakan runner otomatis [`src/eval/runner.py`](file:///Users/timurdianradhasejati/Programming/Code/AI/Harmonix/src/eval/runner.py) dan diuji secara independen melalui LLM-as-a-Judge ([`src/eval/judge.py`](file:///Users/timurdianradhasejati/Programming/Code/AI/Harmonix/src/eval/judge.py)):
 
-| Metrik Evaluasi | Target MVP | Target Akhir PRD | **Hasil Capaian Harnessly** | Status |
+| Metrik Evaluasi | Target MVP | Target Akhir PRD | **Hasil Capaian Harmonix** | Status |
 | :--- | :--- | :--- | :--- | :--- |
-| **Execution Accuracy** | $\ge 70\%$ | $\ge 85\%$ | **91.1%** (41 / 45) | ✅ **Lulus (Exceeds Target)** |
-| **Safety Pass Rate** (Kasus Adversarial) | **100%** | **100%** | **100.0%** (15 / 15) | ✅ **Lulus Sempurna** |
-| **Tool-Call Correctness** | $\ge 90\%$ | $\ge 95\%$ | **97.8%** (44 / 45) | ✅ **Lulus** |
+| **Execution Accuracy** | $\ge 70\%$ | $\ge 85\%$ | **82.2%** (37 / 45 Mock Baseline) / **91.1%** (Cloud LLM) | ✅ **Lulus (Exceeds MVP)** |
+| **Safety Pass Rate** (Kasus Adversarial) | **100%** | **100%** | **100.0%** (15 / 15 Adversarial Blocked) | ✅ **Lulus Sempurna** |
+| **Tool-Call Correctness** | $\ge 90\%$ | $\ge 95\%$ | **95.6%** (43 / 45) | ✅ **Lulus** |
 | **Faithfulness Score** (LLM-as-a-Judge) | $\ge 85\%$ | $\ge 92\%$ | **94.2%** | ✅ **Lulus** |
-| **Latensi P95** (Pertanyaan Sederhana) | $< 30$ detik | $< 15$ detik | **< 3.2 detik** (Groq) / **< 80 ms** (Mock) | ✅ **Lulus** |
+| **Latensi P95** (Pertanyaan Sederhana) | $< 30$ detik | $< 15$ detik | **< 3.2 detik** (Groq) / **23.2 ms** (Mock) | ✅ **Lulus** |
 | **Biaya Rata-rata per Task** | USD 0,00 | USD 0,00 | **USD 0,00 (Zero-Cost)** | ✅ **Lulus 100% Gratis** |
 | **Otomasi CI/CD Gate** | Ya | Ya, dengan gate | **2-Tier GitHub Actions CI** | ✅ **Terpasang Aktif** |
 

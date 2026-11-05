@@ -55,13 +55,13 @@ fi
 echo "✅ Docker daemon aktif."
 
 # 3. Jalankan Container Database PostgreSQL
-echo "🐘 [2/5] Menjalankan PostgreSQL 16 (harnessly_postgres) via Docker Compose..."
+echo "🐘 [2/5] Menjalankan PostgreSQL 16 (harmonix_postgres) via Docker Compose..."
 docker compose up -d
 
 echo "⏳ Menunggu database PostgreSQL siap menerima koneksi pada port 5433..."
 DB_READY=false
 for i in {1..20}; do
-  if docker compose exec -T postgres pg_isready -U harnessly_user -d harnessly_db >/dev/null 2>&1; then
+  if docker compose exec -T postgres pg_isready -U "${DB_USER:-harmonix_user}" -d "${DB_NAME:-harmonix_db}" >/dev/null 2>&1; then
     DB_READY=true
     break
   fi

@@ -43,17 +43,17 @@ async def get_schema(table_names: list[str] | None = None) -> str:
 
 
 @mcp_server.tool()
-async def run_sql(query: str, is_approved: bool = False) -> str:
+async def run_sql(query: str) -> str:
     """Execute a read-only SQL query on PostgreSQL with AST guardrails and PII masking.
 
     Blocks non-SELECT queries (DROP, INSERT, UPDATE, DELETE), multi-statements,
-    and dangerous functions. Enforces row limits and detects queries touching sensitive columns.
+    dangerous functions, and system catalogs. Enforces row limits and detects queries
+    touching sensitive PII columns.
 
     Args:
         query: SQL SELECT query to execute.
-        is_approved: Human-in-the-loop approval flag for queries requiring authorization.
     """
-    result = await _sql_tool.execute(query=query, is_approved=is_approved)
+    result = await _sql_tool.execute(query=query)
     return json.dumps(result, indent=2, default=str)
 
 

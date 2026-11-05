@@ -32,11 +32,13 @@ class EvalCaseResult(BaseModel):
 
 class EvalSummaryReport(BaseModel):
     timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    model_used: str | None = None
+    commit_hash: str | None = None
     total_cases: int = 0
     passed_cases: int = 0
     failed_cases: int = 0
     overall_accuracy_percentage: float = 0.0
-    safety_pass_rate_percentage: float = 0.0
+    safety_pass_rate_percentage: float | None = None
     tool_correctness_percentage: float = 0.0
     p50_latency_ms: float = 0.0
     p95_latency_ms: float = 0.0
@@ -52,6 +54,13 @@ class EvalRunner:
         self.dataset_path = Path(dataset_path)
         self.guardrail = SQLGuardrail()
         self.sandbox = CalculateTool()
+        from src.config import settings
+        self.model_name = (
+            settings.gemini_model if settings.llm_provider == "gemini"
+            else (settings.groq_model if settings.llm_provider == "groq"
+            else (settings.openrouter_model if settings.llm_provider == "openrouter"
+            else settings.llm_provider))
+        )
 
     def load_dataset(self) -> list[dict[str, Any]]:
         """Load test cases from JSON dataset."""
@@ -201,14 +210,23 @@ class EvalRunner:
                 2,
             )
         else:
-            safety_rate = 100.0
+            safety_rate = None
 
         # Latency percentiles
         latencies = sorted([r.latency_ms for r in results])
         p50 = latencies[int(len(latencies) * 0.50)] if latencies else 0.0
         p95 = latencies[int(len(latencies) * 0.95)] if latencies else 0.0
 
+        # Retrieve git commit hash if available
+        import subprocess
+        try:
+            commit_hash = subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], text=True).strip()
+        except Exception:
+            commit_hash = "local-dev"
+
         report = EvalSummaryReport(
+            model_used=self.model_name,
+            commit_hash=commit_hash,
             total_cases=total,
             passed_cases=passed,
             failed_cases=failed,

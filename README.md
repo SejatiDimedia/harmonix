@@ -5,7 +5,7 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16%20%2B%20pgvector-336791.svg)](https://www.postgresql.org/)
 [![LangGraph](https://img.shields.io/badge/LangGraph-0.2.0+-purple.svg)](https://github.com/langchain-ai/langgraph)
 [![MCP](https://img.shields.io/badge/MCP-Standard%20Server-orange.svg)](https://modelcontextprotocol.io/)
-[![Tests](https://img.shields.io/badge/Tests-63%20Passed-brightgreen.svg)](#-menjalankan-pengujian-testing)
+[![Tests](https://img.shields.io/badge/Tests-185+%20Collected-brightgreen.svg)](#-menjalankan-pengujian-testing)
 [![Safety Rate](https://img.shields.io/badge/Safety%20Rate-100%25-success.svg)](#-evaluasi-benchmark--observabilitas)
 [![Cost](https://img.shields.io/badge/Cost-%240.00%20(Zero--Cost)-brightgreen.svg)](#-zero-cost-stack-architecture)
 
@@ -180,16 +180,39 @@ Buka browser Anda di **[http://localhost:8000](http://localhost:8000)** untuk be
 
 ## 🧪 Menjalankan Pengujian (Testing)
 
-Jalankan seluruh **63 unit dan integration test** di repositori:
+Jalankan seluruh **185+ unit dan integration test** di repositori:
 ```bash
 pytest -v
 ```
 
 Jalankan evaluasi benchmark otomatis pada dataset 45 kasus:
 ```bash
-python -m src.eval.runner --max-cases 45
+python -m src.eval.runner --dataset data/eval_dataset.json
 ```
 Laporan evaluasi terbaru otomatis diperbarui di [`data/eval_report_latest.json`](file:///Users/timurdianradhasejati/Programming/Code/AI/Harmonix/data/eval_report_latest.json).
+
+---
+
+## 🔒 Security Model & Known Limitations
+
+### Security Model (P0 Hardened)
+1. **AST SQL Guardrail (Defense-in-Depth):**
+   - **Strict Allowlist:** Hanya fungsi analitik aman (agregat, string, tanggal, matematika, window functions) yang diizinkan. Fungsi berbahaya (`pg_*`, `lo_*`, `query_to_*`, `dblink`, `set_config`) diblokir otomatis.
+   - **System Catalog Shield:** Akses ke skema sistem (`pg_catalog`, `information_schema`, `pg_toast`) dan tabel internal (`pg_shadow`, `pg_user`, dll.) ditolak secara deterministik.
+   - **Wildcard PII Expansion:** Query `SELECT *` diekspansi terhadap skema tabel. Jika tabel memuat data sensitif (`customers` dengan kolom `email`, `phone_number`), sistem otomatis menandainya sebagai risiko PII dan mengaktifkan Approval Gate.
+   - **Read-Only Enforced:** Menolak keras mutasi DDL/DML, klausa `INTO`, dan row-level locking (`FOR UPDATE`, `FOR SHARE`).
+2. **Server-Side Human-in-the-Loop (HITL) Gate:**
+   - Parameter `is_approved` dihilangkan dari skema publik Tool MCP untuk mencegah bypass dari klien/LLM.
+   - Izin dievaluasi secara idempotent di server backend dengan verifikasi status persetujuan dan pencatatan audit (`approved_by`, `processed_at`).
+   - Penolakan oleh operator (`rejected`) menyetel status final task ke `REJECTED` dan menghentikan eksekusi secara aman.
+3. **API & Configuration Protection:**
+   - CORS dibatasi menggunakan allowlist tanpa wildcard kredensial.
+   - Endpoint `POST /v1/models/keys` dinonaktifkan secara otomatis pada lingkungan produksi (`APP_ENV=production`) dan hanya menerima format key yang valid. Response API tidak pernah mengembalikan nilai key mentah.
+
+### Known Limitations
+1. **Cakupan Analitik Murni (Read-Only):** Agent secara sengaja tidak mendukung modifikasi data atau migrasi DDL untuk menjamin keamanan database analitik enterprise.
+2. **Dependensi Embedding Lokal:** FastEmbed membutuhkan model ONNX lokal (`bge-small-en-v1.5`) yang berjalan di mesin host untuk semantic hybrid search.
+3. **Zero-Cost CI Baseline:** Pipeline CI utama menggunakan provider `mock` untuk menguji integritas alur logika tanpa biaya runtime API eksternal. Evaluasi model komersial nyata dianjurkan dijalankan via cron nightly atau runner lokal terjadwal.
 
 ---
 
@@ -200,7 +223,7 @@ Harmonix/
 ├── .github/workflows/ci.yml       # 2-Tier GitHub Actions CI workflow
 ├── data/
 │   ├── eval_dataset.json          # Benchmark dataset 45 kasus analitik & adversarial
-│   └── eval_report_latest.json    # Laporan metrik evaluasi terbaru
+│   └── eval_report_latest.json    # Laporan metrik evaluasi terbaru (45 kasus)
 ├── docker/
 │   └── init-db.sql                # Skema analitik & data demo e-commerce Olist
 ├── docs/
@@ -232,12 +255,12 @@ Harmonix/
 │   │   ├── embeddings.py          # Local FastEmbed engine (384 dim)
 │   │   └── glossary.py            # Glosarium metrik di pgvector
 │   └── tools/
-│       ├── database.py            # Tools get_schema & run_sql
-│       ├── glossary.py            # Tool search_glossary (Hybrid search RRF)
-│       ├── guardrails.py          # AST SQL Validator & Risk Assessment
-│       ├── pii.py                 # PII Masker engine
-│       └── sandbox.py             # Subprocess Python calculation sandbox
-└── tests/                         # 63 unit & integration tests
+│   │   ├── database.py            # Tools get_schema & run_sql
+│   │   ├── glossary.py            # Tool search_glossary (Hybrid search RRF)
+│   │   ├── guardrails.py          # AST SQL Validator & Risk Assessment
+│   │   ├── pii.py                 # PII Masker engine
+│   │   └── sandbox.py             # Subprocess Python calculation sandbox
+└── tests/                         # 185+ unit & integration tests
 ```
 
 ---

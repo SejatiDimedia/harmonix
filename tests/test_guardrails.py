@@ -96,3 +96,45 @@ def test_risk_assessment_passes_safe_aggregate_query(guardrail):
 
     assert assessment.requires_approval is False
     assert len(assessment.risk_reasons) == 0
+
+
+@pytest.mark.parametrize(
+    "query,expected_pii_cols",
+    [
+        ("SELECT * FROM customers", ["email", "phone_number"]),
+        ("SELECT * FROM analytics.customers", ["email", "phone_number"]),
+        ("SELECT c.* FROM customers c JOIN orders o ON c.customer_id = o.customer_id", ["email", "phone_number"]),
+        ("WITH sub AS (SELECT * FROM customers) SELECT * FROM sub", ["email", "phone_number"]),
+    ],
+)
+def test_p0_1_wildcard_expansion_detects_pii(guardrail, query, expected_pii_cols):
+    """P0-1 Test: Verify SELECT * on customers table expands and flags sensitive PII requiring approval."""
+    sanitized = guardrail.validate_and_sanitize(query)
+    assessment = guardrail.assess_risk(sanitized)
+    assert assessment.requires_approval is True
+    for col in expected_pii_cols:
+        assert col in assessment.sensitive_columns_accessed
+
+
+@pytest.mark.parametrize(
+    "bypass_query,expected_error_keyword",
+    [
+        ("SELECT pg_read_binary_file('/etc/passwd')", "dangerous function"),
+        ("SELECT lo_import('/etc/passwd')", "dangerous function"),
+        ("SELECT query_to_xml('SELECT 1', true, false, '')", "dangerous function"),
+        ("SELECT set_config('session_preload_libraries', 'foo', false)", "dangerous function"),
+        ("SELECT * INTO newtbl FROM orders", "INTO"),
+        ("SELECT * FROM orders FOR UPDATE", "row-level locking"),
+        ("SELECT * FROM orders FOR SHARE", "row-level locking"),
+        ("SELECT * FROM pg_catalog.pg_shadow", "system catalog"),
+        ("SELECT table_name FROM information_schema.tables", "system catalog"),
+        ("SELECT * FROM pg_shadow", "system catalog"),
+        ("SELECT unapproved_custom_func(123)", "not in the allowlist"),
+    ],
+)
+def test_p0_1_security_bypass_matrix_blocked(guardrail, bypass_query, expected_error_keyword):
+    """P0-1 Test: Verify all 10 security audit bypass vectors are strictly blocked by AST Guardrails."""
+    with pytest.raises(SQLValidationError) as exc_info:
+        guardrail.validate_and_sanitize(bypass_query)
+    assert expected_error_keyword.lower() in str(exc_info.value).lower()
+

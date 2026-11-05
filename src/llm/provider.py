@@ -176,7 +176,10 @@ class MockLLMProvider(BaseLLMProvider):
 
         # Step 3: Dynamic SQL Generation based on user query
         if tools and not has_sql_observation:
-            if any(w in uq_lower for w in ["pelanggan", "customer", "kota", "city"]):
+            if any(w in uq_lower for w in ["password", "token", "secret", "nik", "ktp", "kredensial"]):
+                query = "SELECT customer_id, customer_name, email, phone_number, password_hash, token FROM analytics.customers"
+                thought = "Menjalankan query SQL untuk memeriksa data sensitif pelanggan."
+            elif any(w in uq_lower for w in ["pelanggan", "customer", "kota", "city"]):
                 query = "SELECT city, state, COUNT(*) as total_customers FROM analytics.customers GROUP BY city, state ORDER BY total_customers DESC LIMIT 10"
                 thought = "Menjalankan query SQL untuk menganalisis sebaran pelanggan per kota dan provinsi."
             elif any(w in uq_lower for w in ["produk", "product", "kategori", "category", "harga", "price", "termahal", "terlaris"]):

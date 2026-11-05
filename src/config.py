@@ -19,16 +19,35 @@ class Settings(BaseSettings):
     app_host: str = Field(default="0.0.0.0", description="Host address for FastAPI server")
     app_port: int = Field(default=8000, description="Port for FastAPI server")
     log_level: str = Field(default="INFO", description="Logging level")
+    cors_allowed_origins: list[str] = Field(
+        default=[
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+            "http://localhost:8000",
+            "http://127.0.0.1:8000",
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+        ],
+        description="Allowed origins for CORS (no wildcard permitted when credentials enabled)",
+    )
+    api_auth_key: str | None = Field(
+        default=None,
+        description="Optional API key for endpoint security (X-API-Key or Bearer token)",
+    )
+    admin_api_key: str | None = Field(
+        default=None,
+        description="Optional Admin API key for sensitive/configuration write endpoints",
+    )
 
     # Database settings
     db_host: str = Field(default="127.0.0.1")
     db_port: int = Field(default=5433)
-    db_user: str = Field(default="harnessly_user")
-    db_password: str = Field(default="harnessly_pass")
-    db_name: str = Field(default="harnessly_db")
+    db_user: str = Field(default="harmonix_user")
+    db_password: str = Field(default="harmonix_pass")
+    db_name: str = Field(default="harmonix_db")
     db_schema: str = Field(default="analytics")
     database_url: str = Field(
-        default="postgresql+asyncpg://harnessly_user:harnessly_pass@127.0.0.1:5433/harnessly_db",
+        default="postgresql+asyncpg://harmonix_user:harmonix_pass@127.0.0.1:5433/harmonix_db",
         description="Async SQLAlchemy database connection URL",
     )
 

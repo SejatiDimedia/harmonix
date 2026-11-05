@@ -1,12 +1,12 @@
-# Architecture & Trade-Off Analysis: Harnessly AI Data Analyst Agent
+# Architecture & Trade-Off Analysis: Harmonix AI Data Analyst Agent
 
-Dokumen analisis teknis ini membedah arsitektur sistem, keputusan rekayasa, serta trade-off mendalam pada **Harnessly** sesuai target deliverable Bagian 10 PRD.
+Dokumen analisis teknis ini membedah arsitektur sistem, keputusan rekayasa, serta trade-off mendalam pada **Harmonix** sesuai target deliverable Bagian 10 PRD.
 
 ---
 
 ## 1. Pemilihan Framework Orchestration: Manual Agent Loop vs LangGraph vs Claude Agent SDK
 
-Harnessly menyediakan **dua implementasi agent harness penuh**:
+Harmonix menyediakan **dua implementasi agent harness penuh**:
 1. **Manual Agent Loop** (`src/agent/manual_loop.py`): Ditulis dari nol menggunakan Python `asyncio` murni tanpa library agent pihak ketiga.
 2. **LangGraph Agent** (`src/agent/langgraph_agent.py`): Diimplementasikan menggunakan `langgraph.graph.StateGraph` dengan state transitions eksplisit.
 
@@ -40,8 +40,8 @@ Banyak arsitektur agen memaksakan pola multi-agent (misal: *Agent 1: Planner*, *
 3. **Failure Cascade**:
    - Jika Agen Reviewer salah memahami konteks query dari Agen Generator, terjadi perdebatan multi-turn (infinite loop conversation) yang menguras anggaran token tanpa menghasilkan jawaban.
 
-### Keputusan Desain Harnessly
-Harnessly mengadopsi **Single-Agent dengan Modular Harness & JIT Specialized Tools**:
+### Keputusan Desain Harmonix
+Harmonix mengadopsi **Single-Agent dengan Modular Harness & JIT Specialized Tools**:
 - Agen tunggal dipersenjatai dengan *Just-In-Time Tools*:
   - `search_glossary`: Mengambil definisi metrik resmi hanya jika diperlukan (menghemat token 80%).
   - `get_schema`: Mengambil struktur kolom dan sampel data secara on-demand.
@@ -53,7 +53,7 @@ Harnessly mengadopsi **Single-Agent dengan Modular Harness & JIT Specialized Too
 
 ## 3. Trade-off: Cost vs Latency vs Akurasi
 
-| Strategi | Pilihan Harnessly | Alternatif Komersial | Keuntungan Harnessly |
+| Strategi | Pilihan Harmonix | Alternatif Komersial | Keuntungan Harmonix |
 | :--- | :--- | :--- | :--- |
 | **Inference Engine** | Cloud Free Tier (Gemini 2.0 Flash / Groq) + Fallback Otomatis ke Ollama lokal (`qwen2.5-coder:7b`) | OpenAI GPT-4o / Claude 3.5 Sonnet berbayar | **Biaya USD 0,00**. Tetap resilient dan beroperasi 100% offline saat internet mati atau kuota API habis. |
 | **Embedding Engine** | Local FastEmbed (`BAAI/bge-small-en-v1.5` ONNX, 384 dim) | OpenAI `text-embedding-3-small` API | Latensi embedding < 1 ms, tidak ada dependensi network eksternal, biaya nol. |
@@ -64,7 +64,7 @@ Harnessly mengadopsi **Single-Agent dengan Modular Harness & JIT Specialized Too
 
 ## 4. Kapan Fine-Tuning / Model Distillation TIDAK Diperlukan?
 
-Dalam proyek Text-to-SQL analitik enterprise, sering kali muncul usulan untuk melakukan fine-tuning model (misal fine-tune Llama pada ribuan pasang query SQL). Harnessly membuktikan bahwa **fine-tuning TIDAK diperlukan** karena alasan berikut:
+Dalam proyek Text-to-SQL analitik enterprise, sering kali muncul usulan untuk melakukan fine-tuning model (misal fine-tune Llama pada ribuan pasang query SQL). Harmonix membuktikan bahwa **fine-tuning TIDAK diperlukan** karena alasan berikut:
 
 1. **Skema Database Berubah Cepat (Schema Drift)**:
    - Model yang di-fine-tune akan menghafal nama tabel dan kolom pada saat data training dibuat. Ketika tim data melakukan migrasi kolom (misal `orders` dipecah menjadi `orders_v2`), model fine-tuned akan tetap menghasilkan SQL usang (halusinasi skema).
@@ -78,7 +78,7 @@ Dalam proyek Text-to-SQL analitik enterprise, sering kali muncul usulan untuk me
 
 ## 5. Model Context Protocol (MCP): Arsitektur Eksternal
 
-Harnessly menyediakan server MCP resmi (`src/mcp/server.py`) yang mengekspos database melalui protokol standar terbuka:
+Harmonix menyediakan server MCP resmi (`src/mcp/server.py`) yang mengekspos database melalui protokol standar terbuka:
 - **Alat yang Disediakan**: `get_schema`, `run_sql`, `search_glossary`, `calculate`.
 - **Keamanan Bawaan**: Semua panggilan alat melalui MCP melewati AST guardrail, batas baris (LIMIT 100), dan penyensoran PII yang sama dengan API internal.
 - **Interoperabilitas**: Dapat langsung dikonsumsi oleh Claude Desktop, Cursor AI, atau agen lain yang mendukung protokol MCP tanpa perlu menulis adapter khusus.

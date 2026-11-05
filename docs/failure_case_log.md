@@ -1,6 +1,6 @@
 # Failure Case Log: Real-World Agent Harness Debugging
 
-Dokumen ini mendokumentasikan 3 kegagalan nyata yang terjadi selama perancangan dan pengujian **Harnessly**, lengkap dengan gejala, cara deteksi melalui tracing, akar masalah (*root cause*), dan solusi permanen di level harness (sesuai persyaratan portofolio Bagian 10 PRD).
+Dokumen ini mendokumentasikan 3 kegagalan nyata yang terjadi selama perancangan dan pengujian **Harmonix**, lengkap dengan gejala, cara deteksi melalui tracing, akar masalah (*root cause*), dan solusi permanen di level harness (sesuai persyaratan portofolio Bagian 10 PRD).
 
 ---
 

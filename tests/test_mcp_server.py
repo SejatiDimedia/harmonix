@@ -52,13 +52,27 @@ async def test_mcp_run_sql_approval_gate():
         "run_sql",
         {
             "query": "SELECT customer_id, customer_email, customer_phone FROM analytics.customers",
-            "is_approved": False,
         },
     )
     assert not res.is_error
     payload = json.loads(res.content[0].text)
     assert payload.get("status") == "approval_required"
     assert len(payload.get("risk_reasons", [])) > 0
+
+
+@pytest.mark.asyncio
+async def test_mcp_run_sql_caller_cannot_bypass_approval():
+    """Verify that an untrusted caller/LLM cannot bypass approval by injecting is_approved parameter."""
+    res = await mcp_server.call_tool(
+        "run_sql",
+        {
+            "query": "SELECT * FROM customers",
+            "is_approved": True,
+        },
+    )
+    assert not res.is_error
+    payload = json.loads(res.content[0].text)
+    assert payload.get("status") == "approval_required"
 
 
 @pytest.mark.asyncio

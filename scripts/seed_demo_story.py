@@ -1,4 +1,4 @@
-"""Data Migration & Storytelling Seed for Harnessly Live BI Dashboard (2026).
+"""Data Migration & Storytelling Seed for Harmonix Live BI Dashboard (2026).
 
 Creates a realistic, cohesive, executive e-commerce dataset for full-year 2026:
 - 35 Indonesian customers across major metropolitan areas

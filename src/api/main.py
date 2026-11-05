@@ -4,7 +4,9 @@ import json
 import logging
 from pathlib import Path
 from typing import Literal
-from fastapi import FastAPI, HTTPException, UploadFile, File, Response
+from datetime import datetime, timezone
+from fastapi import FastAPI, HTTPException, UploadFile, File, Response, Security, Depends, status
+from fastapi.security import APIKeyHeader, HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
@@ -87,14 +89,61 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.cors_allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
 if STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+
+# Authentication Dependencies (P0-3, P0-4)
+api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
+bearer_auth = HTTPBearer(auto_error=False)
+
+
+async def verify_api_auth(
+    api_key: str | None = Security(api_key_header),
+    credentials: HTTPAuthorizationCredentials | None = Security(bearer_auth),
+) -> bool:
+    """Verify standard API authentication via X-API-Key header or Bearer token."""
+    expected_key = settings.api_auth_key
+    if not expected_key:
+        return True  # If no auth key is configured (dev baseline), allow access
+
+    token = api_key or (credentials.credentials if credentials else None)
+    if not token or token != expected_key:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or missing API authentication credentials. Provide a valid 'X-API-Key' or 'Authorization: Bearer <key>'.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return True
+
+
+async def verify_admin_auth(
+    api_key: str | None = Security(api_key_header),
+    credentials: HTTPAuthorizationCredentials | None = Security(bearer_auth),
+) -> bool:
+    """Verify administrator access for critical management endpoints."""
+    expected_admin = settings.admin_api_key or settings.api_auth_key
+    if not expected_admin:
+        if settings.app_env.lower() == "production":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Administrative actions are restricted in production unless ADMIN_API_KEY is configured.",
+            )
+        return True
+
+    token = api_key or (credentials.credentials if credentials else None)
+    if not token or token != expected_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: Administrative privileges required.",
+        )
+    return True
 
 
 # In-memory approval store for pending HITL requests
@@ -172,14 +221,35 @@ async def set_active_models(request: UpdateActiveModelRequest):
 
 
 @app.get("/v1/models/keys", tags=["Models"])
-async def get_model_api_keys():
+async def get_model_api_keys(_auth: bool = Depends(verify_api_auth)):
     """Retrieve configuration status and masked API keys for all cloud providers (FR-36)."""
     return {"keys": get_all_masked_keys()}
 
 
 @app.post("/v1/models/keys", tags=["Models"])
-async def update_model_api_keys(payload: UpdateAPIKeysInput):
+async def update_model_api_keys(
+    payload: UpdateAPIKeysInput,
+    _auth: bool = Depends(verify_admin_auth),
+):
     """Configure custom API keys from UI or API, updating runtime settings and persisting to .env (FR-36)."""
+    if settings.app_env.lower() == "production":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Writing API keys to .env is disabled in production environment.",
+        )
+
+    # Format validation for submitted keys (P0-4)
+    if payload.groq_api_key and not payload.groq_api_key.startswith("gsk_"):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Invalid Groq API key format. Expected key starting with 'gsk_'.",
+        )
+    if payload.openrouter_api_key and not (payload.openrouter_api_key.startswith("sk-or-") or payload.openrouter_api_key.startswith("sk-")):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Invalid OpenRouter API key format. Expected key starting with 'sk-or-' or 'sk-'.",
+        )
+
     updates = {}
     if payload.groq_api_key is not None:
         updates["GROQ_API_KEY"] = payload.groq_api_key
@@ -287,8 +357,12 @@ async def get_task(task_id: str):
 
 
 @app.post("/v1/approvals/{approval_id}", tags=["Agent"])
-async def submit_approval(approval_id: str, request: ApprovalRequest):
-    """Approve or reject a risky query that triggered the human-in-the-loop approval gate."""
+async def submit_approval(
+    approval_id: str,
+    request: ApprovalRequest,
+    _auth: bool = Depends(verify_api_auth),
+):
+    """Approve or reject a risky query that triggered the human-in-the-loop approval gate (P0-2)."""
     item = pending_approvals.get(approval_id)
     if not item:
         # Fallback: check PostgreSQL state table in case server was restarted during pending approval
@@ -299,8 +373,26 @@ async def submit_approval(approval_id: str, request: ApprovalRequest):
         else:
             raise HTTPException(status_code=404, detail="Approval request not found or expired.")
 
+    # Idempotency check: prevent duplicate / conflicting state mutation
+    if item.get("status") == "processed" or item.get("decision"):
+        existing_decision = item.get("decision")
+        if existing_decision == request.decision:
+            return {
+                "approval_id": approval_id,
+                "status": "processed",
+                "decision": request.decision,
+                "task_id": item.get("task_id"),
+                "idempotent": True,
+            }
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Approval request '{approval_id}' has already been processed with decision '{existing_decision}'.",
+        )
+
     item["decision"] = request.decision
     item["reason"] = request.reason
+    item["status"] = "processed"
+    item["processed_at"] = datetime.now(timezone.utc).isoformat()
 
     task_id = item.get("task_id")
     if task_id:
@@ -308,9 +400,13 @@ async def submit_approval(approval_id: str, request: ApprovalRequest):
         if record and record.pending_approval:
             record.pending_approval["decision"] = request.decision
             record.pending_approval["reason"] = request.reason
+            record.pending_approval["status"] = "processed"
+            record.pending_approval["processed_at"] = item["processed_at"]
+
+            new_status = AgentTaskStatus.RESUMED if request.decision == "approved" else AgentTaskStatus.REJECTED
             await save_task_checkpoint(
                 task_id=task_id,
-                status=AgentTaskStatus.RESUMED if request.decision == "approved" else AgentTaskStatus.WAITING_APPROVAL,
+                status=new_status,
                 current_step=record.current_step,
                 messages=record.messages,
                 user_query=record.user_query,
@@ -335,7 +431,7 @@ async def resume_task_stream(task_id: str, request: ResumeTaskRequest | None = N
     if not record:
         raise HTTPException(status_code=404, detail=f"Task '{task_id}' not found.")
 
-    if record.status not in (AgentTaskStatus.WAITING_APPROVAL, AgentTaskStatus.RESUMED, AgentTaskStatus.RUNNING):
+    if record.status not in (AgentTaskStatus.WAITING_APPROVAL, AgentTaskStatus.RESUMED, AgentTaskStatus.RUNNING, AgentTaskStatus.REJECTED):
         raise HTTPException(
             status_code=400,
             detail=f"Task cannot be resumed because its status is '{record.status.value}'.",
@@ -470,7 +566,10 @@ async def get_session(session_id: str):
 
 
 @app.delete("/v1/sessions/{session_id}", tags=["Sessions"])
-async def remove_session(session_id: str):
+async def remove_session(
+    session_id: str,
+    _auth: bool = Depends(verify_api_auth),
+):
     """Delete a conversation session and all its associated tasks and checkpoints."""
     success = await delete_session(session_id=session_id)
     if not success:
@@ -630,11 +729,14 @@ async def refresh_dashboard(session_id: str):
 async def upload_files_to_session(
     session_id: str,
     files: list[UploadFile] = File(...),
+    _auth: bool = Depends(verify_api_auth),
 ):
     """Upload one or more CSV/Excel files and convert each sheet into dynamic PostgreSQL tables."""
     from src.ingestion.excel_csv_parser import (
         process_file_and_create_tables,
         MAX_FILES_PER_BATCH,
+        MAX_FILE_SIZE_BYTES,
+        SUPPORTED_EXTENSIONS,
     )
     if not files:
         raise HTTPException(status_code=400, detail="Tidak ada berkas yang diunggah.")
@@ -649,14 +751,28 @@ async def upload_files_to_session(
 
     for f in files:
         filename = f.filename or "uploaded_data.csv"
+        file_ext = Path(filename).suffix.lower()
+        if file_ext not in SUPPORTED_EXTENSIONS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Tipe berkas '{filename}' tidak didukung. Hanya format {', '.join(sorted(SUPPORTED_EXTENSIONS))} yang diizinkan.",
+            )
+
         try:
             content = await f.read()
+            if len(content) > MAX_FILE_SIZE_BYTES:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Ukuran berkas '{filename}' ({len(content)} bytes) melebihi batas maksimum {MAX_FILE_SIZE_BYTES // (1024 * 1024)}MB.",
+                )
             created = await process_file_and_create_tables(
                 session_id=session_id,
                 filename=filename,
                 file_bytes=content,
             )
             all_created_tables.extend(created)
+        except HTTPException:
+            raise
         except Exception as e:
             logger.error("Error processing file %s: %s", filename, e)
             errors.append(f"{filename}: {str(e)}")
@@ -782,7 +898,7 @@ async def delete_memory_endpoint(memory_id: int):
 
 @app.get("/", response_class=HTMLResponse, tags=["UI"])
 async def web_ui():
-    """Claude AI-inspired warm aesthetic UI for Harnessly with live streaming, HITL gate, and observability."""
+    """Claude AI-inspired warm aesthetic UI for Harmonix with live streaming, HITL gate, and observability."""
     if STATIC_INDEX_PATH.exists():
         return HTMLResponse(content=STATIC_INDEX_PATH.read_text(encoding="utf-8"))
-    return HTMLResponse(content="<h1>Harnessly UI template not found.</h1>", status_code=404)
+    return HTMLResponse(content="<h1>Harmonix UI template not found.</h1>", status_code=404)

@@ -1,19 +1,19 @@
 services:
   postgres:
     image: pgvector/pgvector:pg16
-    container_name: harnessly_postgres
+    container_name: harmonix_postgres
     restart: unless-stopped
     ports:
       - "${DB_PORT:-5433}:5432"
     environment:
-      POSTGRES_USER: ${DB_USER:-harnessly_user}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-harnessly_pass}
-      POSTGRES_DB: ${DB_NAME:-harnessly_db}
+      POSTGRES_USER: ${DB_USER:-harmonix_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-harmonix_pass}
+      POSTGRES_DB: ${DB_NAME:-harmonix_db}
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./docker/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-harnessly_user} -d ${DB_NAME:-harnessly_db}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-harmonix_user} -d ${DB_NAME:-harmonix_db}"]
       interval: 5s
       timeout: 5s
       retries: 5

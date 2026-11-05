@@ -1,5 +1,5 @@
 -- ==============================================================================
--- Harnessly Database Initialization Script
+-- Harmonix Database Initialization Script
 -- PostgreSQL 16 + pgvector Extension + E-commerce Sample Schema
 -- ==============================================================================
 

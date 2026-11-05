@@ -6,7 +6,7 @@ from typing import Any
 
 from src.config import settings
 
-logger = logging.getLogger("harnessly.execution")
+logger = logging.getLogger("harmonix.execution")
 
 
 class TerminalColors:

@@ -22,11 +22,11 @@ Naskah ini dirancang khusus untuk memandu presentasi portofolio atau perekaman v
 ### ⏱️ Menit 00:00 - 01:00 | Pendahuluan: Mengapa Agent Harness Penting?
 * **Aksi Layar:** Tampilkan slide judul / diagram arsitektur di README.
 * **Naskah Presenter:**
-  > *"Halo! Selamat datang di demo **Harnessly**, sebuah production-grade AI Data Analyst Agent untuk PostgreSQL analitik.*
+  > *"Halo! Selamat datang di demo **Harmonix**, sebuah production-grade AI Data Analyst Agent untuk PostgreSQL analitik.*
   > 
   > *Banyak orang berpikir membuat aplikasi Text-to-SQL cukup dengan menyuruh LLM menulis SQL lalu langsung mengeksekusinya ke database. Di dunia enterprise nyata, cara itu berbahaya: LLM sering berhalusinasi nama kolom, rentan terhadap SQL injection, bisa memicu full-scan tabel berbiaya mahal, atau bahkan mengeksekusi perintah DROP TABLE.*
   > 
-  > *Harnessly memecahkan masalah ini dengan membangun **harness produksi lengkap** di sekeliling model bahasa: mencakup AST Guardrails, Human-in-the-loop Approval Gate, Grounding Glosarium RAG lokal, State Persistence di PostgreSQL, Observabilitas granular, dan arsitektur 100% Zero-Cost."*
+  > *Harmonix memecahkan masalah ini dengan membangun **harness produksi lengkap** di sekeliling model bahasa: mencakup AST Guardrails, Human-in-the-loop Approval Gate, Grounding Glosarium RAG lokal, State Persistence di PostgreSQL, Observabilitas granular, dan arsitektur 100% Zero-Cost."*
 
 ---
 
@@ -58,7 +58,7 @@ Naskah ini dirancang khusus untuk memandu presentasi portofolio atau perekaman v
     *`⚠️ Query Berisiko Terdeteksi: Akses kolom PII sensitif (email, phone). [Setujui] / [Tolak]`*
   - Klik tombol **Setujui**. Agen melanjutkan eksekusi dan seluruh data PII yang tampil otomatis disensor (*`j***@example.com`*, *`+62812****7890`*).
 * **Naskah Presenter:**
-  > *"Ini adalah pilar keamanan Harnessly. AST Guardrail membedah pohon sintaks abstrak query dan memblokir seluruh operasi penulisan tanpa celah. Ketika query menyentuh data sensitif pelanggan, sistem tidak langsung menjalankannya, melainkan menahan eksekusi di PostgreSQL tanpa memblokir thread server dan meminta izin analis manusia terlebih dahulu."*
+  > *"Ini adalah pilar keamanan Harmonix. AST Guardrail membedah pohon sintaks abstrak query dan memblokir seluruh operasi penulisan tanpa celah. Ketika query menyentuh data sensitif pelanggan, sistem tidak langsung menjalankannya, melainkan menahan eksekusi di PostgreSQL tanpa memblokir thread server dan meminta izin analis manusia terlebih dahulu."*
 
 ---
 
@@ -67,7 +67,7 @@ Naskah ini dirancang khusus untuk memandu presentasi portofolio atau perekaman v
 * **Perhatikan di Layar:**
   - Grafik metrik: Latensi p50 & p95, rasio keberhasilan, alokasi token per task, Time-to-First-Token (TTFT), dan drift alert status.
 * **Naskah Presenter:**
-  > *"Semua perjalanan agen dicatat dalam tracer observabilitas lengkap dengan metrik latensi dan token. Menariknya, Harnessly dibangun dengan dua pilihan orkestrasi: versi **Manual Loop murni Python** untuk performa latensi super cepat (< 1ms overhead), dan versi **LangGraph StateGraph** sebagai pembanding standar industri. Selain itu, kami juga menyediakan **Model Context Protocol (MCP) Server** di `src/mcp/server.py` sehingga database ini dapat diakses secara aman oleh Claude Desktop atau Cursor."*
+  > *"Semua perjalanan agen dicatat dalam tracer observabilitas lengkap dengan metrik latensi dan token. Menariknya, Harmonix dibangun dengan dua pilihan orkestrasi: versi **Manual Loop murni Python** untuk performa latensi super cepat (< 1ms overhead), dan versi **LangGraph StateGraph** sebagai pembanding standar industri. Selain itu, kami juga menyediakan **Model Context Protocol (MCP) Server** di `src/mcp/server.py` sehingga database ini dapat diakses secara aman oleh Claude Desktop atau Cursor."*
 
 ---
 

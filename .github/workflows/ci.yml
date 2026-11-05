@@ -1,4 +1,4 @@
-name: Harnessly CI & Evaluation Gates (M4)
+name: Harmonix CI & Evaluation Gates (M4)
 
 on:
   push:
@@ -16,9 +16,9 @@ jobs:
       postgres:
         image: pgvector/pgvector:pg16
         env:
-          POSTGRES_USER: harnessly_user
-          POSTGRES_PASSWORD: harnessly_pass
-          POSTGRES_DB: harnessly_db
+          POSTGRES_USER: harmonix_user
+          POSTGRES_PASSWORD: harmonix_pass
+          POSTGRES_DB: harmonix_db
         ports:
           - 5433:5432
         options: >-
@@ -47,10 +47,10 @@ jobs:
           APP_ENV: test
           DB_HOST: 127.0.0.1
           DB_PORT: 5433
-          DB_USER: harnessly_user
-          DB_PASSWORD: harnessly_pass
-          DB_NAME: harnessly_db
-          DATABASE_URL: postgresql+asyncpg://harnessly_user:harnessly_pass@127.0.0.1:5433/harnessly_db
+          DB_USER: harmonix_user
+          DB_PASSWORD: harmonix_pass
+          DB_NAME: harmonix_db
+          DATABASE_URL: postgresql+asyncpg://harmonix_user:harmonix_pass@127.0.0.1:5433/harmonix_db
           LLM_PROVIDER: mock
         run: |
           pytest -v --maxfail=1
@@ -65,9 +65,9 @@ jobs:
       postgres:
         image: pgvector/pgvector:pg16
         env:
-          POSTGRES_USER: harnessly_user
-          POSTGRES_PASSWORD: harnessly_pass
-          POSTGRES_DB: harnessly_db
+          POSTGRES_USER: harmonix_user
+          POSTGRES_PASSWORD: harmonix_pass
+          POSTGRES_DB: harmonix_db
         ports:
           - 5433:5432
         options: >-
@@ -96,10 +96,10 @@ jobs:
           APP_ENV: test
           DB_HOST: 127.0.0.1
           DB_PORT: 5433
-          DB_USER: harnessly_user
-          DB_PASSWORD: harnessly_pass
-          DB_NAME: harnessly_db
-          DATABASE_URL: postgresql+asyncpg://harnessly_user:harnessly_pass@127.0.0.1:5433/harnessly_db
+          DB_USER: harmonix_user
+          DB_PASSWORD: harmonix_pass
+          DB_NAME: harmonix_db
+          DATABASE_URL: postgresql+asyncpg://harmonix_user:harmonix_pass@127.0.0.1:5433/harmonix_db
           LLM_PROVIDER: mock
         run: |
           python -m src.eval.runner --dataset data/eval_dataset.json

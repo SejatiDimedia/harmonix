@@ -304,3 +304,131 @@ async def test_web_ui_endpoint():
         assert "Harmonix" in body
         assert "root" in body
         assert "Newsreader" in body
+
+
+@pytest.mark.asyncio
+async def test_approval_idempotency_and_rejection():
+    """Verify approval endpoint handles idempotency and 409 conflict upon change of decision."""
+    from src.api.main import pending_approvals
+
+    appr_id = "test_appr_audit_123"
+    pending_approvals[appr_id] = {
+        "approval_id": appr_id,
+        "query": "SELECT * FROM customers",
+        "sanitized_query": "SELECT * FROM customers LIMIT 50",
+    }
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        # First submission: reject
+        resp1 = await client.post(
+            f"/v1/approvals/{appr_id}",
+            json={"decision": "rejected", "reason": "Data PII tidak boleh diakses."},
+        )
+        assert resp1.status_code == 200
+        assert resp1.json()["decision"] == "rejected"
+
+        # Second submission with same decision: idempotent 200
+        resp2 = await client.post(
+            f"/v1/approvals/{appr_id}",
+            json={"decision": "rejected", "reason": "Data PII tidak boleh diakses."},
+        )
+        assert resp2.status_code == 200
+        assert resp2.json().get("idempotent") is True
+
+        # Third submission with conflicting decision: 409 Conflict
+        resp3 = await client.post(
+            f"/v1/approvals/{appr_id}",
+            json={"decision": "approved", "reason": "Berubah pikiran"},
+        )
+        assert resp3.status_code == 409
+
+    pending_approvals.pop(appr_id, None)
+
+
+@pytest.mark.asyncio
+async def test_api_authentication_enforcement():
+    """Verify endpoints enforce 401 when API authentication key is configured."""
+    from src.config import settings
+
+    original_key = settings.api_auth_key
+    try:
+        settings.api_auth_key = "test-secure-api-key-xyz"
+
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            # 1. Without credentials -> 401
+            resp_no_auth = await client.get("/v1/models/keys")
+            assert resp_no_auth.status_code == 401
+
+            # 2. With invalid credentials -> 401
+            resp_bad_auth = await client.get(
+                "/v1/models/keys",
+                headers={"X-API-Key": "wrong-key"},
+            )
+            assert resp_bad_auth.status_code == 401
+
+            # 3. With valid X-API-Key -> 200
+            resp_good_key = await client.get(
+                "/v1/models/keys",
+                headers={"X-API-Key": "test-secure-api-key-xyz"},
+            )
+            assert resp_good_key.status_code == 200
+
+            # 4. With valid Bearer token -> 200
+            resp_good_bearer = await client.get(
+                "/v1/models/keys",
+                headers={"Authorization": "Bearer test-secure-api-key-xyz"},
+            )
+            assert resp_good_bearer.status_code == 200
+
+            # 5. /health remains accessible without auth -> 200
+            resp_health = await client.get("/health")
+            assert resp_health.status_code == 200
+    finally:
+        settings.api_auth_key = original_key
+
+
+@pytest.mark.asyncio
+async def test_models_keys_production_protection():
+    """Verify writing API keys is blocked with 403 Forbidden in production environment (P0-4)."""
+    from src.config import settings
+
+    original_env = settings.app_env
+    original_admin_key = settings.admin_api_key
+    try:
+        settings.app_env = "production"
+        settings.admin_api_key = "test-admin-secret"
+
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            # Even with admin key provided, writing to .env is disabled in production
+            resp = await client.post(
+                "/v1/models/keys",
+                headers={"X-API-Key": "test-admin-secret"},
+                json={"groq_api_key": "gsk_prod_dummy_12345"},
+            )
+            assert resp.status_code == 403
+            assert "disabled in production" in resp.json()["detail"].lower()
+    finally:
+        settings.app_env = original_env
+        settings.admin_api_key = original_admin_key
+
+
+@pytest.mark.asyncio
+async def test_models_keys_format_validation():
+    """Verify API key submission performs format validation (P0-4)."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        # Invalid groq key format (missing gsk_)
+        resp_invalid_groq = await client.post(
+            "/v1/models/keys",
+            json={"groq_api_key": "invalid_groq_prefix_12345"},
+        )
+        assert resp_invalid_groq.status_code == 422
+        assert "Invalid Groq API key format" in resp_invalid_groq.json()["detail"]
+
+        # Invalid openrouter key format
+        resp_invalid_or = await client.post(
+            "/v1/models/keys",
+            json={"openrouter_api_key": "bad_openrouter_prefix"},
+        )
+        assert resp_invalid_or.status_code == 422
+        assert "Invalid OpenRouter API key format" in resp_invalid_or.json()["detail"]
+

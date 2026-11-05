@@ -39,19 +39,96 @@ class SQLGuardrail:
         exp.Commit,
         exp.Rollback,
         exp.Set,
+        exp.SetProperty,
+        exp.Into,
+        exp.Lock,
     )
 
-    # Dangerous functions often used in SQL injection / denial-of-service
+    # Dangerous functions blocklist / prefixes
     DANGEROUS_FUNCTIONS = {
         "pg_sleep",
         "pg_read_file",
+        "pg_read_binary_file",
         "pg_write_file",
         "pg_ls_dir",
         "pg_terminate_backend",
         "pg_cancel_backend",
+        "lo_import",
+        "lo_export",
+        "query_to_xml",
+        "table_to_xml",
+        "schema_to_xml",
+        "set_config",
+        "current_setting",
         "system",
         "copy",
         "dblink",
+        "dblink_exec",
+        "dblink_connect",
+    }
+
+    DANGEROUS_FUNCTION_PREFIXES = (
+        "pg_",
+        "lo_",
+        "dblink",
+        "query_to_",
+        "table_to_",
+        "schema_to_",
+        "cursor_to_",
+        "xml_",
+        "set_config",
+        "current_setting",
+        "admin_",
+        "sys_",
+    )
+
+    # Safe analytical functions permitted for query execution
+    ALLOWED_FUNCTIONS = {
+        # Aggregates
+        "count", "sum", "avg", "min", "max",
+        "stddev", "stddev_pop", "stddev_samp",
+        "variance", "var_pop", "var_samp",
+        # String manipulation
+        "concat", "concat_ws", "lower", "upper", "trim", "ltrim", "rtrim",
+        "substr", "substring", "length", "replace", "left", "right",
+        "split_part", "initcap", "regexp_replace", "strpos", "format",
+        "position", "char_length", "character_length",
+        # Math & Numeric
+        "round", "ceil", "ceiling", "floor", "abs", "sign", "mod",
+        "power", "sqrt", "cbrt", "exp", "ln", "log", "trunc",
+        # Date & Time
+        "date_trunc", "extract", "age", "to_char", "to_date", "to_timestamp",
+        "now", "current_date", "current_timestamp", "current_time",
+        "localtime", "localtimestamp", "make_date", "make_timestamp",
+        "justify_days", "justify_hours", "justify_interval",
+        # Conditional / Null handling
+        "coalesce", "nullif", "greatest", "least", "cast", "try_cast",
+        # Window & Ranking
+        "row_number", "rank", "dense_rank", "ntile", "lag", "lead",
+        "first_value", "last_value", "cume_dist", "percent_rank"
+    }
+
+    # Forbidden system schemas and tables
+    FORBIDDEN_SCHEMAS = {
+        "pg_catalog",
+        "information_schema",
+        "pg_toast",
+        "pg_temp",
+    }
+
+    FORBIDDEN_SYSTEM_TABLES = {
+        "pg_shadow",
+        "pg_user",
+        "pg_authid",
+        "pg_database",
+        "pg_tables",
+        "pg_views",
+        "pg_class",
+        "pg_proc",
+        "pg_stat_activity",
+        "pg_settings",
+        "pg_roles",
+        "pg_group",
     }
 
     # Sensitive column names that trigger PII protection / approval gate
@@ -63,6 +140,12 @@ class SQLGuardrail:
         "secret",
         "credit_card",
         "nik",
+    }
+
+    # Known table column mappings for wildcard (*) PII expansion
+    KNOWN_TABLE_SENSITIVE_COLUMNS = {
+        "customers": ["email", "phone_number"],
+        "analytics.customers": ["email", "phone_number"],
     }
 
     def __init__(self, max_row_limit: int | None = None):
@@ -114,22 +197,58 @@ class SQLGuardrail:
                 f"Only read-only SELECT queries are allowed. Attempted: {expression.key.upper()}"
             )
 
-        # 4. AST traversal for forbidden statement types or operations
+        # 4. Explicit check for INTO and row locking
+        if expression.args.get("into") is not None:
+            raise SQLValidationError("Forbidden operation 'INTO' detected in query.")
+        if expression.args.get("locks"):
+            raise SQLValidationError("Forbidden row-level locking (FOR UPDATE / FOR SHARE) detected in query.")
+
+        # 5. AST traversal for forbidden statement types, schemas, and operations
         for node in expression.walk():
             if isinstance(node, self.FORBIDDEN_EXPRESSION_TYPES):
                 raise SQLValidationError(
                     f"Forbidden operation '{node.key.upper()}' detected in query."
                 )
 
-            # Check function calls for dangerous built-in routines
+            # Check for SELECT ... INTO in subqueries or clauses
+            if isinstance(node, exp.Into) or (hasattr(node, "args") and node.args.get("into") is not None):
+                raise SQLValidationError("Forbidden operation 'INTO' detected in query.")
+
+            # Check for FOR UPDATE / FOR SHARE locking
+            if isinstance(node, exp.Lock) or (hasattr(node, "args") and node.args.get("locks")):
+                raise SQLValidationError("Forbidden row-level locking (FOR UPDATE / FOR SHARE) detected in query.")
+
+            # Check function calls: enforce allowlist and block dangerous functions
             if isinstance(node, exp.Anonymous):
-                func_name = node.name.lower()
-                if func_name in self.DANGEROUS_FUNCTIONS:
+                func_name = (node.name or "").lower()
+                if func_name in self.DANGEROUS_FUNCTIONS or any(func_name.startswith(p) for p in self.DANGEROUS_FUNCTION_PREFIXES):
                     raise SQLValidationError(
                         f"Execution of dangerous function '{func_name}' is blocked."
                     )
+                if func_name not in self.ALLOWED_FUNCTIONS:
+                    raise SQLValidationError(
+                        f"Execution of function '{func_name}' is blocked. Function is not in the allowlist of permitted analytics routines."
+                    )
 
-        # 5. Enforce LIMIT clause
+            # Check tables and schemas
+            if isinstance(node, exp.Table):
+                schema_name = (node.db or "").lower()
+                tbl_name = (node.name or "").lower()
+
+                if schema_name in self.FORBIDDEN_SCHEMAS:
+                    raise SQLValidationError(
+                        f"Access to system catalog/schema '{node.db}' is forbidden."
+                    )
+                if tbl_name in self.FORBIDDEN_SYSTEM_TABLES or tbl_name.startswith("pg_"):
+                    raise SQLValidationError(
+                        f"Access to system catalog table '{node.name}' is forbidden."
+                    )
+                if tbl_name in {"tables", "columns", "schemata", "routines"} and (not schema_name or schema_name == "information_schema"):
+                    raise SQLValidationError(
+                        f"Direct query against system catalog table '{node.name}' is blocked. Use get_schema tool instead."
+                    )
+
+        # 6. Enforce LIMIT clause
         # If query has no LIMIT, or user's LIMIT > max_row_limit, enforce max_row_limit
         existing_limit = expression.args.get("limit")
         if existing_limit is None:
@@ -152,7 +271,7 @@ class SQLGuardrail:
         """Assess whether a query should trigger human-in-the-loop approval (FR-25).
 
         Checks for:
-        1. Accessing sensitive columns (e.g. email, phone_number)
+        1. Accessing sensitive columns (e.g. email, phone_number), including wildcard (*) expansion
         2. Unbounded full-table scans on large tables without WHERE clause
         """
         assessment = QueryRiskAssessment()
@@ -164,16 +283,34 @@ class SQLGuardrail:
             assessment.risk_reasons.append("Unparseable SQL expression")
             return assessment
 
-        # Check for sensitive columns accessed
+        # 1. Check for explicit sensitive columns accessed
         for column_node in parsed.find_all(exp.Column):
             col_name = column_node.name.lower()
             if any(sens in col_name for sens in self.SENSITIVE_COLUMNS):
-                assessment.sensitive_columns_accessed.append(col_name)
+                if col_name not in assessment.sensitive_columns_accessed:
+                    assessment.sensitive_columns_accessed.append(col_name)
+
+        # 2. Check for wildcard (*) expansion to sensitive tables
+        has_wildcard = bool(list(parsed.find_all(exp.Star)))
+        if has_wildcard:
+            for tbl in parsed.find_all(exp.Table):
+                tbl_name = (tbl.name or "").lower()
+                known_sens = self.KNOWN_TABLE_SENSITIVE_COLUMNS.get(tbl_name)
+                if not known_sens and tbl.db:
+                    known_sens = self.KNOWN_TABLE_SENSITIVE_COLUMNS.get(f"{tbl.db.lower()}.{tbl_name}")
+                if known_sens:
+                    for s_col in known_sens:
+                        if s_col not in assessment.sensitive_columns_accessed:
+                            assessment.sensitive_columns_accessed.append(s_col)
+                    assessment.risk_reasons.append(
+                        f"Query accesses wildcard '*' on table '{tbl_name}' which contains sensitive PII columns: {', '.join(known_sens)}"
+                    )
 
         if assessment.sensitive_columns_accessed:
             assessment.requires_approval = True
             cols_str = ", ".join(set(assessment.sensitive_columns_accessed))
-            assessment.risk_reasons.append(f"Query accesses sensitive PII columns: {cols_str}")
+            if not any("sensitive PII" in r for r in assessment.risk_reasons):
+                assessment.risk_reasons.append(f"Query accesses sensitive PII columns: {cols_str}")
 
         # Check for unbounded queries (SELECT * FROM table without WHERE clause or aggregation)
         if isinstance(parsed, exp.Select):
