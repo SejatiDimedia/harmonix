@@ -331,7 +331,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
                   onClick={() => onSetEngine('swarm')}
                   className={`px-2 py-0.5 rounded-lg font-medium transition cursor-pointer ${
                     engine === 'swarm'
-                      ? 'text-white bg-purple-600 shadow-sm'
+                      ? 'text-white bg-clay-600 shadow-sm'
                       : 'text-[#94a3b8] hover:text-white'
                   }`}
                   title="Multi-Agent Swarm (Planner-Executor & Spesialis - FR-04)"
