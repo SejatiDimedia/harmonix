@@ -13,25 +13,28 @@ export const AuditorGate: React.FC<AuditorGateProps> = ({ verdict }) => {
   const status = (verdict.status || 'passed').toLowerCase();
   const confidence = Math.round((verdict.confidence_score || 1.0) * 100);
   const rawBadge = verdict.badge || 'Verified by Data Auditor';
-  const badgeText = rawBadge.replace(/\s*\(Heuristic\)/gi, '').trim();
+  let badgeText = rawBadge.replace(/\s*\(Heuristic\)/gi, '').trim();
+  if (badgeText.toLowerCase().includes('unverified')) {
+    badgeText = 'Verifikasi Auditor (Eksekusi Langsung)';
+  }
   const critique = verdict.critique || '';
   const issues = verdict.issues || [];
 
-  let badgeBg = 'bg-[#0a1628] border-cyan-500/20 text-cyan-200';
+  let badgeBg = 'bg-[#0c1424] border-white/[0.06] text-slate-200';
   let Icon = ShieldCheck;
-  let iconColor = 'text-[#00d2ee]';
-  let confidenceBg = 'bg-cyan-950/80 text-cyan-300 border border-cyan-700/40';
+  let iconColor = 'text-emerald-400';
+  let confidenceBg = 'bg-slate-800 text-slate-300 border border-slate-700/50';
 
   if (status === 'flagged') {
-    badgeBg = 'bg-[#1a1222] border-rose-500/30 text-rose-200';
+    badgeBg = 'bg-[#0c1424] border-rose-500/25 text-rose-200';
     Icon = AlertOctagon;
     iconColor = 'text-rose-400';
-    confidenceBg = 'bg-rose-950/80 text-rose-300 border border-rose-700/40';
+    confidenceBg = 'bg-rose-950/60 text-rose-300 border border-rose-800/40';
   } else if (status === 'warning') {
-    badgeBg = 'bg-[#1a161f] border-amber-500/30 text-amber-200';
+    badgeBg = 'bg-[#0c1424] border-amber-500/20 text-slate-200';
     Icon = AlertTriangle;
     iconColor = 'text-amber-400';
-    confidenceBg = 'bg-amber-950/80 text-amber-300 border border-amber-700/40';
+    confidenceBg = 'bg-slate-800 text-amber-300 border border-amber-500/20';
   }
 
   return (

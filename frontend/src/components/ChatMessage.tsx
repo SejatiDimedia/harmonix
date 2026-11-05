@@ -40,6 +40,18 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
     return `${Math.round(ms)}ms`;
   };
 
+  const formatMemoryKey = (rawKey: string) => {
+    const map: Record<string, string> = {
+      swarm_plan: 'Rencana Eksekusi',
+      sql_specialist_result: 'Hasil Eksekusi SQL',
+      calc_specialist_result: 'Hasil Perhitungan Kalkulator',
+      chart_specialist_result: 'Hasil Desain Visualisasi',
+      general_analyst_result: 'Hasil Sintesis Analis',
+    };
+    const k = rawKey.toLowerCase().trim();
+    return map[k] || rawKey.replace(/_/g, ' ');
+  };
+
   const workingMemoryKeys = turn.working_memory ? Object.keys(turn.working_memory) : [];
   const hasPlan = Boolean(turn.execution_plan && turn.execution_plan.tasks && turn.execution_plan.tasks.length > 0);
 
@@ -197,30 +209,30 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
                   </span>
                   <div className="hidden sm:flex items-center gap-1.5 shrink-0 ml-1">
                     {turn.sql_queries && turn.sql_queries.length > 0 && (
-                      <span className="text-[10px] text-[#94a3b8] bg-[#162742] px-2 py-0.5 rounded-full font-mono">
+                      <span className="text-[10px] text-slate-300 bg-slate-800/80 px-2.5 py-0.5 rounded-full font-mono border border-slate-700/40">
                         {turn.sql_queries.length} SQL
                       </span>
                     )}
                     {turn.tables && turn.tables.length > 0 && (
-                      <span className="text-[10px] text-[#94a3b8] bg-[#162742] px-2 py-0.5 rounded-full font-mono">
+                      <span className="text-[10px] text-slate-300 bg-slate-800/80 px-2.5 py-0.5 rounded-full font-mono border border-slate-700/40">
                         {turn.tables.length} Tabel
                       </span>
                     )}
                     {turn.memories_recalled && turn.memories_recalled.length > 0 && (
-                      <span className="text-[10px] text-[#00d2ee] bg-[#0c2438] px-2 py-0.5 rounded-full font-mono flex items-center gap-1">
-                        <Brain className="w-2.5 h-2.5" />
-                        Memori pgvector
+                      <span className="text-[10px] text-slate-300 bg-slate-800/80 px-2.5 py-0.5 rounded-full font-mono border border-slate-700/40 flex items-center gap-1">
+                        <Brain className="w-2.5 h-2.5 text-slate-400" />
+                        Memori
                       </span>
                     )}
                     {workingMemoryKeys.length > 0 && (
-                      <span className="text-[10px] text-amber-300 bg-[#241a08] border border-amber-700/40 px-2 py-0.5 rounded-full font-mono flex items-center gap-1">
-                        <FileText className="w-2.5 h-2.5 text-amber-400" />
-                        {workingMemoryKeys.length} Catatan Kerja
+                      <span className="text-[10px] text-slate-300 bg-slate-800/80 px-2.5 py-0.5 rounded-full font-mono border border-slate-700/40 flex items-center gap-1">
+                        <FileText className="w-2.5 h-2.5 text-slate-400" />
+                        {workingMemoryKeys.length} Catatan
                       </span>
                     )}
                     {hasPlan && (
-                      <span className="text-[10px] text-purple-300 bg-[#261538] border border-purple-700/40 px-2 py-0.5 rounded-full font-mono flex items-center gap-1">
-                        <Layers className="w-2.5 h-2.5 text-purple-400" />
+                      <span className="text-[10px] text-slate-300 bg-slate-800/80 px-2.5 py-0.5 rounded-full font-mono border border-slate-700/40 flex items-center gap-1">
+                        <Layers className="w-2.5 h-2.5 text-slate-400" />
                         {turn.execution_plan?.tasks.length} Sub-Agent
                       </span>
                     )}
@@ -239,38 +251,38 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
 
               {showDataFlow && (
                 <div className="mt-2.5 space-y-3 pt-1 border-t border-white/[0.04]">
-                  {/* Sub-Agent Swarm / Planner-Executor Plan (FR-04) */}
+                  {/* Sub-Agent Swarm / Planner-Executor Plan */}
                   {hasPlan && (
-                    <div className="flex flex-col gap-2 p-3 rounded-xl bg-[#19132d]/90 border border-purple-500/30 text-xs font-mono shadow-sm">
+                    <div className="flex flex-col gap-2 p-3 rounded-xl bg-[#0c1424] border border-white/[0.06] text-xs font-mono shadow-sm">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-purple-300 font-semibold">
-                          <Layers className="w-3.5 h-3.5 text-purple-400" />
-                          <span>Rencana & Delegasi Sub-Agent (FR-04 Swarm)</span>
+                        <div className="flex items-center gap-2 text-slate-200 font-semibold font-sans">
+                          <Layers className="w-3.5 h-3.5 text-clay-400" />
+                          <span>Rencana & Delegasi Sub-Agent</span>
                         </div>
-                        <span className="text-[10px] text-purple-300/90 bg-purple-950/60 px-2 py-0.5 rounded border border-purple-700/40 uppercase">
+                        <span className="text-[10px] text-slate-400 bg-slate-800/80 px-2 py-0.5 rounded border border-slate-700/40 uppercase font-mono">
                           {turn.execution_plan?.complexity_level || 'multi-agent'}
                         </span>
                       </div>
-                      <div className="text-[11px] text-slate-300 italic">
-                        🎯 Sasaran: "{turn.execution_plan?.goal}"
+                      <div className="text-[11px] text-slate-400 font-sans">
+                        Sasaran: "{turn.execution_plan?.goal}"
                       </div>
                       <div className="grid grid-cols-1 gap-2 mt-1">
                         {turn.execution_plan?.tasks.map((task) => {
                           const roleLabel =
                             task.role === 'sql_specialist'
-                              ? '🔍 SQL Specialist'
+                              ? 'SQL Specialist'
                               : task.role === 'calc_specialist'
-                              ? '🔢 Quantitative Specialist'
+                              ? 'Quantitative Specialist'
                               : task.role === 'chart_specialist'
-                              ? '📊 Chart Specialist'
-                              : '🤖 General Analyst';
+                              ? 'Chart Specialist'
+                              : 'General Analyst';
                           return (
-                            <div key={task.id} className="p-2.5 rounded-lg bg-[#0e0a1c] border border-white/[0.04] text-[11px] flex flex-col gap-1">
+                            <div key={task.id} className="p-2.5 rounded-lg bg-[#080d18] border border-white/[0.04] text-[11px] flex flex-col gap-1">
                               <div className="flex items-center justify-between">
-                                <span className="font-semibold text-purple-200">
+                                <span className="font-medium text-slate-200 font-sans">
                                   #{task.id} {task.title}
                                 </span>
-                                <span className="text-[10px] text-purple-400 font-mono">
+                                <span className="text-[10px] text-slate-400 font-mono">
                                   {roleLabel}
                                 </span>
                               </div>
@@ -289,24 +301,24 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
                     </div>
                   )}
 
-                  {/* Recalled Long-Term Memories Badge (FR-17) */}
+                  {/* Recalled Long-Term Memories */}
                   {turn.memories_recalled && turn.memories_recalled.length > 0 && (
-                    <div className="flex flex-col gap-1.5 p-2.5 rounded-xl bg-[#0c1e33]/80 border border-[#00d2ee]/20 text-xs font-mono text-[#00d2ee] shadow-sm select-none">
-                      <div className="flex items-center gap-2">
-                        <Brain className="w-4 h-4 text-[#00d2ee] shrink-0" />
-                        <span className="font-semibold">
-                          Memori Pengalaman (pgvector): {turn.memories_recalled.length} kueri terverifikasi digunakan
+                    <div className="flex flex-col gap-2 p-3 rounded-xl bg-[#0c1424] border border-white/[0.06] text-xs font-mono shadow-sm select-none">
+                      <div className="flex items-center gap-2 text-slate-200 font-semibold font-sans">
+                        <Brain className="w-3.5 h-3.5 text-clay-400 shrink-0" />
+                        <span>
+                          Memori Analisis Terkait ({turn.memories_recalled.length} kueri terverifikasi)
                         </span>
                       </div>
-                      <div className="pl-6 text-[11px] text-slate-300 flex flex-col gap-1">
+                      <div className="pl-5 text-[11px] text-slate-300 flex flex-col gap-1.5">
                         {turn.memories_recalled.map((m, idx) => (
-                          <div key={idx} className="flex items-baseline gap-1.5">
-                            <span className="text-[#00d2ee] font-bold">›</span>
-                            <span className="truncate max-w-[420px] text-slate-200" title={m.question_text}>
+                          <div key={idx} className="flex items-baseline gap-2">
+                            <span className="text-slate-500">•</span>
+                            <span className="truncate max-w-[420px] text-slate-300 font-sans text-xs" title={m.question_text}>
                               "{m.question_text}"
                             </span>
-                            <span className="text-[#00d2ee]/90 text-[10px] ml-auto shrink-0 font-medium">
-                              ({Math.round((m.similarity || 0.8) * 100)}% mirip)
+                            <span className="text-slate-400 text-[10px] ml-auto shrink-0 font-mono">
+                              {Math.round((m.similarity || 0.8) * 100)}% relevan
                             </span>
                           </div>
                         ))}
@@ -314,24 +326,24 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
                     </div>
                   )}
 
-                  {/* Working Memory / Scratchpad (FR-18) */}
+                  {/* Working Memory / Scratchpad */}
                   {turn.working_memory && workingMemoryKeys.length > 0 && (
-                    <div className="flex flex-col gap-2 p-3 rounded-xl bg-[#141d2e]/90 border border-amber-500/25 text-xs font-mono shadow-sm">
+                    <div className="flex flex-col gap-2 p-3 rounded-xl bg-[#0c1424] border border-white/[0.06] text-xs font-mono shadow-sm">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-amber-300 font-semibold">
-                          <FileText className="w-3.5 h-3.5 text-amber-400" />
-                          <span>Catatan Kerja Agen (Working Memory / Scratchpad - FR-18)</span>
+                        <div className="flex items-center gap-2 text-slate-200 font-semibold font-sans">
+                          <FileText className="w-3.5 h-3.5 text-clay-400" />
+                          <span>Catatan Pemikiran Analisis</span>
                         </div>
-                        <span className="text-[10px] text-amber-400/90 bg-amber-950/60 px-2 py-0.5 rounded border border-amber-700/40">
-                          {workingMemoryKeys.length} topik aktif
+                        <span className="text-[10px] text-slate-400 bg-slate-800/80 px-2 py-0.5 rounded border border-slate-700/40 font-mono">
+                          {workingMemoryKeys.length} catatan
                         </span>
                       </div>
                       <div className="space-y-2 mt-1">
                         {workingMemoryKeys.map((key) => (
-                          <div key={key} className="p-2.5 rounded-lg bg-[#0b1220] border border-white/[0.04] text-[11px]">
-                            <div className="text-amber-400 font-semibold mb-1 uppercase tracking-wide text-[10px] flex items-center gap-1.5">
-                              <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
-                              {key}
+                          <div key={key} className="p-2.5 rounded-lg bg-[#080d18] border border-white/[0.04] text-[11px]">
+                            <div className="text-slate-300 font-semibold mb-1 uppercase tracking-wide text-[10px] flex items-center gap-1.5 font-mono">
+                              <span className="w-1.5 h-1.5 rounded-full bg-clay-400"></span>
+                              {formatMemoryKey(key)}
                             </div>
                             <div className="text-slate-300 whitespace-pre-wrap leading-relaxed font-sans text-xs">
                               {turn.working_memory![key]}

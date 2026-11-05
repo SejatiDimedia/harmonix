@@ -326,7 +326,8 @@ export function convertSmallTwoColTableToKpiCards(markdown: string): string {
   </div>`;
     }).join('\n');
 
-    return `\n<div class="kpi-summary-grid">\n${cardsHtml}\n</div>\n`;
+    const gridClass = rows.length === 1 ? 'kpi-summary-grid kpi-summary-grid-single' : 'kpi-summary-grid';
+    return `\n<div class="${gridClass}">\n${cardsHtml}\n</div>\n`;
   });
 }
 
