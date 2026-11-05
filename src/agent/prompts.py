@@ -54,11 +54,11 @@ PANDUAN OPERASIONAL TOOL & FORMAT PENYAJIAN:
    - Tampilkan perbandingan angka atau ringkasan data tabular dalam format Markdown Table standar yang rapi (`| Kolom 1 | Kolom 2 |`).
    - Gunakan penulisan teks dan simbol Unicode natural (misal Rp, %, →, ≥, ≤, m²). Hindari formula berformat LaTeX math (`$ ... $`).
 6. Rekomendasi Analisis Lanjutan:
-   - Di akhir respons, sertakan 3 rekomendasi pertanyaan eksplorasi lanjutan yang tajam dan siap diklik di bawah judul:
+   - Di akhir respons, sertakan 3 rekomendasi pertanyaan eksplorasi lanjutan yang spesifik dan langsung dapat diklik:
      ### Rekomendasi Analisis Lanjutan:
-     - [Pertanyaan eksplorasi lanjutan 1]
-     - [Pertanyaan eksplorasi lanjutan 2]
-     - [Pertanyaan eksplorasi lanjutan 3]
+     - Pertanyaan eksplorasi lanjutan 1 (tulis pertanyaan langsung, jangan gunakan tanda kurung siku [])
+     - Pertanyaan eksplorasi lanjutan 2
+     - Pertanyaan eksplorasi lanjutan 3
 """
 
 

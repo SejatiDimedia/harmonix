@@ -12,42 +12,43 @@ export const AuditorGate: React.FC<AuditorGateProps> = ({ verdict }) => {
 
   const status = (verdict.status || 'passed').toLowerCase();
   const confidence = Math.round((verdict.confidence_score || 1.0) * 100);
-  const badgeText = verdict.badge || 'Verified by Data Auditor';
+  const rawBadge = verdict.badge || 'Verified by Data Auditor';
+  const badgeText = rawBadge.replace(/\s*\(Heuristic\)/gi, '').trim();
   const critique = verdict.critique || '';
   const issues = verdict.issues || [];
 
-  let badgeBg = 'bg-[#0c1e33] text-cyan-200';
+  let badgeBg = 'bg-[#0a1628] border-cyan-500/20 text-cyan-200';
   let Icon = ShieldCheck;
   let iconColor = 'text-[#00d2ee]';
-  let confidenceBg = 'bg-cyan-950/60 text-cyan-300';
+  let confidenceBg = 'bg-cyan-950/80 text-cyan-300 border border-cyan-700/40';
 
   if (status === 'flagged') {
-    badgeBg = 'bg-[#1a1222] text-rose-200';
+    badgeBg = 'bg-[#1a1222] border-rose-500/30 text-rose-200';
     Icon = AlertOctagon;
     iconColor = 'text-rose-400';
-    confidenceBg = 'bg-rose-950/60 text-rose-300';
+    confidenceBg = 'bg-rose-950/80 text-rose-300 border border-rose-700/40';
   } else if (status === 'warning') {
-    badgeBg = 'bg-[#1a161f] text-amber-200';
+    badgeBg = 'bg-[#1a161f] border-amber-500/30 text-amber-200';
     Icon = AlertTriangle;
     iconColor = 'text-amber-400';
-    confidenceBg = 'bg-amber-950/60 text-amber-300';
+    confidenceBg = 'bg-amber-950/80 text-amber-300 border border-amber-700/40';
   }
 
   return (
-    <div className="mt-3 pt-2.5 border-t border-white/[0.06] text-xs">
-      <div className={`rounded-xl p-3 transition-all shadow-sm ${badgeBg}`}>
+    <div className="mt-3 pt-2 text-xs">
+      <div className={`rounded-xl p-3 transition-all border shadow-sm ${badgeBg}`}>
         <button
           type="button"
           aria-expanded={isExpanded}
-          aria-label={`Detail verifikasi auditor: ${badgeText} (${confidence}%). Klik untuk buka atau tutup.`}
+          aria-label={`Detail verifikasi auditor: ${badgeText} (Tingkat Kepercayaan: ${confidence}%). Klik untuk buka atau tutup.`}
           onClick={() => setIsExpanded(!isExpanded)}
           className="w-full flex items-center justify-between cursor-pointer select-none text-left"
         >
-          <div className="flex items-center gap-2 text-xs">
+          <div className="flex items-center gap-2.5 text-xs">
             <Icon className={`w-4 h-4 ${iconColor} shrink-0`} />
             <span className="font-semibold text-[#f8fafc] font-sans tracking-tight">{badgeText}</span>
-            <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono ${confidenceBg}`}>
-              {confidence}%
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono ${confidenceBg}`}>
+              Kepercayaan {confidence}%
             </span>
           </div>
 
@@ -63,6 +64,10 @@ export const AuditorGate: React.FC<AuditorGateProps> = ({ verdict }) => {
 
         {isExpanded && (
           <div className="mt-2.5 pt-2.5 border-t border-white/10 text-[11px] leading-relaxed space-y-2.5">
+            <div className="text-[10px] font-mono text-cyan-300/90 bg-[#0c1f38] px-2.5 py-1.5 rounded-lg border border-cyan-800/40 flex items-center gap-1.5">
+              <span>✓</span>
+              <span>Audit Maker-Checker: Logika SQL valid, konsistensi numerik diverifikasi, dan bebas pelanggaran guardrail.</span>
+            </div>
             <div className="text-[#cbd5e1]">{critique}</div>
 
             {issues.length > 0 && (

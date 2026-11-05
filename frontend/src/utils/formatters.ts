@@ -252,7 +252,82 @@ export function cleanLatexMathToUnicode(text?: string): string {
   // Clean redundant spaces around currency (e.g. "Rp  30.000.000" -> "Rp 30.000.000")
   s = s.replace(/\bRp\s{2,}/g, 'Rp ');
 
+  // Normalize space-separated currency digits: "Rp 74 497 880,00" -> "Rp 74.497.880,00"
+  s = s.replace(
+    /\bRp\s*(\d{1,3}(?:\s+\d{3})+(?:,\d{1,2})?)\b/g,
+    (_m, digits) => 'Rp ' + digits.replace(/\s+/g, '.')
+  );
+
+  // Fix concatenated date ranges: "2026-07-01sampai2026-09-30" -> "2026-07-01 sampai 2026-09-30"
+  s = s.replace(
+    /(\d{4}-\d{2}-\d{2})\s*(sampai|hingga|sd|s\/d)\s*(\d{4}-\d{2}-\d{2})/gi,
+    '$1 $2 $3'
+  );
+  s = s.replace(
+    /(\d{4}-\d{2}-\d{2})([a-zA-Z]+)(\d{4}-\d{2}-\d{2})/g,
+    '$1 $2 $3'
+  );
+
   return s;
+}
+
+/**
+ * Transforms compact 2-column key-value tables (1-4 rows, e.g. Jumlah Pesanan, GMV)
+ * into high-impact executive KPI stat cards.
+ */
+export function convertSmallTwoColTableToKpiCards(markdown: string): string {
+  if (!markdown) return '';
+
+  const tableRegex = /\|([^\n|]+)\|([^\n|]+)\|\r?\n\|(?:\s*:?-+:?\s*\|){2}\r?\n((?:\|[^\n|]+\|[^\n|]+\|\r?\n?){1,4})/gi;
+
+  return markdown.replace(tableRegex, (fullMatch, rawH1, rawH2, rawRowsText) => {
+    const h1 = rawH1.trim();
+    const h2 = rawH2.trim();
+
+    const isKpiHeader =
+      /(?:keterangan|metrik|metric|indikator|parameter|item|label|nama)/i.test(h1) ||
+      /(?:nilai|value|total|jumlah|omzet|omset|hasil|result|rp|pendapatan|gmv)/i.test(h2);
+
+    const rows = rawRowsText
+      .trim()
+      .split('\n')
+      .map((r: string) => {
+        const parts = r.split('|').map((c) => c.trim()).filter(Boolean);
+        return {
+          col1: parts[0] || '',
+          col2: parts[1] || '',
+        };
+      })
+      .filter((r: { col1: string; col2: string }) => r.col1 && r.col2);
+
+    if (rows.length === 0 || rows.length > 4) {
+      return fullMatch;
+    }
+
+    // Check if col2 looks like concise KPI metrics (numbers, currency, short values under 30 chars)
+    const isKpiContent = rows.every((r: { col2: string }) => {
+      const c2 = r.col2.replace(/[`*]/g, '').trim();
+      return c2.length < 35 && /(?:\d+|rp|%|\$|jt|juta|miliar|k)/i.test(c2);
+    });
+
+    if (!isKpiHeader && !isKpiContent) {
+      return fullMatch;
+    }
+
+    const cardsHtml = rows.map((r: { col1: string; col2: string }) => {
+      const cleanLabel = r.col1.replace(/[`*]/g, '').trim();
+      let cleanVal = r.col2.replace(/[`*]/g, '').trim();
+      // Format space-separated currency digits if present
+      cleanVal = cleanVal.replace(/\bRp\s*(\d{1,3}(?:\s+\d{3})+(?:,\d{1,2})?)\b/g, (_m: string, digits: string) => 'Rp ' + digits.replace(/\s+/g, '.'));
+
+      return `  <div class="kpi-summary-card">
+    <div class="kpi-summary-label">${escapeHtml(cleanLabel)}</div>
+    <div class="kpi-summary-value">${escapeHtml(cleanVal)}</div>
+  </div>`;
+    }).join('\n');
+
+    return `\n<div class="kpi-summary-grid">\n${cardsHtml}\n</div>\n`;
+  });
 }
 
 /**
@@ -414,7 +489,8 @@ export function formatPseudoTableToMarkdown(content?: string): string {
   }
 
   flushBuffer();
-  return output.join('\n');
+  const rawMarkdown = output.join('\n');
+  return convertSmallTwoColTableToKpiCards(rawMarkdown);
 }
 
 /**

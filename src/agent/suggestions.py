@@ -162,15 +162,37 @@ def clean_latex_math_to_unicode(text: str) -> str:
     # Clean redundant spaces around currency (e.g. "Rp  30.000.000" -> "Rp 30.000.000")
     s = re.sub(r"\bRp\s{2,}", "Rp ", s)
 
+    # Normalize space-separated currency digits: "Rp 74 497 880,00" -> "Rp 74.497.880,00"
+    s = re.sub(
+        r"\bRp\s*(\d{1,3}(?:\s+\d{3})+(?:,\d{1,2})?)\b",
+        lambda m: "Rp " + m.group(1).replace(" ", "."),
+        s,
+    )
+
+    # Fix concatenated date ranges: "2026-07-01sampai2026-09-30" -> "2026-07-01 sampai 2026-09-30"
+    s = re.sub(
+        r"(\d{4}-\d{2}-\d{2})\s*(sampai|hingga|sd|s\/d)\s*(\d{4}-\d{2}-\d{2})",
+        r"\1 \2 \3",
+        s,
+        flags=re.IGNORECASE,
+    )
+    s = re.sub(
+        r"(\d{4}-\d{2}-\d{2})([a-zA-Z]+)(\d{4}-\d{2}-\d{2})",
+        r"\1 \2 \3",
+        s,
+    )
+
     return s
 
 
 def clean_suggestion_text(text: str) -> str:
-    """Strip bullet points, numbering, markdown bolding, and excess whitespace."""
+    """Strip bullet points, numbering, markdown bolding, brackets, and excess whitespace."""
     s = text.strip()
-    # Remove leading numbering/bullets like "1.", "1)", "-", "*", "•"
-    s = re.sub(r"^(?:(?:\d+[\.\)]|\-|\*|•)\s*)+", "", s)
-    # Remove surrounding quotes
+    # Remove leading numbering/bullets like "1.", "1)", "-", "*", "•", "↳", "→"
+    s = re.sub(r"^(?:(?:\d+[\.\)]|[\-–—\*•↳→])\s*)+", "", s)
+    # Remove surrounding quotes and brackets/parentheses
+    s = s.strip("\"' ")
+    s = re.sub(r"^[\[\(]+|[\]\)]+$", "", s).strip()
     s = s.strip("\"' ")
     # Remove markdown bold/italics markers at boundaries
     s = re.sub(r"^\*+|\*+$", "", s).strip()

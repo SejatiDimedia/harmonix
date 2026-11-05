@@ -94,6 +94,51 @@
   font-style: italic;
 }
 
+/* Executive KPI Summary Cards */
+.kpi-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.875rem;
+  margin: 1.25rem 0;
+}
+
+.kpi-summary-card {
+  background: linear-gradient(135deg, #0e192c 0%, #13223b 100%);
+  border: 1px solid rgba(0, 210, 238, 0.2);
+  border-radius: 0.875rem;
+  padding: 1.125rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.kpi-summary-card:hover {
+  border-color: rgba(0, 210, 238, 0.45);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 210, 238, 0.1);
+}
+
+.kpi-summary-label {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #94a3b8;
+  margin-bottom: 0.5rem;
+}
+
+.kpi-summary-value {
+  font-family: var(--font-sans);
+  font-size: 1.625rem;
+  font-weight: 700;
+  color: #f8fafc;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
 /* Markdown Tables (GFM) */
 .markdown-body table {
   width: 100%;

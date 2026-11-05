@@ -34,6 +34,12 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
   const [copiedQuery, setCopiedQuery] = useState(false);
   const [copiedAnswer, setCopiedAnswer] = useState(false);
 
+  const formatLatency = (ms?: number) => {
+    if (!ms) return '0ms';
+    if (ms >= 1000) return `${(ms / 1000).toFixed(1)}s`;
+    return `${Math.round(ms)}ms`;
+  };
+
   const workingMemoryKeys = turn.working_memory ? Object.keys(turn.working_memory) : [];
   const hasPlan = Boolean(turn.execution_plan && turn.execution_plan.tasks && turn.execution_plan.tasks.length > 0);
 
@@ -368,9 +374,13 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
           <div className="text-[11px] text-[#94a3b8] font-mono mt-3 pt-2.5 border-t border-white/[0.06] flex items-center justify-between select-none">
             <div className="flex items-center gap-3">
               {turn.metrics && (
-                <span>
-                  Latensi: {turn.metrics.total_latency_ms || 0}ms
-                  {turn.metrics.ttft_ms ? ` (TTFT: ${turn.metrics.ttft_ms}ms)` : ''}
+                <span className="flex items-center gap-1.5 text-slate-400">
+                  <span>Latensi: {formatLatency(turn.metrics.total_latency_ms)}</span>
+                  {turn.metrics.ttft_ms ? (
+                    <span className="text-[10px] text-slate-500">
+                      (TTFT: {formatLatency(turn.metrics.ttft_ms)})
+                    </span>
+                  ) : null}
                 </span>
               )}
               {turn.answer_text && !isStreaming && (
@@ -378,32 +388,32 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
                   type="button"
                   onClick={handleCopyAnswer}
                   title="Salin jawaban analitik lengkap"
-                  className="flex items-center gap-1 hover:text-[#f8fafc] transition cursor-pointer text-[#94a3b8]"
+                  className="flex items-center gap-1 px-2 py-0.5 rounded-md hover:bg-white/[0.06] text-slate-400 hover:text-white transition cursor-pointer"
                 >
                   {copiedAnswer ? (
                     <>
                       <Check className="w-3 h-3 text-emerald-400" />
-                      <span className="text-emerald-400 font-medium">Jawaban tersalin!</span>
+                      <span className="text-emerald-400 font-medium">Tersalin!</span>
                     </>
                   ) : (
                     <>
                       <Copy className="w-3 h-3" />
-                      <span>Salin Jawaban</span>
+                      <span>Salin</span>
                     </>
                   )}
                 </button>
               )}
             </div>
             {turn.metrics && (
-              <span className="flex items-center gap-1.5">
-                <span>Konsumsi Token: {turn.metrics.total_tokens?.toLocaleString() || 0}</span>
+              <span className="flex items-center gap-1.5 text-slate-400">
+                <span>{turn.metrics.total_tokens?.toLocaleString('id-ID') || 0} token</span>
                 {turn.metrics.cached_tokens && turn.metrics.cached_tokens > 0 ? (
                   <span
                     className="inline-flex items-center gap-0.5 text-[10px] text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 font-medium"
-                    title={`Prompt Caching (FR-15): ${turn.metrics.cached_tokens.toLocaleString()} token dibaca langsung dari cache`}
+                    title={`Prompt Caching: ${turn.metrics.cached_tokens.toLocaleString('id-ID')} token dibaca langsung dari cache`}
                   >
                     <span>⚡</span>
-                    <span>{turn.metrics.cached_tokens.toLocaleString()} cached</span>
+                    <span>{turn.metrics.cached_tokens.toLocaleString('id-ID')} cached</span>
                   </span>
                 ) : null}
               </span>
