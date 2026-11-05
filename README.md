@@ -227,6 +227,7 @@ Harmonix/
 ├── docker/
 │   └── init-db.sql                # Skema analitik & data demo e-commerce Olist
 ├── docs/
+│   ├── manual_run_guide.md            # Panduan lengkap menjalankan aplikasi secara manual
 │   ├── architecture_and_tradeoffs.md  # Analisis mendalam trade-off arsitektur (PRD Bagian 10)
 │   ├── failure_case_log.md            # Dokumentasi 3 kasus kegagalan nyata & perbaikannya
 │   ├── eval_report_summary.md         # Ringkasan metodologi & metrik benchmark evaluasi
@@ -268,10 +269,11 @@ Harmonix/
 ## 📚 Dokumen Pendukung Portofolio
 
 Sesuai persyaratan portofolio Bagian 10 PRD:
-1. **[Analisis Trade-Off Arsitektur](docs/architecture_and_tradeoffs.md)**: Perbandingan Manual Loop vs LangGraph vs Claude Agent SDK, Single vs Multi-Agent, Cost vs Latency vs Akurasi, dan mengapa fine-tuning tidak diperlukan.
-2. **[Failure Case Log](docs/failure_case_log.md)**: Analisis 3 kegagalan nyata (SQLAlchemy binding, infinite loop sandbox GIL, halusinasi skema) dan solusinya.
-3. **[Laporan Evaluasi](docs/eval_report_summary.md)**: Metrik akurasi, safety rate, breakdown 6 kategori, dan release gate.
-4. **[Naskah Video Demo](docs/demo_script.md)**: Panduan presentasi portofolio menit-demi-menit.
+1. **[Panduan Menjalankan Manual](docs/manual_run_guide.md)**: Panduan *step-by-step* instalasi dependensi, inisialisasi Docker PostgreSQL, backend FastAPI, frontend, dan integrasi MCP.
+2. **[Analisis Trade-Off Arsitektur](docs/architecture_and_tradeoffs.md)**: Perbandingan Manual Loop vs LangGraph vs Claude Agent SDK, Single vs Multi-Agent, Cost vs Latency vs Akurasi, dan mengapa fine-tuning tidak diperlukan.
+3. **[Failure Case Log](docs/failure_case_log.md)**: Analisis 3 kegagalan nyata (SQLAlchemy binding, infinite loop sandbox GIL, halusinasi skema) dan solusinya.
+4. **[Laporan Evaluasi](docs/eval_report_summary.md)**: Metrik akurasi, safety rate, breakdown 6 kategori, dan release gate.
+5. **[Naskah Video Demo](docs/demo_script.md)**: Panduan presentasi portofolio menit-demi-menit.
 
 ---
 
