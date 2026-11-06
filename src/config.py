@@ -146,6 +146,36 @@ class Settings(BaseSettings):
     langfuse_secret_key: str | None = Field(default=None, description="Langfuse secret API key")
     langfuse_host: str = Field(default="https://cloud.langfuse.com", description="Langfuse API host URL")
 
+    # Distributed Task Queue & Worker settings (FR-43, Pilar 6.3)
+    queue_backend: Literal["postgres", "redis", "memory"] = Field(
+        default="postgres",
+        description="Task queue backend: 'postgres' (FOR UPDATE SKIP LOCKED), 'redis', or 'memory'",
+    )
+    queue_redis_url: str = Field(
+        default="redis://localhost:6379/0",
+        description="Redis connection URL when queue_backend is 'redis'",
+    )
+    queue_worker_concurrency: int = Field(
+        default=4,
+        description="Maximum concurrent jobs per background worker instance",
+    )
+    queue_worker_poll_interval_seconds: float = Field(
+        default=0.5,
+        description="Polling interval in seconds for worker job acquisition",
+    )
+    queue_max_retries: int = Field(
+        default=3,
+        description="Maximum automatic retries before moving job to Dead-Letter Queue (DLQ)",
+    )
+    queue_retry_backoff_base_seconds: float = Field(
+        default=2.0,
+        description="Base delay in seconds for exponential backoff retry calculation",
+    )
+    queue_job_timeout_seconds: int = Field(
+        default=180,
+        description="Maximum execution timeout in seconds for a single queued job",
+    )
+
     # Auditor Agent settings (FR-35 Maker-Checker Quality Gate)
     auditor_enabled: bool = Field(default=True, description="Enable Data Auditor agent verification")
     auditor_provider: Literal["ollama", "gemini", "groq", "openrouter", "9router", "mock", "auto"] = Field(

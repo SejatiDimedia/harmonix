@@ -289,3 +289,63 @@ export async function deleteUploadedTable(
   return true;
 }
 
+// =============================================================================
+// Batch Processing API (FR-42, Pilar 6.4)
+// =============================================================================
+
+export async function submitBatchJob(payload: {
+  queries: string[];
+  engine?: string;
+  concurrency_limit?: number;
+}): Promise<any> {
+  const res = await fetch('/v1/batch', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: 'Gagal mengirim tugas batch' }));
+    throw new Error(err.detail || 'Gagal mengirim tugas batch');
+  }
+  return res.json();
+}
+
+export async function getBatchJob(batchId: string): Promise<any> {
+  const res = await fetch(`/v1/batch/${batchId}`);
+  if (!res.ok) throw new Error(`Batch '${batchId}' tidak ditemukan`);
+  return res.json();
+}
+
+export async function listBatchJobs(): Promise<{ total: number; batches: any[] }> {
+  const res = await fetch('/v1/batch');
+  if (!res.ok) throw new Error('Gagal memuat riwayat tugas batch');
+  return res.json();
+}
+
+// =============================================================================
+// Distributed Task Queue API (FR-43, Pilar 6.3)
+// =============================================================================
+
+export async function getQueueStatus(): Promise<any> {
+  const res = await fetch('/v1/queue/status');
+  if (!res.ok) throw new Error('Gagal memuat status antrian tugas');
+  return res.json();
+}
+
+export async function listQueueJobs(status?: string, limit = 50): Promise<{ total: number; jobs: any[] }> {
+  const url = status ? `/v1/queue/jobs?status=${status}&limit=${limit}` : `/v1/queue/jobs?limit=${limit}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('Gagal memuat daftar antrian tugas');
+  return res.json();
+}
+
+export async function retryQueueJob(jobId: string): Promise<any> {
+  const res = await fetch(`/v1/queue/jobs/${jobId}/retry`, { method: 'POST' });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: 'Gagal me-retry tugas' }));
+    throw new Error(err.detail || 'Gagal me-retry tugas');
+  }
+  return res.json();
+}
+
+

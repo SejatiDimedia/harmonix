@@ -13,10 +13,10 @@ Dokumen ini adalah **panduan belajar teknis & pelacak implementasi produksi (*pr
 | **3** | **Protokol dan Integrasi** | 5 | 4 | 0 | 1* | **80%** *(100% in-scope)* |
 | **4** | **Evaluasi dan Observability** | 4 | 4 | 0 | 0 | **100%** |
 | **5** | **Keamanan dan Keandalan** | 4 | 4 | 0 | 0 | **100%** |
-| **6** | **Rekayasa Produksi** | 5 | 4 | 1 | 0 | **85%** |
-| **TOTAL** | **Semua Pilar** | **27** | **25** | **1** | **1** | **~93%** *(96% in-scope)* |
+| **6** | **Rekayasa Produksi** | 5 | 5 | 0 | 0 | **100%** |
+| **TOTAL** | **Semua Pilar** | **27** | **26** | **0** | **1** | **~96.3%** *(100% in-scope)* |
 
-*\*Catatan Pilar 3.4 (Computer Use / Browser Agent) sengaja dikecualikan (out-of-scope) karena domain Harmonix adalah Data Analytics & Text-to-SQL.*
+*\*Catatan Pilar 3.4 (Computer Use / Browser Agent) sengaja dikecualikan (out-of-scope) karena domain Harnessly adalah Data Analytics & Text-to-SQL.*
 
 ---
 
@@ -378,13 +378,24 @@ Dokumen ini adalah **panduan belajar teknis & pelacak implementasi produksi (*pr
 
 ---
 
-### 6.3 Distributed Task Queue & Background Worker Architecture (FR-43)
-- **Status:** `[PARSIAL] ⚠️` *(Terdokumentasi di PRD.md: FR-43 Target Prioritas Utama Selanjutnya)*
-- **Konsep:** Menangani task komputasi analitik berdurasi panjang dan Batch API secara terisolasi menggunakan antrian terdistribusi agar proses tidak membebani web thread server FastAPI.
-- **Kondisi Saat Ini:** Task saat ini dijalankan sebagai coroutine `asyncio` latar belakang di memori FastAPI (`BatchProcessingEngine`).
-- **Target Implementasi Produksi (FR-43):**
-  1. *Dual-Adapter Queue*: PostgreSQL native (`FOR UPDATE SKIP LOCKED` transactional queue - 100% Zero Cost tanpa service ekstra) serta Redis Queue (RQ) untuk scaling horizontal multi-worker.
-  2. *Dedicated Worker Process*: Skrip CLI `python -m src.queue.worker` dengan heartbeat, auto-retry exponential backoff, dan Dead-Letter Queue (DLQ).
+### 6.3 Distributed Task Queue & Independent Background Worker Architecture (FR-43 & FR-44)
+- **Status:** `[SUDAH] ✅` *(100% Lengkap: FR-43 Distributed Task Queue, Worker Process & FR-44 Web Runner UI)*
+- **Lokasi Kode:**
+  - Kontrak Data Queue: [`src/queue/models.py`](file:///Users/timurdianradhasejati/Programming/Code/AI/harnessly/src/queue/models.py)
+  - Kontrak Interface Queue: [`src/queue/base.py`](file:///Users/timurdianradhasejati/Programming/Code/AI/harnessly/src/queue/base.py)
+  - PostgreSQL Queue Engine (`FOR UPDATE SKIP LOCKED`): [`src/queue/postgres_queue.py`](file:///Users/timurdianradhasejati/Programming/Code/AI/harnessly/src/queue/postgres_queue.py)
+  - In-Memory & Redis Adapters: [`src/queue/memory_queue.py`](file:///Users/timurdianradhasejati/Programming/Code/AI/harnessly/src/queue/memory_queue.py) & [`src/queue/redis_queue.py`](file:///Users/timurdianradhasejati/Programming/Code/AI/harnessly/src/queue/redis_queue.py)
+  - Queue Manager Factory: [`src/queue/manager.py`](file:///Users/timurdianradhasejati/Programming/Code/AI/harnessly/src/queue/manager.py)
+  - Standalone Worker Daemon CLI: [`src/queue/worker.py`](file:///Users/timurdianradhasejati/Programming/Code/AI/harnessly/src/queue/worker.py)
+  - REST API Endpoints: [`src/api/main.py#L680-L745`](file:///Users/timurdianradhasejati/Programming/Code/AI/harnessly/src/api/main.py#L680-L745)
+  - Bulk Analytics & Queue Web Runner UI: [`frontend/src/components/BatchRunner.tsx`](file:///Users/timurdianradhasejati/Programming/Code/AI/harnessly/frontend/src/components/BatchRunner.tsx)
+  - Unit Test Suite Queue (5/5 Passed): [`tests/test_queue.py`](file:///Users/timurdianradhasejati/Programming/Code/AI/harnessly/tests/test_queue.py)
+- **Konsep & Arsitektur Rekayasa Produksi:**
+  - **Pemisahan Beban (Decoupling):** Kueri analitik berat dan pemrosesan batch massal dipisahkan secara fisik dari proses web HTTP server FastAPI, menjaga latensi respons antarmuka chat tetap prima (<50ms).
+  - **Zero-Cost High-Performance Concurrency (`FOR UPDATE SKIP LOCKED`):** Menggunakan klausa locking native PostgreSQL untuk penugasan tugas antar-worker secara atomik tanpa *race condition* dan tanpa memerlukan dependensi Redis eksternal di lingkungan lokal.
+  - **Prioritas & Penjadwalan Dinamis:** Mendukung 4 level prioritas (`LOW`, `NORMAL`, `HIGH`, `CRITICAL`) sehingga kueri analitik kritis langsung mendahului antrian reguler.
+  - **Idempotensi & Dead-Letter Queue (DLQ):** Setiap kegagalan kueri dieksekusi ulang dengan *exponential backoff*. Bila telah melampaui `max_retries` (default 3x), tugas otomatis diisolasi ke status `DEAD_LETTER` agar tidak menyebabkan *poison-pill cascade*.
+  - **Worker Telemetri & Heartbeat:** Worker mengirim sinyal *heartbeat* berkala yang mencatat pemanfaatan konkurensi, jumlah tugas selesai, dan kegagalan yang dapat dipantau langsung di UI.
 
 ---
 
@@ -431,11 +442,13 @@ Untuk melengkapi 100% materi AI Agent Engineer ke dalam portofolio ini, berikut 
 [Tahap 2: Peningkatan Daya Nalar & Multi-Agent Swarm (100%)]
 ✅ FR-04: Sub-Agent Swarm & Planner-Executor Multi-Agent Architecture (Planner, SQL, Calc, Chart Specialists)
 
-[Tahap 3: Infrastruktur Skala Besar & Keamanan Tingkat Tinggi (Hampir 100%)]
+[Tahap 3: Infrastruktur Skala Besar & Keamanan Tingkat Tinggi (100% Selesai!)]
 ✅ FR-26: Docker Container Air-Gapped Sandbox untuk Eksekusi Python Tool (AST Subprocess Fallback)
 ✅ FR-42: Asynchronous Batch Processing Engine & Bulk Analytics API (JSONL & CSV Export)
-🎯 FR-43: Distributed Task Queue & Independent Background Worker Architecture (Target Utama Pilar 6.3)
-⏳ FR-44: Bulk Analytics Web Runner & Batch Dashboard UI (Antarmuka Pengguna Batch)
+✅ FR-43: Distributed Task Queue & Independent Background Worker Architecture (FOR UPDATE SKIP LOCKED & Redis Queue)
+✅ FR-44: Bulk Analytics Web Runner & Batch Dashboard UI (Antarmuka Pengguna Batch & Telemetri Queue)
+
+[Tahap 4: Eksplorasi Protokol & Kognisi Lanjutan (Opsional)]
 ⏳ FR-45: Dynamic External Model Context Protocol (MCP) Client Integration (Pilar 3.1)
 ⏳ FR-46: Autonomous Session Reflection & Knowledge Distillation Engine (Pilar 2.4)
 ```

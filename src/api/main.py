@@ -678,6 +678,67 @@ async def list_all_batches():
     return {"total": len(jobs), "batches": [j.model_dump() for j in jobs]}
 
 
+# ==============================================================================
+# Distributed Task Queue & Worker API (FR-43, Pilar 6.3)
+# ==============================================================================
+
+from src.queue.manager import get_task_queue
+from src.queue.models import EnqueueJobRequest, QueueJobState
+
+@app.get("/v1/queue/status", tags=["Task Queue"])
+async def get_queue_status_endpoint():
+    """Get queue health, pending task breakdown, and active worker telemetry (FR-43)."""
+    queue = get_task_queue()
+    stats = await queue.get_stats()
+    return stats.model_dump()
+
+
+@app.get("/v1/queue/jobs", tags=["Task Queue"])
+async def list_queue_jobs_endpoint(
+    status: QueueJobState | None = None,
+    limit: int = 50,
+):
+    """List recent tasks in the distributed queue with optional status filter."""
+    queue = get_task_queue()
+    jobs = await queue.list_jobs(status=status, limit=min(limit, 100))
+    return {"total": len(jobs), "jobs": [j.model_dump() for j in jobs]}
+
+
+@app.get("/v1/queue/jobs/{job_id}", tags=["Task Queue"])
+async def get_queue_job_endpoint(job_id: str):
+    """Retrieve details, payload, and execution results of a specific queue job."""
+    queue = get_task_queue()
+    job = await queue.get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail=f"Job '{job_id}' not found in queue.")
+    return job.model_dump()
+
+
+@app.post("/v1/queue/jobs/{job_id}/retry", tags=["Task Queue"])
+async def retry_queue_job_endpoint(job_id: str):
+    """Manually re-enqueue a FAILED or DEAD_LETTER job for execution."""
+    queue = get_task_queue()
+    job = await queue.retry_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail=f"Job '{job_id}' not found or cannot be retried.")
+    return {"status": "re-queued", "job": job.model_dump()}
+
+
+@app.post("/v1/queue/jobs", tags=["Task Queue"])
+async def enqueue_job_endpoint(payload: EnqueueJobRequest):
+    """Enqueue a new asynchronous task for background worker execution."""
+    queue = get_task_queue()
+    job = await queue.enqueue(
+        job_type=payload.job_type,
+        payload=payload.payload,
+        priority=payload.priority,
+        max_retries=payload.max_retries,
+        delay_seconds=payload.delay_seconds,
+    )
+    return job.model_dump()
+
+
+
 
 # ==============================================================================
 # Live BI Dashboard Canvas Endpoints (FR-37)

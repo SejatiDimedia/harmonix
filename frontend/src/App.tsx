@@ -30,6 +30,7 @@ import { ApprovalBanner } from './components/ApprovalBanner';
 import { MetricsModal } from './components/MetricsModal';
 import { ModelSettingsModal } from './components/ModelSettingsModal';
 import { DashboardCanvas } from './components/DashboardCanvas';
+import { BatchRunner } from './components/BatchRunner';
 import { ConfirmDeleteModal } from './components/ConfirmDeleteModal';
 import { Toast } from './components/Toast';
 
@@ -748,7 +749,7 @@ export const App: React.FC = () => {
               onClearPrefill={() => setInputPrefill('')}
             />
           </>
-        ) : (
+        ) : activeTab === 'dashboard' ? (
           <DashboardCanvas
             widgets={dashboardData?.widgets || []}
             isLoading={isDashboardLoading}
@@ -760,6 +761,8 @@ export const App: React.FC = () => {
             sessionId={currentSessionId || undefined}
             activeModel={activeModel}
           />
+        ) : (
+          <BatchRunner showToast={showToast} />
         )}
       </div>
 

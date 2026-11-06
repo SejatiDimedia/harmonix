@@ -187,7 +187,72 @@ export interface HealthStatus {
   environment?: string;
 }
 
-export type ActiveTab = 'chat' | 'dashboard';
+export type ActiveTab = 'chat' | 'dashboard' | 'batch';
+
+export interface BatchQueryItem {
+  query_id: string;
+  query: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  answer_text?: string | null;
+  sql_queries?: string[];
+  row_count?: number;
+  error?: string | null;
+  duration_ms?: number;
+}
+
+export interface BatchJobRecord {
+  batch_id: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  total_queries: number;
+  completed_queries: number;
+  failed_queries: number;
+  engine: string;
+  items: BatchQueryItem[];
+  created_at: number;
+  completed_at?: number | null;
+  total_duration_sec?: number;
+}
+
+export interface WorkerHeartbeat {
+  worker_id: string;
+  status: string;
+  concurrency: number;
+  active_jobs: number;
+  jobs_completed: number;
+  jobs_failed: number;
+  started_at: number;
+  last_heartbeat_at: number;
+}
+
+export interface QueueStats {
+  backend: string;
+  total_jobs: number;
+  queued: number;
+  processing: number;
+  completed: number;
+  failed: number;
+  retrying: number;
+  dead_letter: number;
+  active_workers: number;
+  workers: WorkerHeartbeat[];
+}
+
+export interface QueueJob {
+  job_id: string;
+  job_type: string;
+  payload: Record<string, any>;
+  priority: number;
+  status: 'QUEUED' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'RETRYING' | 'DEAD_LETTER';
+  attempts: number;
+  max_retries: number;
+  last_error?: string | null;
+  result?: Record<string, any> | null;
+  worker_id?: string | null;
+  created_at: number;
+  started_at?: number | null;
+  completed_at?: number | null;
+  duration_ms?: number;
+}
 
 export type WidgetType = 'chart' | 'table' | 'kpi';
 

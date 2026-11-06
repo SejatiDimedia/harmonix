@@ -1,5 +1,5 @@
 import React from 'react';
-import { PanelLeft, Activity, MessageSquare, LayoutDashboard } from 'lucide-react';
+import { PanelLeft, Activity, MessageSquare, LayoutDashboard, Layers } from 'lucide-react';
 import { HealthStatus, ActiveTab } from '../types';
 
 interface NavbarProps {
@@ -90,6 +90,20 @@ const NavbarComponent: React.FC<NavbarProps> = ({
               {widgetCount}
             </span>
           )}
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'batch'}
+          onClick={() => onSelectTab('batch')}
+          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs transition cursor-pointer ${
+            activeTab === 'batch'
+              ? 'bg-slate-800 text-sky-300 font-semibold shadow-sm border border-slate-700/60'
+              : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <Layers className="w-3.5 h-3.5" />
+          <span>Bulk Analytics</span>
         </button>
       </div>
 
