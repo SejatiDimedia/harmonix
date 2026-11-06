@@ -6,6 +6,13 @@ BASE_ANALYST_SYSTEM_PROMPT = """PERAN
 Kamu analis data analitik. Tugasmu menghasilkan angka yang benar, faktual, dan bisa diperiksa.
 Lebih baik menyatakan asumsi secara transparan daripada menebak diam-diam.
 
+HIERARKI RESOLUSI SUMBER DATA (PENTING):
+1. Jika sesi percakapan memuat TABEL DATA EKSTERNAL DARI FILE PENGGUNA (Session Uploaded Tables dari file CSV/Excel):
+   - Prioritaskan dan gunakan HANYA tabel unggahan tersebut sebagai sumber analisis utama.
+   - DILARANG meng-query tabel database e-commerce bawaan (orders, products, customers, dll.) kecuali pengguna secara eksplisit memintanya.
+2. Jika sesi TIDAK memuat file eksternal:
+   - Gunakan skema database relasional bawaan (analytics.orders, dll.) sesuai kebutuhan pertanyaan.
+
 DATABASE SCHEMA DEFAULT POSTGRESQL (Hanya digunakan jika kueri database relasional bawaan tanpa file eksternal):
 Database analitik PostgreSQL memiliki skema `analytics` dengan tabel-tabel bawaan:
 - `analytics.orders`: Informasi pesanan (order_id, customer_id, order_status, order_purchase_timestamp, order_delivered_timestamp)
@@ -31,7 +38,7 @@ PRINSIP ANALISIS & VERIFIKASI DATA:
    - Panggil tool `get_schema` jika memerlukan rincian kolom atau sampel data spesifik sebelum menyusun kueri.
    - Jika ada istilah atau rumus bisnis khusus (seperti GMV, AOV, delivered rate), gunakan tool `search_glossary`.
 2. Integritas Data & Sanitasi Logika:
-   - Pastikan filter kondisi bisnis relevan diterapkan (misal mengecualikan status pesanan batal/cancelled saat menghitung pendapatan riil).
+   - Pastikan filter kondisi bisnis relevan diterapkan jika tersedia di data (misal mengecualikan status batal/cancelled saat menghitung pendapatan riil pada data transaksi).
    - Verifikasi konsistensi internal: jumlah bagian harus sama dengan total yang diklaim, dan tidak ada persentase yang tidak masuk akal.
    - Jika ada baris kosong (NULL) atau anomali data yang dikecualikan, laporkan dampaknya secara transparan.
    - Penjelasan sebab-akibat yang tidak terbukti secara langsung oleh data wajib dinyatakan sebagai asumsi atau estimasi terbuka.
@@ -71,7 +78,7 @@ PENTING: Auditor bertindak sebagai evaluator independen yang memeriksa kebenaran
 1. AUDIT LOGIKA SQL & INTEGRITAS BISNIS:
    - Apakah kueri SQL yang dieksekusi tepat sasaran untuk menjawab pertanyaan pengguna?
    - Apakah join antartabel benar dan bebas dari ledakan Cartesian (Cartesian product / fan-out explosion)?
-   - Apakah filter status bisnis diterapkan secara wajar (misal memfilter status order aktif/delivered untuk metrik pendapatan)?
+   - Apakah filter status bisnis diterapkan secara wajar jika kolom status tersedia di data (misal memfilter status aktif/sukses/delivered untuk metrik pendapatan)?
    - Apakah ada data dibuang atau diubah tanpa alasan yang jelas?
 
 2. NUMERICAL & FACTUAL FAITHFULNESS (ANTI-HALUSINASI):
@@ -164,7 +171,8 @@ async def build_analyst_system_prompt(
         memory_section = (
             "\n\nREFERENSI KUERI TERBUKTI BERHASIL (FEW-SHOT MEMORY - FR-17):\n"
             + "\n".join(memory_lines)
-            + "\nGunakan struktur JOIN dan pola agregasi di atas sebagai acuan, sesuaikan parameter filter sesuai pertanyaan pengguna, dan jalankan kueri melalui tool `run_sql`."
+            + "\nGunakan struktur JOIN dan pola agregasi di atas sebagai acuan, sesuaikan parameter filter sesuai pertanyaan pengguna, dan jalankan kueri melalui tool `run_sql`. "
+            "Jika sesi aktif menggunakan file eksternal (CSV/Excel), terapkan pola logika di atas pada nama tabel dan kolom file yang relevan (bukan tabel default database)."
         )
         sections.append(memory_section)
 
