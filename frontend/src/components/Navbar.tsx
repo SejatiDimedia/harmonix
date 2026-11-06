@@ -51,16 +51,17 @@ const NavbarComponent: React.FC<NavbarProps> = ({
       </div>
 
       {/* Center: Navigation Tabs (Chat vs Live BI Dashboard) */}
-      <div role="tablist" aria-label="Tampilan Utama" className="flex items-center rounded-xl bg-[#0f1a2e] p-1 shadow-inner shadow-black/20">
+      <div role="tablist" aria-label="Tampilan Utama" className="flex items-center p-1 bg-slate-900/90 rounded-xl border border-slate-800 text-xs font-medium select-none shadow-sm">
         <button
           type="button"
           role="tab"
           aria-selected={activeTab === 'chat'}
           onClick={() => onSelectTab('chat')}
-          className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition cursor-pointer ${activeTab === 'chat'
-            ? 'bg-clay-600 text-white shadow-sm'
-            : 'text-[#94a3b8] hover:text-[#f8fafc]'
-            }`}
+          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs transition cursor-pointer ${
+            activeTab === 'chat'
+              ? 'bg-slate-800 text-sky-300 font-semibold shadow-sm border border-slate-700/60'
+              : 'text-slate-400 hover:text-slate-200'
+          }`}
         >
           <MessageSquare className="w-3.5 h-3.5" />
           <span>Percakapan</span>
@@ -70,15 +71,22 @@ const NavbarComponent: React.FC<NavbarProps> = ({
           role="tab"
           aria-selected={activeTab === 'dashboard'}
           onClick={() => onSelectTab('dashboard')}
-          className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition cursor-pointer ${activeTab === 'dashboard'
-            ? 'bg-clay-600 text-white shadow-sm'
-            : 'text-[#94a3b8] hover:text-[#f8fafc]'
-            }`}
+          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs transition cursor-pointer ${
+            activeTab === 'dashboard'
+              ? 'bg-slate-800 text-sky-300 font-semibold shadow-sm border border-slate-700/60'
+              : 'text-slate-400 hover:text-slate-200'
+          }`}
         >
           <LayoutDashboard className="w-3.5 h-3.5" />
           <span>Live Dashboard</span>
           {widgetCount > 0 && (
-            <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-white/20 text-white font-mono font-bold">
+            <span
+              className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold ${
+                activeTab === 'dashboard'
+                  ? 'bg-sky-950 text-sky-300 border border-sky-800/50'
+                  : 'bg-slate-800 text-slate-400 border border-slate-700/40'
+              }`}
+            >
               {widgetCount}
             </span>
           )}

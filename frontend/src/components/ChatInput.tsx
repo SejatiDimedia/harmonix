@@ -253,13 +253,13 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
                 disabled={isUploading || isLoading}
                 onClick={() => fileInputRef.current?.click()}
                 aria-label="Unggah file data CSV atau Excel"
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-mono bg-[#14223b] hover:bg-[#182a47] text-[#f8fafc] hover:text-white transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
+                className="group flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-mono bg-transparent hover:bg-[#14223b] text-slate-400 hover:text-slate-100 border border-transparent hover:border-slate-800/80 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                 title="Unggah CSV atau Excel (.xlsx, .xls) untuk dianalisis bersama database warehouse (Maks 10 file, 15MB/file)"
               >
                 {isUploading ? (
                   <Loader2 className="w-3.5 h-3.5 animate-spin text-clay-400" />
                 ) : (
-                  <Paperclip className="w-3.5 h-3.5 text-[#94a3b8]" />
+                  <Paperclip className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-200 transition-colors" />
                 )}
                 <span className="hidden sm:inline">
                   {isUploading ? 'Memproses...' : 'Upload Data'}
@@ -273,13 +273,21 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
                 aria-label={`Pilih model analitik. Model saat ini: ${activeProvider.toUpperCase()} (${activeModel})`}
                 aria-haspopup="dialog"
                 aria-expanded={isPopoverOpen}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-mono bg-[#14223b] hover:bg-[#182a47] text-[#f8fafc] hover:text-white transition cursor-pointer shadow-sm"
+                className={`group flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-mono transition cursor-pointer border ${
+                  isPopoverOpen
+                    ? 'bg-[#14223b] text-slate-100 border-slate-700/60 shadow-sm'
+                    : 'bg-transparent text-slate-400 hover:text-slate-100 hover:bg-[#14223b] border-transparent hover:border-slate-800/80'
+                }`}
                 title={`Model Aktif: ${activeProvider.toUpperCase()} (${activeModel})`}
               >
                 <span className="truncate max-w-[120px] sm:max-w-[180px]">
                   {activeProvider.toUpperCase()}: {shortModelName}
                 </span>
-                <ChevronDown className="w-3 h-3 text-[#94a3b8]" />
+                <ChevronDown
+                  className={`w-3 h-3 transition-transform duration-150 ${
+                    isPopoverOpen ? 'rotate-180 text-sky-400' : 'text-slate-400 group-hover:text-slate-200'
+                  }`}
+                />
               </button>
 
               <ModelPickerPopover
@@ -299,14 +307,18 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
               />
 
               {/* Engine Toggle */}
-              <div role="group" aria-label="Pilihan Engine Orchestrator" className="hidden md:flex items-center bg-[#14223b] rounded-xl p-0.5 text-xs font-mono select-none shadow-sm">
+              <div
+                role="group"
+                aria-label="Pilihan Engine Orchestrator"
+                className="hidden md:flex items-center p-1 bg-slate-900/90 rounded-xl border border-slate-800 text-xs font-mono select-none shadow-sm"
+              >
                 <button
                   type="button"
                   onClick={() => onSetEngine('manual')}
-                  className={`px-2 py-0.5 rounded-lg font-medium transition cursor-pointer ${
+                  className={`px-3 py-1 rounded-lg text-xs font-medium transition cursor-pointer ${
                     engine === 'manual'
-                      ? 'text-white bg-clay-600 shadow-sm'
-                      : 'text-[#94a3b8] hover:text-white'
+                      ? 'bg-slate-800 text-sky-300 font-semibold shadow-sm border border-slate-700/60'
+                      : 'text-slate-400 hover:text-slate-200'
                   }`}
                   title="Engine Eksekusi Cepat (Deterministic Loop)"
                 >
@@ -315,10 +327,10 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
                 <button
                   type="button"
                   onClick={() => onSetEngine('langgraph')}
-                  className={`px-2 py-0.5 rounded-lg font-medium transition cursor-pointer ${
+                  className={`px-3 py-1 rounded-lg text-xs font-medium transition cursor-pointer ${
                     engine === 'langgraph'
-                      ? 'text-white bg-clay-600 shadow-sm'
-                      : 'text-[#94a3b8] hover:text-white'
+                      ? 'bg-slate-800 text-sky-300 font-semibold shadow-sm border border-slate-700/60'
+                      : 'text-slate-400 hover:text-slate-200'
                   }`}
                   title="LangGraph Workflow Engine"
                 >
@@ -327,10 +339,10 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
                 <button
                   type="button"
                   onClick={() => onSetEngine('swarm')}
-                  className={`px-2 py-0.5 rounded-lg font-medium transition cursor-pointer ${
+                  className={`px-3 py-1 rounded-lg text-xs font-medium transition cursor-pointer ${
                     engine === 'swarm'
-                      ? 'text-white bg-clay-600 shadow-sm'
-                      : 'text-[#94a3b8] hover:text-white'
+                      ? 'bg-slate-800 text-sky-300 font-semibold shadow-sm border border-slate-700/60'
+                      : 'text-slate-400 hover:text-slate-200'
                   }`}
                   title="Multi-Agent Swarm (Planner-Executor & Spesialis - FR-04)"
                 >

@@ -86,6 +86,15 @@ export const App: React.FC = () => {
 
   const [inputPrefill, setInputPrefill] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const hasAutoRestored = useRef(false);
+
+  // Auto-restore most recent session on initial load if none is selected
+  useEffect(() => {
+    if (!hasAutoRestored.current && !currentSessionId && sessionsData?.sessions && sessionsData.sessions.length > 0) {
+      hasAutoRestored.current = true;
+      setCurrentSessionId(sessionsData.sessions[0].session_id);
+    }
+  }, [currentSessionId, sessionsData, setCurrentSessionId]);
 
   // Sync initial catalog config
   useEffect(() => {
