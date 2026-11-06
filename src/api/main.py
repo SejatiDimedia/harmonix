@@ -1,7 +1,9 @@
 """FastAPI application with SSE streaming, state persistence, checkpointing, and HITL endpoints."""
 
+import asyncio
 import json
 import logging
+import uuid
 from pathlib import Path
 from typing import Literal
 from datetime import datetime, timezone
@@ -37,6 +39,7 @@ from src.agent.state import (
 from src.config import settings
 from src.db.connection import check_db_health
 from src.llm.registry import ModelRegistry
+from src.agent.cancellation import request_task_cancellation, is_task_cancelled, clear_task_cancellation
 from src.llm.keys_manager import (
     UpdateAPIKeysInput,
     get_all_masked_keys,
@@ -301,25 +304,27 @@ async def chat_stream(request: ChatRequest):
     )
     custom_auditor = DataAuditorAgent(llm=auditor_llm)
 
+    active_task_id = request.task_id or f"task_{uuid.uuid4().hex[:12]}"
+
     if request.engine == "swarm":
         agent_runner = PlannerExecutorAgent(llm=analyst_llm, auditor=custom_auditor)
         stream_iter = agent_runner.run_stream(
             user_query=request.query,
-            task_id=request.task_id,
+            task_id=active_task_id,
             session_id=request.session_id,
         )
     elif request.engine == "langgraph":
         agent_runner = LangGraphAgent(llm=analyst_llm, auditor=custom_auditor)
         stream_iter = agent_runner.run_stream(
             user_query=request.query,
-            task_id=request.task_id,
+            task_id=active_task_id,
             session_id=request.session_id,
         )
     else:
         agent_runner = ManualAgentLoop(llm=analyst_llm, auditor=custom_auditor)
         stream_iter = agent_runner.run(
             user_query=request.query,
-            task_id=request.task_id,
+            task_id=active_task_id,
             session_id=request.session_id,
         )
 
@@ -337,6 +342,23 @@ async def chat_stream(request: ChatRequest):
                     "event": event["event"],
                     "data": json.dumps(event["data"], ensure_ascii=False),
                 }
+        except (asyncio.CancelledError, GeneratorExit):
+            logger.info("Chat stream cancelled by client for task %s", active_task_id)
+            request_task_cancellation(active_task_id)
+            try:
+                await save_task_checkpoint(
+                    task_id=active_task_id,
+                    status=AgentTaskStatus.CANCELLED,
+                    current_step=0,
+                    messages=[],
+                    user_query=request.query,
+                    session_id=request.session_id,
+                    final_result={"answer_text": ""},
+                    error_message="Koneksi dibatalkan oleh pengguna.",
+                )
+            except Exception:
+                pass
+            raise
         except Exception as e:
             logger.error("Error in chat event generator: %s", e)
             yield {
@@ -354,6 +376,56 @@ async def get_task(task_id: str):
     if not record:
         raise HTTPException(status_code=404, detail=f"Task '{task_id}' not found.")
     return record.model_dump()
+
+
+@app.post("/v1/tasks/{task_id}/cancel", tags=["Agent"])
+async def cancel_task_endpoint(task_id: str):
+    """Cancel an ongoing agent task (e.g. when user sent a wrong chat query)."""
+    request_task_cancellation(task_id)
+
+    # Cancel any pending approvals linked to this task
+    for appr_id, appr in list(pending_approvals.items()):
+        if appr.get("task_id") == task_id:
+            pending_approvals.pop(appr_id, None)
+
+    # Persist cancelled status in DB
+    try:
+        record = await get_task_record(task_id)
+        if record:
+            await save_task_checkpoint(
+                task_id=task_id,
+                status=AgentTaskStatus.CANCELLED,
+                current_step=record.current_step,
+                messages=record.messages,
+                user_query=record.user_query,
+                session_id=record.session_id,
+                final_result={"answer_text": ""},
+                error_message="Dibatalkan oleh pengguna.",
+            )
+    except Exception as e:
+        logger.warning("Could not update cancelled task status in DB: %s", e)
+
+    return {
+        "status": "cancelled",
+        "task_id": task_id,
+        "message": "Proses analitik berhasil dibatalkan.",
+    }
+
+
+class CancelChatRequest(BaseModel):
+    task_id: str | None = None
+    session_id: str | None = None
+
+
+@app.post("/v1/chat/cancel", tags=["Agent"])
+async def cancel_chat(request: CancelChatRequest):
+    """Cancel current in-flight chat query by task_id or session_id."""
+    if request.task_id:
+        request_task_cancellation(request.task_id)
+        for appr_id, appr in list(pending_approvals.items()):
+            if appr.get("task_id") == request.task_id:
+                pending_approvals.pop(appr_id, None)
+    return {"status": "cancelled", "task_id": request.task_id}
 
 
 @app.post("/v1/approvals/{approval_id}", tags=["Agent"])

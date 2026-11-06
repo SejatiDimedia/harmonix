@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
-import { Loader2, Brain, Database, ChevronDown, Copy, Check, Pencil, RotateCcw, FileText, Layers } from 'lucide-react';
+import { Loader2, Brain, Database, ChevronDown, Copy, Check, Pencil, RotateCcw, FileText, Layers, Square } from 'lucide-react';
 import { ChatTurn, ChartSpec, TableData } from '../types';
 import { SQLBox } from './SQLBox';
 import { DataTable } from './DataTable';
@@ -19,6 +19,7 @@ interface ChatMessageProps {
   onEditQuery?: (text: string) => void;
   onPinChart?: (spec: ChartSpec, sqlQuery?: string) => void;
   onPinTable?: (table: TableData, title: string, sqlQuery?: string) => void;
+  onCancel?: () => void;
 }
 
 const ChatMessageComponent: React.FC<ChatMessageProps> = ({
@@ -29,6 +30,7 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
   onEditQuery,
   onPinChart,
   onPinTable,
+  onCancel,
 }) => {
   const [showDataFlow, setShowDataFlow] = useState(false);
   const [copiedQuery, setCopiedQuery] = useState(false);
@@ -151,18 +153,55 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
         />
 
         <div className="flex-1 space-y-2.5 leading-relaxed min-w-0">
-          {/* Streaming status badge */}
+          {/* Streaming status badge & Cancel button */}
           {isStreaming && (
-            <div role="status" aria-live="polite" className="text-xs font-mono flex items-center gap-1.5 select-none pb-1">
-              <span className="text-clay-400 font-mono text-[11px] flex items-center gap-1.5 animate-pulse">
-                <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+            <div role="status" aria-live="polite" className="text-xs font-mono flex items-center justify-between gap-2 select-none pb-1">
+              <span className="text-slate-400 font-mono text-[11px] flex items-center gap-1.5">
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-sky-400 shrink-0" />
                 <span>{streamingStatus || 'Merancang rencana analitik...'}</span>
               </span>
+              {onCancel && (
+                <button
+                  type="button"
+                  onClick={onCancel}
+                  className="px-2.5 py-1 rounded-lg text-[11px] font-mono text-slate-300 hover:text-white bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/60 transition cursor-pointer flex items-center gap-1.5 shadow-sm shrink-0"
+                  title="Batalkan proses saat ini (Esc)"
+                >
+                  <Square className="w-2.5 h-2.5 fill-rose-400 text-rose-400" />
+                  <span>Batalkan</span>
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Cancelled state banner (Refined Sober Neutral - No AI Slop Neon) */}
+          {turn.status === 'CANCELLED' && (
+            <div className="p-3 rounded-xl bg-[#0c1424] border border-white/[0.08] text-xs flex flex-wrap items-center justify-between gap-3 shadow-sm my-1">
+              <div className="flex items-center gap-2.5">
+                <span className="w-2 h-2 rounded-full bg-slate-500 shrink-0" />
+                <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-mono text-[10px] font-medium tracking-wide border border-slate-700/60">
+                  Dibatalkan
+                </span>
+                <span className="text-slate-400 font-sans text-xs">
+                  Proses analitik dihentikan atas permintaan pengguna.
+                </span>
+              </div>
+              {turn.user_query && onEditQuery && (
+                <button
+                  type="button"
+                  onClick={() => onEditQuery(turn.user_query)}
+                  className="px-2.5 py-1 rounded-lg text-xs font-mono bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 hover:text-white border border-white/[0.08] transition cursor-pointer flex items-center gap-1.5 shrink-0"
+                  title="Kembalikan kueri ke kolom input untuk diperbaiki"
+                >
+                  <Pencil className="w-3 h-3 text-slate-400" />
+                  <span>Edit Pesan</span>
+                </button>
+              )}
             </div>
           )}
 
           {/* Answer Markdown content (Jawaban Inti / Kesimpulan Utama) */}
-          {sanitizedMarkdown && (
+          {sanitizedMarkdown && turn.status !== 'CANCELLED' && (
             <div
               className="content markdown-body"
               dangerouslySetInnerHTML={{ __html: sanitizedMarkdown }}
@@ -382,7 +421,8 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
           )}
 
           {/* Latency & Token Metrics & Copy Answer */}
-          <div className="text-[11px] text-[#94a3b8] font-mono mt-3 pt-2.5 border-t border-white/[0.06] flex items-center justify-between select-none">
+          {turn.status !== 'CANCELLED' && (turn.metrics || (turn.answer_text && turn.answer_text.trim().length > 0)) && (
+            <div className="text-[11px] text-[#94a3b8] font-mono mt-3 pt-2.5 border-t border-white/[0.06] flex items-center justify-between select-none">
             <div className="flex items-center gap-3">
               {turn.metrics && (
                 <span className="flex items-center gap-1.5 text-slate-400">
@@ -442,6 +482,7 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
               </span>
             )}
           </div>
+          )}
 
           {/* Follow-up suggestions */}
           {turn.follow_up_suggestions && turn.follow_up_suggestions.length > 0 && (

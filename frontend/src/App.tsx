@@ -18,6 +18,7 @@ import {
   sendChatMessage,
   submitApproval,
   resumeTask,
+  cancelTask,
   setActiveModels as apiSetActiveModels,
 } from './services/api';
 import { formatModelNameShort, getChartDescriptiveTitle } from './utils/formatters';
@@ -87,6 +88,7 @@ export const App: React.FC = () => {
 
   const [inputPrefill, setInputPrefill] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
   const hasAutoRestored = useRef(false);
 
   // Auto-restore most recent session on initial load if none is selected
@@ -272,6 +274,9 @@ export const App: React.FC = () => {
       };
       setStreamingTurn(inFlightTurn);
 
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+
       let accumulatedText = '';
 
       try {
@@ -280,6 +285,7 @@ export const App: React.FC = () => {
             query,
             engine,
             session_id: sid,
+            task_id: inFlightTurn.task_id,
             provider: activeProvider,
             model: activeModel,
             auditor_provider: activeAuditorProvider,
@@ -344,6 +350,9 @@ export const App: React.FC = () => {
               appendTurn(completedTurn);
               setStreamingTurn(null);
               refetchSessions();
+            } else if (event === 'cancelled') {
+              setStreamingTurn(null);
+              setIsStreaming(false);
             } else if (event === 'error') {
               const errorTurn = {
                 task_id: inFlightTurn.task_id,
@@ -354,9 +363,14 @@ export const App: React.FC = () => {
               appendTurn(errorTurn);
               setStreamingTurn(null);
             }
-          }
+          },
+          controller.signal
         );
       } catch (err: any) {
+        if (err.name === 'AbortError' || err.message?.includes('aborted')) {
+          // Handled gracefully via handleCancelStream
+          return;
+        }
         const errorTurn = {
           task_id: inFlightTurn.task_id,
           status: 'ERROR',
@@ -366,6 +380,7 @@ export const App: React.FC = () => {
         appendTurn(errorTurn);
         setStreamingTurn(null);
       } finally {
+        abortControllerRef.current = null;
         setIsStreaming(false);
       }
     },
@@ -392,6 +407,9 @@ export const App: React.FC = () => {
     setPendingApproval(null);
     setIsStreaming(true);
     setStreamingStatus('Mengeksekusi query yang disetujui...');
+
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
     try {
       await submitApproval(approval_id, 'approved');
@@ -437,6 +455,9 @@ export const App: React.FC = () => {
           appendTurn(completedTurn);
           setStreamingTurn(null);
           refetchSessions();
+        } else if (event === 'cancelled') {
+          setStreamingTurn(null);
+          setIsStreaming(false);
         } else if (event === 'error') {
           const errorTurn = {
             task_id,
@@ -448,8 +469,11 @@ export const App: React.FC = () => {
           setStreamingTurn(null);
           showToast(`Resume error: ${data.message || 'Error eksekusi'}`);
         }
-      });
+      }, controller.signal);
     } catch (err: any) {
+      if (err.name === 'AbortError' || err.message?.includes('aborted')) {
+        return;
+      }
       const errorTurn = {
         task_id,
         status: 'ERROR',
@@ -460,6 +484,7 @@ export const App: React.FC = () => {
       setStreamingTurn(null);
       showToast(`Resume error: ${err.message}`);
     } finally {
+      abortControllerRef.current = null;
       setIsStreaming(false);
     }
   }, [
@@ -481,6 +506,9 @@ export const App: React.FC = () => {
     setPendingApproval(null);
     setIsStreaming(true);
     setStreamingStatus('Membatalkan dan menyusun query alternatif...');
+
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
     try {
       await submitApproval(approval_id, 'rejected', 'Query ditolak oleh analis manusia.');
@@ -526,6 +554,9 @@ export const App: React.FC = () => {
           appendTurn(completedTurn);
           setStreamingTurn(null);
           refetchSessions();
+        } else if (event === 'cancelled') {
+          setStreamingTurn(null);
+          setIsStreaming(false);
         } else if (event === 'error') {
           const errorTurn = {
             task_id,
@@ -537,8 +568,11 @@ export const App: React.FC = () => {
           setStreamingTurn(null);
           showToast(`Resume error: ${data.message || 'Error eksekusi'}`);
         }
-      });
+      }, controller.signal);
     } catch (err: any) {
+      if (err.name === 'AbortError' || err.message?.includes('aborted')) {
+        return;
+      }
       const errorTurn = {
         task_id,
         status: 'ERROR',
@@ -549,6 +583,7 @@ export const App: React.FC = () => {
       setStreamingTurn(null);
       showToast(`Resume error: ${err.message}`);
     } finally {
+      abortControllerRef.current = null;
       setIsStreaming(false);
     }
   }, [
@@ -562,6 +597,62 @@ export const App: React.FC = () => {
     refetchSessions,
     showToast,
   ]);
+
+  // Cancel Process Handler (e.g. user made typo or sent wrong query)
+  const handleCancelStream = useCallback(async () => {
+    if (!isStreaming && !pendingApproval) return;
+
+    // 1. Abort in-flight network SSE request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+
+    const targetTaskId = streamingTurn?.task_id || pendingApproval?.task_id;
+    const targetQuery = streamingTurn?.user_query || pendingApproval?.user_query || '';
+
+    // 2. Notify backend to gracefully abort LLM and database connections
+    if (targetTaskId) {
+      cancelTask(targetTaskId).catch((err) =>
+        console.warn('Backend cancel error:', err)
+      );
+    }
+
+    // 3. Clear streaming & approval state
+    setIsStreaming(false);
+    setPendingApproval(null);
+
+    // 4. Save cancelled turn in chat history
+    if (streamingTurn) {
+      const partialText = streamingTurn.answer_text?.trim();
+      const cancelledTurn = {
+        ...streamingTurn,
+        status: 'CANCELLED',
+        answer_text: partialText || '',
+      };
+      appendTurn(cancelledTurn);
+    }
+    setStreamingTurn(null);
+
+    // 5. Restore original query to chat input for immediate editing
+    if (targetQuery) {
+      setInputPrefill(targetQuery);
+      showToast('Proses dibatalkan. Pesan Anda dikembalikan ke kolom input untuk diperbaiki ✏️');
+    } else {
+      showToast('Proses analitik dibatalkan.');
+    }
+  }, [isStreaming, pendingApproval, streamingTurn, appendTurn, showToast]);
+
+  // Global Escape keyboard listener to abort running queries
+  useEffect(() => {
+    const handleGlobalEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isStreaming) {
+        handleCancelStream();
+      }
+    };
+    window.addEventListener('keydown', handleGlobalEsc);
+    return () => window.removeEventListener('keydown', handleGlobalEsc);
+  }, [isStreaming, handleCancelStream]);
 
   // Feature #3: Pinning to Dashboard Handlers
   const handlePinChart = useCallback(
@@ -721,6 +812,7 @@ export const App: React.FC = () => {
                         onEditQuery={handleEditQuery}
                         onPinChart={handlePinChart}
                         onPinTable={handlePinTable}
+                        onCancel={handleCancelStream}
                       />
                     )}
                   </>
@@ -744,6 +836,7 @@ export const App: React.FC = () => {
               onSelectModel={handleSelectModel}
               onOpenFullModelModal={() => setIsModelModalOpen(true)}
               onSubmit={handleSendMessage}
+              onCancel={handleCancelStream}
               showToast={showToast}
               inputPrefill={inputPrefill}
               onClearPrefill={() => setInputPrefill('')}

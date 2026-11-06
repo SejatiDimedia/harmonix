@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { ArrowUp, ChevronDown, Paperclip, FileSpreadsheet, Loader2, X } from 'lucide-react';
+import { ArrowUp, ChevronDown, Paperclip, FileSpreadsheet, Loader2, X, Square } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { EngineType, ModelCatalogResponse, UploadedTableSummary } from '../types';
 import { formatModelNameShort } from '../utils/formatters';
@@ -20,6 +20,7 @@ interface ChatInputProps {
   onSelectModel: (provider: string, modelId: string) => void;
   onOpenFullModelModal: () => void;
   onSubmit: (query: string) => void;
+  onCancel?: () => void;
   showToast?: (message: string) => void;
   inputPrefill?: string;
   onClearPrefill?: () => void;
@@ -37,6 +38,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
   onSelectModel,
   onOpenFullModelModal,
   onSubmit,
+  onCancel,
   showToast,
   inputPrefill,
   onClearPrefill,
@@ -95,6 +97,11 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
   }, [query]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Escape' && isLoading && onCancel) {
+      e.preventDefault();
+      onCancel();
+      return;
+    }
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleFormSubmit();
@@ -351,16 +358,36 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
               </div>
             </div>
 
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={isLoading || isUploading || !query.trim()}
-              aria-label="Kirim pertanyaan (Enter)"
-              className="p-2 rounded-xl bg-clay-600 hover:bg-clay-500 disabled:opacity-30 disabled:hover:bg-clay-600 text-white transition shadow-sm cursor-pointer disabled:cursor-not-allowed"
-              title="Kirim (Enter)"
-            >
-              <ArrowUp className="w-4 h-4 stroke-[2.5]" />
-            </button>
+            {/* Submit / Cancel Action Button */}
+            <div className="flex items-center gap-2">
+              {isLoading && (
+                <span className="hidden sm:inline-flex text-[11px] font-mono text-slate-400 select-none">
+                  Tekan <kbd className="px-1 py-0.5 text-[10px] bg-slate-800 rounded border border-slate-700 text-slate-300">Esc</kbd> atau klik Batalkan
+                </span>
+              )}
+              {isLoading ? (
+                <button
+                  type="button"
+                  onClick={onCancel}
+                  aria-label="Batalkan proses analitik (Esc)"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 active:bg-slate-900 text-slate-200 hover:text-white transition-all shadow-sm cursor-pointer border border-slate-700/80 active:scale-95 shrink-0"
+                  title="Batalkan proses analitik ini jika salah ketik atau salah kirim (Esc)"
+                >
+                  <Square className="w-3 h-3 fill-rose-400 text-rose-400" />
+                  <span className="text-xs font-medium font-sans">Batalkan</span>
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  disabled={isUploading || !query.trim()}
+                  aria-label="Kirim pertanyaan (Enter)"
+                  className="p-2 rounded-xl bg-clay-600 hover:bg-clay-500 disabled:opacity-30 disabled:hover:bg-clay-600 text-white transition shadow-sm cursor-pointer disabled:cursor-not-allowed"
+                  title="Kirim (Enter)"
+                >
+                  <ArrowUp className="w-4 h-4 stroke-[2.5]" />
+                </button>
+              )}
+            </div>
           </div>
         </form>
 

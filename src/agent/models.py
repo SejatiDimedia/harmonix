@@ -14,6 +14,7 @@ class AgentTaskStatus(str, Enum):
     REJECTED = "REJECTED"
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
+    CANCELLED = "CANCELLED"
 
 
 class TableData(BaseModel):

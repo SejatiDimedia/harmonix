@@ -9,8 +9,8 @@
   --color-clay-100: #e0f2fe;
   --color-clay-200: #bae6fd;
   --color-clay-300: #7dd3fc;
-  --color-clay-400: #00d2ee;
-  --color-clay-500: #008cd0;
+  --color-clay-400: #38bdf8;
+  --color-clay-500: #0284c7;
   --color-clay-600: #0277bd;
   --color-clay-700: #0369a1;
   --color-clay-800: #075985;
@@ -20,7 +20,7 @@
 
 /* WCAG 2.1 AA Focus Visible Indicator (SC 2.4.7) */
 :focus-visible {
-  outline: 2px solid #00d2ee !important;
+  outline: 2px solid #38bdf8 !important;
   outline-offset: 2px !important;
 }
 

@@ -30,6 +30,7 @@ from src.agent.models import (
 from src.agent.observation_processor import ObservationProcessor
 from src.agent.prompts import BASE_ANALYST_SYSTEM_PROMPT, build_analyst_system_prompt
 from src.agent.scratchpad import WorkingMemoryManager
+from src.agent.cancellation import clear_task_cancellation, is_task_cancelled
 from src.agent.state import get_session_history, save_task_checkpoint
 from src.agent.suggestions import get_smart_suggestions
 from src.config import settings
@@ -628,6 +629,37 @@ class PlannerExecutorAgent:
         citations: list[Citation] = []
 
         for subtask in plan.tasks:
+            if is_task_cancelled(task_id):
+                cancelled_msg = "Proses analitik dibatalkan oleh pengguna."
+                logger.info("PlannerExecutorAgent: Task %s cancelled by user request.", task_id)
+                self.term_logger.log_task_failed(
+                    task_id=task_id, error=cancelled_msg, step=len(executed_sqls) + 1, elapsed_seconds=time.perf_counter() - start_time
+                )
+                try:
+                    await save_task_checkpoint(
+                        task_id=task_id,
+                        status=AgentTaskStatus.CANCELLED,
+                        current_step=len(executed_sqls) + 1,
+                        messages=[],
+                        user_query=user_query,
+                        session_id=session_id,
+                        final_result={"answer_text": ""},
+                        error_message=cancelled_msg,
+                    )
+                except Exception as e:
+                    logger.warning("Planner checkpoint cancel save failed: %s", e)
+
+                yield {
+                    "event": "cancelled",
+                    "data": {
+                        "task_id": task_id,
+                        "status": AgentTaskStatus.CANCELLED.value,
+                        "message": cancelled_msg,
+                    },
+                }
+                clear_task_cancellation(task_id)
+                return
+
             subtask.status = "running"
             t_sub_start = time.perf_counter()
 

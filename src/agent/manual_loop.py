@@ -33,6 +33,7 @@ from src.config import settings
 from src.llm.provider import BaseLLMProvider, MockLLMProvider, ToolCall, get_llm_provider
 from src.observability.models import SpanStatus, SpanType
 from src.agent.scratchpad import WorkingMemoryManager
+from src.agent.cancellation import clear_task_cancellation, is_task_cancelled
 from src.observability.tracer import AgentTracer
 from src.rag.long_term_memory import retrieve_relevant_memories, store_successful_query
 from src.tools.base import BaseTool
@@ -210,6 +211,43 @@ class ManualAgentLoop:
         while step < self.max_steps:
             step += 1
             elapsed_time = time.perf_counter() - start_time
+
+            # 0. User Cancellation Check
+            if is_task_cancelled(task_id):
+                cancelled_msg = "Proses analitik dibatalkan oleh pengguna."
+                logger.info("ManualAgentLoop: Task %s cancelled by user request at step %d.", task_id, step)
+                self.term_logger.log_task_failed(
+                    task_id=task_id, error=cancelled_msg, step=step, elapsed_seconds=elapsed_time
+                )
+                try:
+                    await save_task_checkpoint(
+                        task_id=task_id,
+                        status=AgentTaskStatus.CANCELLED,
+                        current_step=step,
+                        messages=messages,
+                        user_query=user_query,
+                        session_id=session_id,
+                        final_result={"answer_text": ""},
+                        error_message=cancelled_msg,
+                    )
+                except Exception as e:
+                    logger.warning("Checkpoint save failed on cancellation: %s", e)
+
+                tracer.end_span(
+                    root_span.span_id,
+                    status=SpanStatus.ERROR,
+                    error_message=cancelled_msg,
+                )
+                yield {
+                    "event": "cancelled",
+                    "data": {
+                        "task_id": task_id,
+                        "status": AgentTaskStatus.CANCELLED.value,
+                        "message": cancelled_msg,
+                    },
+                }
+                clear_task_cancellation(task_id)
+                return
 
             # 1. Total Timeout Check (FR-02, FR-27)
             if elapsed_time > self.total_timeout:

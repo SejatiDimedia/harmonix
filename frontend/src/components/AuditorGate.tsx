@@ -67,7 +67,7 @@ export const AuditorGate: React.FC<AuditorGateProps> = ({ verdict }) => {
 
         {isExpanded && (
           <div className="mt-2.5 pt-2.5 border-t border-white/10 text-[11px] leading-relaxed space-y-2.5">
-            <div className="text-[10px] font-mono text-cyan-300/90 bg-[#0c1f38] px-2.5 py-1.5 rounded-lg border border-cyan-800/40 flex items-center gap-1.5">
+            <div className="text-[10px] font-mono text-sky-300 bg-[#0c192e] px-2.5 py-1.5 rounded-lg border border-sky-800/40 flex items-center gap-1.5">
               <span>✓</span>
               <span>Audit Maker-Checker: Logika SQL valid, konsistensi numerik diverifikasi, dan bebas pelanggaran guardrail.</span>
             </div>
@@ -93,8 +93,8 @@ export const AuditorGate: React.FC<AuditorGateProps> = ({ verdict }) => {
                     </div>
                     <div className="mt-1 text-[#94a3b8] leading-relaxed">{iss.description}</div>
                     {iss.suggested_fix && (
-                      <div className="mt-1.5 text-cyan-300 font-mono text-[10px] flex items-center gap-1">
-                        <Lightbulb className="w-3 h-3 text-[#00d2ee] shrink-0" />
+                      <div className="mt-1.5 text-sky-300 font-mono text-[10px] flex items-center gap-1">
+                        <Lightbulb className="w-3 h-3 text-sky-400 shrink-0" />
                         <span>Saran: {iss.suggested_fix}</span>
                       </div>
                     )}

@@ -256,8 +256,8 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
           )}
 
           {successFeedback && (
-            <div className="p-3 rounded-xl bg-[#0c1e33] text-xs text-cyan-200 flex items-center gap-2 shadow-sm">
-              <CheckCircle2 className="w-4 h-4 text-[#00d2ee] shrink-0" />
+            <div className="p-3 rounded-xl bg-[#0c1a2e] text-xs text-sky-200 border border-sky-800/40 flex items-center gap-2 shadow-sm">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
               <span>{successFeedback}</span>
             </div>
           )}
@@ -284,12 +284,12 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
                           {p.provider.toUpperCase()}
                         </span>
                         {p.is_ready ? (
-                          <span className="text-[10px] font-mono font-medium text-cyan-400">SIAP</span>
+                          <span className="text-[10px] font-mono font-medium text-emerald-400">SIAP</span>
                         ) : (
                           <span className="text-[10px] font-mono font-medium text-slate-500">OFFLINE</span>
                         )}
                       </div>
-                      <span className={`text-[11px] truncate font-mono ${p.is_ready ? 'text-cyan-300/80' : 'text-[#64748b]'}`}>
+                      <span className={`text-[11px] truncate font-mono ${p.is_ready ? 'text-sky-300/80' : 'text-[#64748b]'}`}>
                         {p.status_message}
                       </span>
                     </div>
@@ -431,7 +431,7 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
                   <span
                     className={`text-[10px] px-2.5 py-0.5 rounded-full border font-mono flex items-center gap-1.5 ${
                       groqInfo?.is_set
-                        ? 'bg-cyan-950/50 border-cyan-800/40 text-cyan-300'
+                        ? 'bg-emerald-950/40 border-emerald-800/50 text-emerald-400'
                         : 'bg-[#14223b] border-[#1e3557] text-[#94a3b8]'
                     }`}
                   >
@@ -482,7 +482,7 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
                   <span
                     className={`text-[10px] px-2.5 py-0.5 rounded-full border font-mono flex items-center gap-1.5 ${
                       geminiInfo?.is_set
-                        ? 'bg-cyan-950/50 border-cyan-800/40 text-cyan-300'
+                        ? 'bg-emerald-950/40 border-emerald-800/50 text-emerald-400'
                         : 'bg-[#14223b] border-[#1e3557] text-[#94a3b8]'
                     }`}
                   >
@@ -533,7 +533,7 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
                   <span
                     className={`text-[10px] px-2.5 py-0.5 rounded-full border font-mono flex items-center gap-1.5 ${
                       openrouterInfo?.is_set
-                        ? 'bg-cyan-950/50 border-cyan-800/40 text-cyan-300'
+                        ? 'bg-emerald-950/40 border-emerald-800/50 text-emerald-400'
                         : 'bg-[#14223b] border-[#1e3557] text-[#94a3b8]'
                     }`}
                   >

@@ -432,3 +432,39 @@ async def test_models_keys_format_validation():
         assert resp_invalid_or.status_code == 422
         assert "Invalid OpenRouter API key format" in resp_invalid_or.json()["detail"]
 
+
+@pytest.mark.asyncio
+async def test_cancel_task_endpoint():
+    """Verify /v1/tasks/{task_id}/cancel flags task and returns cancelled status."""
+    from src.agent.cancellation import is_task_cancelled, clear_task_cancellation
+
+    test_task_id = "test_cancel_12345"
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            resp = await client.post(f"/v1/tasks/{test_task_id}/cancel")
+            assert resp.status_code == 200
+            data = resp.json()
+            assert data["status"] == "cancelled"
+            assert data["task_id"] == test_task_id
+            assert is_task_cancelled(test_task_id) is True
+    finally:
+        clear_task_cancellation(test_task_id)
+
+
+@pytest.mark.asyncio
+async def test_cancel_chat_endpoint():
+    """Verify /v1/chat/cancel endpoint accepts task_id or session_id and flags cancellation."""
+    from src.agent.cancellation import is_task_cancelled, clear_task_cancellation
+
+    test_task_id = "test_chat_cancel_67890"
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            resp = await client.post("/v1/chat/cancel", json={"task_id": test_task_id})
+            assert resp.status_code == 200
+            data = resp.json()
+            assert data["status"] == "cancelled"
+            assert is_task_cancelled(test_task_id) is True
+    finally:
+        clear_task_cancellation(test_task_id)
+
+

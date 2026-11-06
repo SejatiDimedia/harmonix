@@ -123,6 +123,7 @@ export interface ChatStreamParams {
   query: string;
   engine: EngineType;
   session_id: string;
+  task_id?: string;
   provider?: string;
   model?: string;
   auditor_provider?: string;
@@ -165,12 +166,14 @@ export async function readSSEStream(
 
 export async function sendChatMessage(
   params: ChatStreamParams,
-  onEvent: (event: string, data: any) => void
+  onEvent: (event: string, data: any) => void,
+  signal?: AbortSignal
 ) {
   const res = await fetch('/v1/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params),
+    signal,
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: 'Request failed' }));
@@ -182,18 +185,32 @@ export async function sendChatMessage(
 export async function resumeTask(
   taskId: string,
   feedback: string,
-  onEvent: (event: string, data: any) => void
+  onEvent: (event: string, data: any) => void,
+  signal?: AbortSignal
 ) {
   const res = await fetch(`/v1/tasks/${taskId}/resume`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ feedback }),
+    signal,
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: 'Resume failed' }));
     throw new Error(err.detail || `Server returned ${res.status}`);
   }
   await readSSEStream(res, onEvent);
+}
+
+export async function cancelTask(taskId: string): Promise<{ status: string; message: string }> {
+  const res = await fetch(`/v1/tasks/${taskId}/cancel`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: 'Failed to cancel task' }));
+    throw new Error(err.detail || 'Failed to cancel task');
+  }
+  return res.json();
 }
 
 export async function getDashboardWidgets(sessionId: string): Promise<DashboardListResponse> {
