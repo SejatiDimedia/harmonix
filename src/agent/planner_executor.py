@@ -353,11 +353,15 @@ class PlannerExecutorAgent:
                     if cols and rows:
                         captured_tables.append(TableData(columns=cols, rows=rows, row_count=len(rows)))
 
+                formatted_obs = ObservationProcessor.format_observation_for_llm(
+                    tool_name=tc.name,
+                    observation=obs,
+                )
                 messages.append({
                     "role": "tool",
                     "tool_call_id": tc.id,
                     "name": tc.name,
-                    "content": json.dumps(obs, ensure_ascii=False) if isinstance(obs, (dict, list)) else str(obs),
+                    "content": formatted_obs,
                 })
 
         return {

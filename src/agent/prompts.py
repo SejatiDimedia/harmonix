@@ -162,13 +162,9 @@ async def build_analyst_system_prompt(
             memory_lines.append(memory_block)
 
         memory_section = (
-            "\n\nMEMORI JANGKA PANJANG & KUERI TERBUKTI BERHASIL SEBELUMNYA (FEW-SHOT GUIDANCE - FR-17):\n"
-            "Sistem pgvector menemukan pengalaman kueri SQL serupa yang sebelumnya terbukti berhasil dan diverifikasi akurat:\n"
+            "\n\nREFERENSI KUERI TERBUKTI BERHASIL (FEW-SHOT MEMORY - FR-17):\n"
             + "\n".join(memory_lines)
-            + "\nATURAN PEMANFAATAN MEMORI:\n"
-            "1. Jika pertanyaan pengguna saat ini serupa dengan contoh di atas, gunakan struktur, rumus, dan relasi JOIN tersebut sebagai acuan utama.\n"
-            "2. Sesuaikan filter tanggal, limit baris, atau nama kolom jika pertanyaan spesifik pengguna membutuhkan parameter berbeda.\n"
-            "3. Tetap jalankan kueri melalui tool `run_sql` untuk mendapatkan data terbaru."
+            + "\nGunakan struktur JOIN dan pola agregasi di atas sebagai acuan, sesuaikan parameter filter sesuai pertanyaan pengguna, dan jalankan kueri melalui tool `run_sql`."
         )
         sections.append(memory_section)
 

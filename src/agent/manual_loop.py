@@ -608,12 +608,16 @@ class ManualAgentLoop:
                             user_query=user_query,
                         )
 
-                    # Append observation to message history
+                    # Append observation to message history (FR-15: token-pruned preview for large SQL tables)
+                    formatted_content = ObservationProcessor.format_observation_for_llm(
+                        tool_name=tool_name,
+                        observation=observation,
+                    )
                     messages.append({
                         "role": "tool",
                         "tool_call_id": tool_call.id,
                         "name": tool_name,
-                        "content": json.dumps(observation, ensure_ascii=False),
+                        "content": formatted_content,
                     })
 
                 # Proceed to next iteration to let LLM interpret observations

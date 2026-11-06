@@ -62,14 +62,10 @@ def get_cached_session_schema_prompt(
         "Pengguna telah mengunggah file data spreadsheet (CSV/Excel) ke dalam sesi percakapan ini.\n"
         "Tabel-tabel fisik dinamis berikut TELAH DIBUAT di skema `analytics` PostgreSQL dan SIAP DI-QUERY / DI-JOIN:\n"
         + "\n".join(table_sections)
-        + "\n\nPANDUAN & ATURAN ANALISIS DATA SPREADSHEET (POLA KONDISI -> TINDAKAN -> LAPORAN):\n"
-        "1. LANGKAH 0 - KENALI DATA: Tentukan peran tiap tabel dari strukturnya (detail vs master vs ringkasan). Seluruh kalkulasi wajib dihitung dari tabel detail, tabel ringkasan hanya pembanding. Jika berbeda, uraikan selisihnya per kelompok tanpa menebak penyebabnya.\n"
-        "2. LANGKAH 1 - PROFIL KUALITAS DATA: Jalankan pemeriksaan untuk 8 jenis masalah (duplikat ID, kolom tipe campur, angka tersimpan teks, variasi kategori, nilai di luar rentang wajar/negatif pada SETIAP kolom numerik, kunci tanpa pasangan/kosong, nilai kosong pada kolom hitung, baris uji coba/dummy). Tampilkan jumlah baris terdampak termasuk jika nol.\n"
-        "3. LANGKAH 2 - KEPUTUSAN PEMBERSIHAN: Jangan pernah membuang atau mengubah baris tanpa melaporkan jumlah, alasan, dan beberapa contoh barisnya. Analisis level entitas hanya memakai baris dengan kunci valid.\n"
-        "4. TANGGAL TEKS: Tentukan urutan tanggal dari bukti data (>12), jangan biarkan konversi otomatis menebak. Jika ambigu, tanyakan ke pengguna atau nyatakan asumsi.\n"
-        "5. LANGKAH 3 - PERHITUNGAN KODE NYATA: Hitung lewat kode/query SQL nyata dan tampilkan tabel langsung dari hasil eksekusi, jangan mengetik ulang dengan tangan. Ikuti definisi metrik persis sesuai pertanyaan.\n"
-        "6. LANGKAH 4 - VERIFIKASI SEBELUM MENJAWAB: Verifikasi jumlah bagian = total, total baris awal = baris valid + baris dikecualikan, dan bandingkan dua sumber jika ada serta laporkan selisihnya per kelompok.\n"
-        "7. FORMAT JAWABAN: Wajib memuat (1) Jawaban langsung di awal, (2) Log data temuan & tindakan per jenis masalah, (3) Asumsi yang dipakai, (4) Hasil verifikasi, (5) Label [Dugaan] untuk penjelasan sebab yang tidak terbukti oleh data."
+        + "\n\nPANDUAN ANALISIS DATA SPREADSHEET SESI:\n"
+        "1. Prioritas Tabel: Hitung seluruh metrik dari tabel transaksi/detail. Tabel ringkasan hanya pembanding.\n"
+        "2. Integritas Kolom: Periksa anomali (duplikasi ID, nilai kosong/NULL, parsing tanggal/angka). Laporkan baris yang dikecualikan dan nyatakan asumsi secara transparan jika ada ambiguitas.\n"
+        "3. Eksekusi Faktual: Jalankan kalkulasi melalui kueri SQL nyata dengan `run_sql`, dan verifikasi bahwa jumlah sub-bagian konsisten dengan total."
     )
 
     _SESSION_SCHEMA_CACHE[session_id] = (dynamic_section, current_hash)

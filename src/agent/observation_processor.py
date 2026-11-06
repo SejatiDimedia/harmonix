@@ -1,5 +1,6 @@
 """Observation processor for structuring tables and synthesizing visual charts (FR-07)."""
 
+import json
 import logging
 from typing import Any
 from src.agent.models import ChartSpec, Citation, TableData
@@ -9,6 +10,43 @@ logger = logging.getLogger(__name__)
 
 class ObservationProcessor:
     """Processes raw observations from tool executions into structured tables and charts."""
+
+    @staticmethod
+    def format_observation_for_llm(
+        tool_name: str,
+        observation: Any,
+        max_preview_rows: int = 15,
+    ) -> str:
+        """Format tool observation for LLM conversation context, pruning large payloads to save tokens.
+
+        - If rows <= max_preview_rows: preserves full JSON.
+        - If rows > max_preview_rows: retains top preview rows + summary metadata and explanatory note,
+          ensuring full rows remain safely stored in captured_tables for UI and chart rendering.
+        """
+        if not isinstance(observation, dict):
+            if isinstance(observation, list):
+                return json.dumps(observation, ensure_ascii=False)
+            return str(observation)
+
+        if tool_name == "run_sql" and observation.get("status") == "success":
+            rows = observation.get("rows", [])
+            total_rows = len(rows)
+            if total_rows > max_preview_rows:
+                pruned = dict(observation)
+                pruned["rows"] = rows[:max_preview_rows]
+                pruned["row_count"] = total_rows
+                pruned["total_rows_count"] = total_rows
+                pruned["preview_count"] = max_preview_rows
+                pruned["preview_rows_count"] = max_preview_rows
+                pruned["is_preview"] = True
+                pruned["system_note"] = (
+                    f"Menampilkan sampel {max_preview_rows} dari {total_rows} baris data. "
+                    f"Seluruh {total_rows} baris data telah ditampilkan kepada pengguna di tabel UI. "
+                    "Analisis tren, pola utama, atau nilai ringkasan tanpa mengetik ulang seluruh baris."
+                )
+                return json.dumps(pruned, ensure_ascii=False)
+
+        return json.dumps(observation, ensure_ascii=False)
 
     @staticmethod
     def process_sql_observation(

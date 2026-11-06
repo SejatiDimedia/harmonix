@@ -156,3 +156,37 @@ async def test_manual_agent_loop_emergency_synthesis_on_step_limit():
     assert len(final_event["data"]["sql_queries"]) >= 1
 
 
+def test_observation_processor_token_pruning_head_tail():
+    """Verify that large SQL tables (>15 rows) are safely pruned for LLM context while small tables remain untouched."""
+    import json
+    from src.agent.observation_processor import ObservationProcessor
+
+    # Case A: Small table (<= 15 rows) -> Unmodified
+    small_obs = {
+        "status": "success",
+        "columns": ["id", "val"],
+        "rows": [[i, f"item_{i}"] for i in range(10)],
+        "row_count": 10,
+    }
+    small_formatted = ObservationProcessor.format_observation_for_llm("run_sql", small_obs)
+    small_parsed = json.loads(small_formatted)
+    assert len(small_parsed["rows"]) == 10
+    assert "is_preview" not in small_parsed
+
+    # Case B: Large table (> 15 rows) -> Pruned to 15 preview rows with metadata and note
+    large_obs = {
+        "status": "success",
+        "columns": ["id", "val"],
+        "rows": [[i, f"item_{i}"] for i in range(100)],
+        "row_count": 100,
+    }
+    large_formatted = ObservationProcessor.format_observation_for_llm("run_sql", large_obs, max_preview_rows=15)
+    large_parsed = json.loads(large_formatted)
+    assert len(large_parsed["rows"]) == 15
+    assert large_parsed["total_rows_count"] == 100
+    assert large_parsed["preview_rows_count"] == 15
+    assert large_parsed["is_preview"] is True
+    assert "system_note" in large_parsed
+
+
+
