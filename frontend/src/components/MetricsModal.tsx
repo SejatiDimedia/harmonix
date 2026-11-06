@@ -251,7 +251,7 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({
                   <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
                   <div>
                     <span className="font-semibold font-mono block text-amber-300">
-                      Peringatan Anomali Drift (OB-04):
+                      Peringatan Anomali Drift:
                     </span>
                     <ul className="mt-1 list-disc list-inside space-y-0.5 text-slate-300 text-xs">
                       {metrics.drift_reasons?.map((reason, idx) => (

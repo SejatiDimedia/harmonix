@@ -689,7 +689,7 @@ export const App: React.FC = () => {
                         <div className="flex items-center justify-between font-medium text-sky-400 mb-2">
                           <div className="flex items-center gap-2">
                             <span className="text-sm">🧠</span>
-                            <span className="font-semibold tracking-wide">Konteks Sesi Terpadu (FR-14 Auto-Compaction)</span>
+                            <span className="font-semibold tracking-wide">Ringkasan Konteks Percakapan Sesi</span>
                             <span className="px-2 py-0.5 rounded-full text-[10px] bg-sky-950 text-sky-300 border border-sky-800/50">
                               {sessionDetailsData.compacted_turn_count || 0} turn dirangkum
                             </span>
@@ -762,7 +762,12 @@ export const App: React.FC = () => {
             activeModel={activeModel}
           />
         ) : (
-          <BatchRunner showToast={showToast} />
+          <BatchRunner
+            showToast={showToast}
+            activeProvider={activeProvider}
+            activeModel={activeModel}
+            sessionId={currentSessionId || undefined}
+          />
         )}
       </div>
 

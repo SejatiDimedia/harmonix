@@ -118,3 +118,57 @@ async def test_batch_api_endpoints():
         csv_resp = await client.get(f"/v1/batch/{batch_id}/results?format=csv")
         assert csv_resp.status_code == 200
         assert "text/csv" in csv_resp.headers["content-type"]
+
+
+@pytest.mark.asyncio
+async def test_batch_single_query_success_and_error_handling():
+    """Verify that batch correctly maps final_result and error events into answer_text and error fields."""
+    queries = ["Sukses kueri", "Gagal kueri"]
+
+    async def mock_run_stream(user_query, task_id, **kwargs):
+        if "Sukses" in user_query:
+            yield {
+                "event": "final_result",
+                "data": {
+                    "answer_text": "Hasil perhitungan sukses adalah 42 unit.",
+                    "sql_queries": ["SELECT 42;"],
+                    "tables": [{"columns": ["val"], "rows": [[42]], "row_count": 1}],
+                },
+            }
+        else:
+            yield {
+                "event": "error",
+                "data": {"message": "Simulated LLM inference failure"},
+            }
+
+    with patch("src.batch.engine.ManualAgentLoop") as mock_loop_cls:
+        instance = mock_loop_cls.return_value
+        instance.run_stream.side_effect = mock_run_stream
+
+        record = await BatchProcessingEngine.create_batch(
+            queries=queries,
+            concurrency_limit=2,
+            provider="mock",
+            model="mock-model",
+        )
+
+        # Allow execution to complete
+        await asyncio.sleep(0.1)
+
+        fetched = BatchProcessingEngine.get_batch(record.batch_id)
+        assert fetched is not None
+        assert fetched.status == "completed"
+        assert fetched.completed_queries == 1
+        assert fetched.failed_queries == 1
+
+        success_item = next(it for it in fetched.items if "Sukses" in it.query)
+        assert success_item.status == "completed"
+        assert success_item.answer_text == "Hasil perhitungan sukses adalah 42 unit."
+        assert len(success_item.sql_queries) == 1
+        assert success_item.row_count == 1
+        assert success_item.error is None
+
+        fail_item = next(it for it in fetched.items if "Gagal" in it.query)
+        assert fail_item.status == "failed"
+        assert fail_item.answer_text is None
+        assert "Simulated LLM inference failure" in (fail_item.error or "")

@@ -641,48 +641,66 @@ class ManualAgentLoop:
                 })
                 continue
 
-            # No tool calls -> Agent has concluded reasoning!
+            # No tool calls -> Check if content is provided
+            content_str = (llm_response.content or "").strip()
+            if not content_str and step < self.max_steps:
+                logger.warning("Agent returned empty response at step %d. Prompting to continue.", step)
+                messages.append({
+                    "role": "user",
+                    "content": "Respons Anda kosong. Silakan lanjutkan analisis: jalankan tool `run_sql` untuk mengeksekusi kueri di database, atau tuliskan jawaban analisis data yang lengkap.",
+                })
+                continue
+
+            final_answer_text = llm_response.content or ""
             break
 
-        # Graceful degradation and emergency synthesis if max steps or token budget reached
-        if step >= self.max_steps or total_tokens > self.max_token_budget:
-            # If no narrative answer was generated yet but data was captured, force a zero-tool synthesis
-            if not final_answer_text and (captured_tables or executed_sqls):
-                logger.info("Task %s reached step limit without final narrative answer. Running emergency synthesis...", task_id)
-                synth_messages = list(messages)
-                synth_messages.append({
-                    "role": "user",
-                    "content": (
-                        "Batas iterasi langkah tercapai. Berdasarkan seluruh baris data dan hasil query di atas, "
-                        "tuliskan jawaban akhir lengkap, terstruktur, dan langsung menjawab pertanyaan pengguna: "
-                        f"\"{user_query}\"."
-                    ),
-                })
-                try:
-                    synth_span = tracer.start_span(
-                        name="emergency_synthesis",
-                        span_type=SpanType.LLM,
-                        parent_span_id=root_span.span_id,
-                    )
-                    synth_resp = await asyncio.wait_for(
-                        self.llm.chat(messages=synth_messages, tools=None),
-                        timeout=self.step_timeout,
-                    )
-                    tracer.end_span(synth_span.span_id)
-                    if synth_resp.content:
-                        final_answer_text = synth_resp.content
-                        total_tokens += synth_resp.usage.total_tokens
-                        prompt_tokens += synth_resp.usage.prompt_tokens
-                        completion_tokens += synth_resp.usage.completion_tokens
-                        cached_tokens += getattr(synth_resp.usage, "cached_tokens", 0)
-                        yield {
-                            "event": "token",
-                            "data": {"delta": synth_resp.content},
-                        }
-                except Exception as e:
-                    logger.warning("Emergency synthesis failed: %s", e)
+        # If no narrative answer was generated yet, force a zero-tool synthesis
+        if not final_answer_text or not final_answer_text.strip():
+            logger.info("Task %s has no narrative answer. Running final emergency synthesis...", task_id)
+            synth_messages = list(messages)
+            synth_messages.append({
+                "role": "user",
+                "content": (
+                    "Berdasarkan seluruh hasil observasi, skema, tabel data, dan kueri di atas, "
+                    "tuliskan jawaban analisis data akhir yang lengkap, faktual, terstruktur, "
+                    f"dan langsung menjawab pertanyaan: \"{user_query}\"."
+                ),
+            })
+            try:
+                synth_span = tracer.start_span(
+                    name="emergency_synthesis",
+                    span_type=SpanType.LLM,
+                    parent_span_id=root_span.span_id,
+                )
+                synth_resp = await asyncio.wait_for(
+                    self.llm.chat(messages=synth_messages, tools=None),
+                    timeout=self.step_timeout,
+                )
+                tracer.end_span(synth_span.span_id)
+                if synth_resp and synth_resp.content:
+                    final_answer_text = synth_resp.content
+                    total_tokens += synth_resp.usage.total_tokens
+                    prompt_tokens += synth_resp.usage.prompt_tokens
+                    completion_tokens += synth_resp.usage.completion_tokens
+                    cached_tokens += getattr(synth_resp.usage, "cached_tokens", 0)
+                    yield {
+                        "event": "token",
+                        "data": {"delta": synth_resp.content},
+                    }
+            except Exception as e:
+                logger.warning("Final emergency synthesis failed: %s", e)
 
+        # Graceful degradation notice if max steps or token budget reached
+        if step >= self.max_steps or total_tokens > self.max_token_budget:
             warning = f"Batas langkah ({self.max_steps}) tercapai sebelum analisis selesai penuh."
+            if final_answer_text:
+                if not final_answer_text.startswith("Batas langkah"):
+                    final_answer_text = f"{warning}\n\n{final_answer_text}"
+            else:
+                if captured_charts or captured_tables:
+                    final_answer_text = f"{warning} Berikut adalah visualisasi dan data yang berhasil diekstrak."
+                else:
+                    final_answer_text = f"{warning} Berikut adalah data parsial yang berhasil diperoleh."
             if final_answer_text:
                 if not final_answer_text.startswith("Batas langkah"):
                     final_answer_text = f"{warning}\n\n{final_answer_text}"

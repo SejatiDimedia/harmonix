@@ -37,6 +37,7 @@ class BatchQueryItem(BaseModel):
     status: Literal["pending", "processing", "completed", "failed"] = "pending"
     answer_text: str | None = None
     sql_queries: list[str] = Field(default_factory=list)
+    tables: list[dict[str, Any]] = Field(default_factory=list)
     row_count: int = 0
     error: str | None = None
     duration_ms: float = 0.0
@@ -50,6 +51,9 @@ class BatchJobRecord(BaseModel):
     completed_queries: int = 0
     failed_queries: int = 0
     engine: str = "manual"
+    provider: str | None = None
+    model: str | None = None
+    session_id: str | None = None
     items: list[BatchQueryItem] = Field(default_factory=list)
     created_at: float = Field(default_factory=time.time)
     completed_at: float | None = None
@@ -61,6 +65,9 @@ class CreateBatchRequest(BaseModel):
     queries: list[str] = Field(..., min_length=1, max_length=500, description="List of natural language analytics questions")
     engine: Literal["manual", "langgraph", "swarm"] = Field(default="manual", description="Execution engine to use for queries")
     concurrency_limit: int = Field(default=3, ge=1, le=10, description="Max concurrent query executions")
+    provider: str | None = Field(default=None, description="Optional LLM provider override")
+    model: str | None = Field(default=None, description="Optional model ID override")
+    session_id: str | None = Field(default=None, description="Active session ID for uploaded file context")
 
 
 # ==============================================================================
@@ -78,6 +85,9 @@ class BatchProcessingEngine:
         queries: list[str],
         engine: str = "manual",
         concurrency_limit: int = 3,
+        provider: str | None = None,
+        model: str | None = None,
+        session_id: str | None = None,
     ) -> BatchJobRecord:
         """Create and queue a batch analytics job."""
         batch_id = f"batch_{uuid.uuid4().hex[:10]}"
@@ -94,6 +104,9 @@ class BatchProcessingEngine:
             completed_queries=0,
             failed_queries=0,
             engine=engine,
+            provider=provider,
+            model=model,
+            session_id=session_id,
             items=items,
             created_at=time.time(),
         )
@@ -115,8 +128,55 @@ class BatchProcessingEngine:
         return cls._jobs.get(batch_id)
 
     @classmethod
+    async def get_batch_async(cls, batch_id: str) -> BatchJobRecord | None:
+        """Retrieve batch job record by ID, checking memory first then database."""
+        if batch_id in cls._jobs:
+            return cls._jobs[batch_id]
+
+        try:
+            async with get_db_session() as session:
+                res = await session.execute(
+                    text("SELECT payload FROM analytics.batch_jobs WHERE batch_id = :bid"),
+                    {"bid": batch_id},
+                )
+                row = res.fetchone()
+                if row and row[0]:
+                    payload_data = row[0]
+                    if isinstance(payload_data, str):
+                        payload_data = json.loads(payload_data)
+                    record = BatchJobRecord(**payload_data)
+                    cls._jobs[batch_id] = record
+                    return record
+        except Exception as e:
+            logger.debug("Database get_batch failed: %s", e)
+
+        return None
+
+    @classmethod
     def list_batches(cls) -> list[BatchJobRecord]:
         """List all active and completed batch jobs."""
+        return sorted(cls._jobs.values(), key=lambda j: j.created_at, reverse=True)
+
+    @classmethod
+    async def list_batches_async(cls) -> list[BatchJobRecord]:
+        """List all active and completed batch jobs, hydrating from database."""
+        try:
+            async with get_db_session() as session:
+                res = await session.execute(
+                    text("SELECT payload FROM analytics.batch_jobs ORDER BY created_at DESC LIMIT 100")
+                )
+                rows = res.fetchall()
+                for row in rows:
+                    if row and row[0]:
+                        payload_data = row[0]
+                        if isinstance(payload_data, str):
+                            payload_data = json.loads(payload_data)
+                        bid = payload_data.get("batch_id")
+                        if bid and bid not in cls._jobs:
+                            cls._jobs[bid] = BatchJobRecord(**payload_data)
+        except Exception as e:
+            logger.debug("Database list_batches failed: %s", e)
+
         return sorted(cls._jobs.values(), key=lambda j: j.created_at, reverse=True)
 
     @classmethod
@@ -135,23 +195,67 @@ class BatchProcessingEngine:
                 item.status = "processing"
                 t0 = time.perf_counter()
                 try:
-                    agent = ManualAgentLoop()
+                    from src.llm.registry import ModelRegistry
+                    from src.agent.auditor import DataAuditorAgent
+
+                    registry = ModelRegistry.get_instance()
+                    analyst_llm = registry.create_analyst_llm(
+                        override_provider=record.provider,
+                        override_model=record.model,
+                    )
+                    auditor_llm = registry.create_auditor_llm()
+                    auditor = DataAuditorAgent(llm=auditor_llm)
+
+                    if record.engine == "swarm":
+                        from src.agent.planner_executor import PlannerExecutorAgent
+                        agent = PlannerExecutorAgent(llm=analyst_llm, auditor=auditor)
+                    elif record.engine == "langgraph":
+                        from src.agent.langgraph_agent import LangGraphAgent
+                        agent = LangGraphAgent(llm=analyst_llm, auditor=auditor)
+                    else:
+                        agent = ManualAgentLoop(llm=analyst_llm, auditor=auditor)
+
                     resp_data: dict[str, Any] = {}
+                    error_msg: str | None = None
+
                     async for event in agent.run_stream(
                         user_query=item.query,
                         task_id=f"{batch_id}_{item.query_id}",
+                        session_id=record.session_id,
+                        is_approved=True,
                     ):
-                        if event["event"] == "final_result":
-                            resp_data = event["data"]
+                        ev = event.get("event")
+                        if ev == "final_result":
+                            resp_data = event.get("data") or {}
+                        elif ev == "error":
+                            err_payload = event.get("data") or {}
+                            error_msg = err_payload.get("message") or str(err_payload)
 
-                    item.status = "completed"
-                    item.answer_text = resp_data.get("answer_text", "")
-                    item.sql_queries = resp_data.get("sql_queries", [])
-                    tables = resp_data.get("tables", [])
-                    if tables:
-                        item.row_count = sum(t.get("row_count", 0) for t in tables)
-                    record.completed_queries += 1
+                    ans_text = (resp_data.get("answer_text") or "").strip()
+                    sql_list = resp_data.get("sql_queries", [])
+                    tbl_list = resp_data.get("tables", [])
+
+                    if ans_text:
+                        item.status = "completed"
+                        item.answer_text = ans_text
+                        item.sql_queries = sql_list
+                        item.tables = tbl_list
+                        if tbl_list:
+                            item.row_count = sum(t.get("row_count", 0) for t in tbl_list)
+                        record.completed_queries += 1
+                    elif sql_list or tbl_list:
+                        item.status = "completed"
+                        item.answer_text = "Analisis query SQL selesai diproses dan data berhasil diperoleh."
+                        item.sql_queries = sql_list
+                        item.tables = tbl_list
+                        record.completed_queries += 1
+                    else:
+                        item.status = "failed"
+                        item.error = error_msg or "Model tidak mengeksekusi SQL maupun mengembalikan jawaban analisis."
+                        record.failed_queries += 1
+
                 except Exception as e:
+                    logger.error("Batch query item execution failed: %s", e)
                     item.status = "failed"
                     item.error = str(e)
                     record.failed_queries += 1
@@ -161,7 +265,12 @@ class BatchProcessingEngine:
         # Run all items concurrently bounded by semaphore
         await asyncio.gather(*[_run_single_query(item) for item in record.items])
 
-        record.status = "completed" if record.failed_queries < record.total_queries else "failed"
+        if record.failed_queries == 0:
+            record.status = "completed"
+        elif record.completed_queries > 0:
+            record.status = "completed"
+        else:
+            record.status = "failed"
         record.completed_at = time.time()
         record.total_duration_sec = round(time.perf_counter() - start_time, 2)
 

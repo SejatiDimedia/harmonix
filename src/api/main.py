@@ -630,6 +630,9 @@ async def submit_batch_job(payload: CreateBatchRequest):
         queries=payload.queries,
         engine=payload.engine,
         concurrency_limit=payload.concurrency_limit,
+        provider=payload.provider,
+        model=payload.model,
+        session_id=payload.session_id,
     )
     return record.model_dump()
 
@@ -637,7 +640,7 @@ async def submit_batch_job(payload: CreateBatchRequest):
 @app.get("/v1/batch/{batch_id}", tags=["Batch Analytics"])
 async def get_batch_status(batch_id: str):
     """Check progress and execution status of a batch analytics job."""
-    record = BatchProcessingEngine.get_batch(batch_id)
+    record = await BatchProcessingEngine.get_batch_async(batch_id)
     if not record:
         raise HTTPException(status_code=404, detail=f"Batch job '{batch_id}' not found.")
     return record.model_dump()
@@ -649,7 +652,7 @@ async def get_batch_results(
     format: Literal["json", "jsonl", "csv"] = "json",
 ):
     """Download results of a completed batch job in JSON, JSONL, or CSV format."""
-    record = BatchProcessingEngine.get_batch(batch_id)
+    record = await BatchProcessingEngine.get_batch_async(batch_id)
     if not record:
         raise HTTPException(status_code=404, detail=f"Batch job '{batch_id}' not found.")
 
@@ -674,7 +677,7 @@ async def get_batch_results(
 @app.get("/v1/batch", tags=["Batch Analytics"])
 async def list_all_batches():
     """List all submitted batch analytics jobs."""
-    jobs = BatchProcessingEngine.list_batches()
+    jobs = await BatchProcessingEngine.list_batches_async()
     return {"total": len(jobs), "batches": [j.model_dump() for j in jobs]}
 
 

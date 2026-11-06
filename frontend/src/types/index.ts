@@ -195,6 +195,7 @@ export interface BatchQueryItem {
   status: 'pending' | 'processing' | 'completed' | 'failed';
   answer_text?: string | null;
   sql_queries?: string[];
+  tables?: Array<{ columns: string[]; rows: (string | number | null)[][]; row_count?: number }>;
   row_count?: number;
   error?: string | null;
   duration_ms?: number;

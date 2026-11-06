@@ -297,6 +297,9 @@ export async function submitBatchJob(payload: {
   queries: string[];
   engine?: string;
   concurrency_limit?: number;
+  provider?: string;
+  model?: string;
+  session_id?: string;
 }): Promise<any> {
   const res = await fetch('/v1/batch', {
     method: 'POST',

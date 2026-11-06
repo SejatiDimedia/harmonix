@@ -344,7 +344,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
                       ? 'bg-slate-800 text-sky-300 font-semibold shadow-sm border border-slate-700/60'
                       : 'text-slate-400 hover:text-slate-200'
                   }`}
-                  title="Multi-Agent Swarm (Planner-Executor & Spesialis - FR-04)"
+                  title="Multi-Agent Swarm (Planner-Executor & Spesialis)"
                 >
                   Swarm
                 </button>
