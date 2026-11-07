@@ -120,7 +120,9 @@ class GetSchemaTool(BaseTool):
                 # Fetch 2 sample rows (masking sensitive PII fields)
                 sample_rows = []
                 try:
-                    sample_query = text(f'SELECT * FROM "{schema_name}"."{clean_table}" LIMIT 2;')
+                    escaped_schema = schema_name.replace('"', '""')
+                    escaped_table = clean_table.replace('"', '""')
+                    sample_query = text(f'SELECT * FROM "{escaped_schema}"."{escaped_table}" LIMIT 2;')
                     sample_res = await session.execute(sample_query)
                     sample_cols = list(sample_res.keys())
                     for row in sample_res.fetchall():
@@ -221,7 +223,7 @@ class RunSQLTool(BaseTool):
                 }
 
         # 3. Execution with statement timeout
-        timeout_ms = settings.sql_execution_timeout_seconds * 1000
+        timeout_ms = int(settings.sql_execution_timeout_seconds * 1000)
         start_time = time.perf_counter()
 
         async with get_db_session() as session:

@@ -212,7 +212,10 @@ async def list_models():
 
 
 @app.post("/v1/models/active", tags=["Models"])
-async def set_active_models(request: UpdateActiveModelRequest):
+async def set_active_models(
+    request: UpdateActiveModelRequest,
+    _auth: bool = Depends(verify_api_auth),
+):
     """Update active models for Analyst and Auditor dynamically without server restart (FR-36)."""
     updated = ModelRegistry.get_instance().update_active_config(
         analyst_provider=request.analyst_provider,
@@ -278,7 +281,10 @@ async def get_metrics():
 
 
 @app.post("/v1/chat", tags=["Agent"])
-async def chat_stream(request: ChatRequest):
+async def chat_stream(
+    request: ChatRequest,
+    _auth: bool = Depends(verify_api_auth),
+):
     """Send question to the agent and receive real-time SSE stream events:
 
     Supports dynamic orchestrator selection via `request.engine`:
@@ -379,7 +385,10 @@ async def get_task(task_id: str):
 
 
 @app.post("/v1/tasks/{task_id}/cancel", tags=["Agent"])
-async def cancel_task_endpoint(task_id: str):
+async def cancel_task_endpoint(
+    task_id: str,
+    _auth: bool = Depends(verify_api_auth),
+):
     """Cancel an ongoing agent task (e.g. when user sent a wrong chat query)."""
     request_task_cancellation(task_id)
 
@@ -418,7 +427,10 @@ class CancelChatRequest(BaseModel):
 
 
 @app.post("/v1/chat/cancel", tags=["Agent"])
-async def cancel_chat(request: CancelChatRequest):
+async def cancel_chat(
+    request: CancelChatRequest,
+    _auth: bool = Depends(verify_api_auth),
+):
     """Cancel current in-flight chat query by task_id or session_id."""
     if request.task_id:
         request_task_cancellation(request.task_id)
@@ -497,7 +509,11 @@ async def submit_approval(
 
 
 @app.post("/v1/tasks/{task_id}/resume", tags=["Agent"])
-async def resume_task_stream(task_id: str, request: ResumeTaskRequest | None = None):
+async def resume_task_stream(
+    task_id: str,
+    request: ResumeTaskRequest | None = None,
+    _auth: bool = Depends(verify_api_auth),
+):
     """Resume execution of a paused or waiting-approval task with SSE streaming."""
     record = await get_task_record(task_id)
     if not record:
@@ -696,7 +712,10 @@ async def trigger_session_compaction_endpoint(session_id: str):
 from src.batch.engine import BatchProcessingEngine, CreateBatchRequest
 
 @app.post("/v1/batch", tags=["Batch Analytics"])
-async def submit_batch_job(payload: CreateBatchRequest):
+async def submit_batch_job(
+    payload: CreateBatchRequest,
+    _auth: bool = Depends(verify_api_auth),
+):
     """Submit a bulk batch of natural language analytical questions for background processing (FR-42)."""
     record = await BatchProcessingEngine.create_batch(
         queries=payload.queries,
@@ -790,7 +809,10 @@ async def get_queue_job_endpoint(job_id: str):
 
 
 @app.post("/v1/queue/jobs/{job_id}/retry", tags=["Task Queue"])
-async def retry_queue_job_endpoint(job_id: str):
+async def retry_queue_job_endpoint(
+    job_id: str,
+    _auth: bool = Depends(verify_api_auth),
+):
     """Manually re-enqueue a FAILED or DEAD_LETTER job for execution."""
     queue = get_task_queue()
     job = await queue.retry_job(job_id)
@@ -800,7 +822,10 @@ async def retry_queue_job_endpoint(job_id: str):
 
 
 @app.post("/v1/queue/jobs", tags=["Task Queue"])
-async def enqueue_job_endpoint(payload: EnqueueJobRequest):
+async def enqueue_job_endpoint(
+    payload: EnqueueJobRequest,
+    _auth: bool = Depends(verify_api_auth),
+):
     """Enqueue a new asynchronous task for background worker execution."""
     queue = get_task_queue()
     job = await queue.enqueue(
@@ -831,14 +856,20 @@ async def list_dashboard_widgets(session_id: str):
 
 
 @app.post("/v1/dashboard/pin", tags=["Dashboard"])
-async def pin_to_dashboard(payload: PinWidgetInput):
+async def pin_to_dashboard(
+    payload: PinWidgetInput,
+    _auth: bool = Depends(verify_api_auth),
+):
     """Pin a chart, table, or KPI metric card to the session's live dashboard."""
     widget = await pin_widget(payload)
     return widget.model_dump()
 
 
 @app.delete("/v1/dashboard/{widget_id}", tags=["Dashboard"])
-async def delete_widget(widget_id: str):
+async def delete_widget(
+    widget_id: str,
+    _auth: bool = Depends(verify_api_auth),
+):
     """Remove/unpin a widget from the dashboard."""
     success = await delete_dashboard_widget(widget_id=widget_id)
     if not success:
@@ -847,7 +878,10 @@ async def delete_widget(widget_id: str):
 
 
 @app.post("/v1/dashboard/refresh/{session_id}", tags=["Dashboard"])
-async def refresh_dashboard(session_id: str):
+async def refresh_dashboard(
+    session_id: str,
+    _auth: bool = Depends(verify_api_auth),
+):
     """Re-execute all pinned widgets' SQL queries directly against PostgreSQL (0 LLM Cost)."""
     updated_widgets = await refresh_dashboard_widgets(session_id=session_id)
     return {

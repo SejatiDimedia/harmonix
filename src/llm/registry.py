@@ -39,7 +39,7 @@ def get_local_9router_key() -> str:
                 return str(row[0])
     except Exception:
         pass
-    return "sk-8abbefea34ddc0cc-npg38u-a6649356"
+    return None
 
 
 class ModelOption(BaseModel):

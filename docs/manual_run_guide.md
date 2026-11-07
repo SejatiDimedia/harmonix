@@ -63,7 +63,7 @@ Harmonix membaca konfigurasi dari berkas `.env` di *root* direktori.
 
    # Jika menggunakan 9Router (Smart Local Gateway di port 20128)
    NINEROUTER_BASE_URL=http://localhost:20128/v1
-   NINEROUTER_API_KEY=sk-8abbefea34ddc0cc-npg38u-a6649356 # Atau biarkan auto-detect dari ~/.9router/db/data.sqlite
+   NINEROUTER_API_KEY=your_ninerouter_key # Atau biarkan kosong untuk auto-detect dari ~/.9router/db/data.sqlite
    NINEROUTER_MODEL=ag/gemini-3.8-flash # Atau claude-3-7-sonnet, deepseek-r1, gpt-4o
    ```
 

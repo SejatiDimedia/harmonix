@@ -76,7 +76,7 @@ class Settings(BaseSettings):
 
     # Option 5: 9Router (Smart Local AI Gateway)
     ninerouter_base_url: str = Field(default="http://localhost:20128/v1")
-    ninerouter_api_key: str | None = Field(default="sk-8abbefea34ddc0cc-npg38u-a6649356")
+    ninerouter_api_key: str | None = Field(default=None)
     ninerouter_model: str = Field(default="ag/gemini-3.8-flash")
 
     # LLM Fallback & Routing settings (FR-28)

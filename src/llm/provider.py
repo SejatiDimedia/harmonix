@@ -743,7 +743,7 @@ def create_single_provider(
                 from src.llm.registry import get_local_9router_key
                 key = get_local_9router_key()
             except Exception:
-                key = "sk-8abbefea34ddc0cc-npg38u-a6649356"
+                key = None
         p = OpenAICompatibleProvider(
             base_url=settings.ninerouter_base_url,
             api_key=key,
