@@ -150,11 +150,12 @@ export const App: React.FC = () => {
     (sid: string) => {
       resetStream();
       setCurrentSessionId(sid);
+      setActiveTab('chat');
       if (window.innerWidth < 768) {
         setIsSidebarOpen(false);
       }
     },
-    [resetStream, setCurrentSessionId, setIsSidebarOpen]
+    [resetStream, setCurrentSessionId, setActiveTab, setIsSidebarOpen]
   );
 
   const handleNewChat = useCallback(() => {
@@ -731,9 +732,12 @@ export const App: React.FC = () => {
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[#080f1d] text-[#f8fafc] print:h-auto print:w-full print:max-w-full print:bg-white print:overflow-visible print:text-gray-900 print:block">
-      {/* Session History Sidebar */}
+      {/* Session History & Navigation Sidebar */}
       <Sidebar
         isOpen={isSidebarOpen}
+        activeTab={activeTab}
+        widgetCount={widgetCount}
+        onSelectTab={setActiveTab}
         sessions={sessionsData?.sessions || []}
         currentSessionId={currentSessionId}
         onSelectSession={handleSelectSession}
@@ -742,20 +746,25 @@ export const App: React.FC = () => {
         onRenameSession={handleRenameSession}
         onDeleteSession={handleDeleteSessionClick}
         onCloseMobile={() => setIsSidebarOpen(false)}
+        onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
       />
 
       {/* Main Workspace Area */}
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden print:h-auto print:w-full print:max-w-full print:bg-white print:overflow-visible print:block print:p-0 print:m-0">
-        {/* Navbar with Tab Switcher */}
+        {/* Navbar */}
         <Navbar
           health={healthData || null}
           activeTab={activeTab}
-          widgetCount={widgetCount}
-          onSelectTab={setActiveTab}
+          isSidebarOpen={isSidebarOpen}
+          isMetricsOpen={isMetricsOpen}
           onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
           onOpenMetrics={() => {
-            refetchMetrics();
-            setIsMetricsOpen(true);
+            if (isMetricsOpen) {
+              setIsMetricsOpen(false);
+            } else {
+              refetchMetrics();
+              setIsMetricsOpen(true);
+            }
           }}
         />
 

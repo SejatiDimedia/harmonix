@@ -139,7 +139,7 @@ const SingleChartCanvas: React.FC<SingleChartProps> = ({
             borderColor: '#1e3557',
             borderWidth: 1,
             padding: 10,
-            bodyFont: { family: 'JetBrains Mono', size: 11 },
+            bodyFont: { family: 'Plus Jakarta Sans', size: 11 },
             titleFont: { family: 'Plus Jakarta Sans', size: 12, weight: 'bold' },
           },
         },
@@ -148,11 +148,11 @@ const SingleChartCanvas: React.FC<SingleChartProps> = ({
           : {
               x: {
                 grid: { color: 'rgba(30, 53, 87, 0.5)' },
-                ticks: { color: '#94a3b8', font: { family: 'JetBrains Mono', size: 10 } },
+                ticks: { color: '#94a3b8', font: { family: 'Plus Jakarta Sans', size: 10 } },
               },
               y: {
                 grid: { color: 'rgba(30, 53, 87, 0.5)' },
-                ticks: { color: '#94a3b8', font: { family: 'JetBrains Mono', size: 10 } },
+                ticks: { color: '#94a3b8', font: { family: 'Plus Jakarta Sans', size: 10 } },
               },
             },
       },

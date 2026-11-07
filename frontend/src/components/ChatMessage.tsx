@@ -89,57 +89,61 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
     <div className="space-y-4">
       {/* User Bubble */}
       {turn.user_query && (
-        <div className="flex justify-end group">
+        <div className="flex flex-col items-end group">
           <div className="relative max-w-[85%] rounded-2xl bg-[#14223b] px-4 py-3 text-sm text-[#f8fafc] leading-relaxed shadow-sm font-sans border border-white/[0.04]">
             <div className="select-text whitespace-pre-wrap break-words">
               {turn.user_query}
             </div>
+          </div>
 
-            {/* Quick Actions for User Query (Copy, Edit, Resend) */}
-            <div className="mt-2 pt-1.5 border-t border-white/[0.06] flex items-center justify-end gap-1 sm:opacity-80 sm:group-hover:opacity-100 transition-opacity select-none">
+          {/* Quick Actions for User Query (Resend, Edit, Copy) - Only visible on hover */}
+          <div className="mt-1 flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-150 select-none min-h-[26px]">
+            {onSelectSuggestion && (
               <button
                 type="button"
-                onClick={handleCopyQuery}
-                title="Salin pertanyaan ke clipboard"
-                className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-mono text-[#94a3b8] hover:text-[#f8fafc] hover:bg-white/[0.06] transition cursor-pointer"
+                onClick={() => onSelectSuggestion(turn.user_query!)}
+                aria-label="Ajukan ulang pertanyaan"
+                title="Ajukan ulang pertanyaan ini langsung ke agent"
+                className="relative group/btn p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.08] transition cursor-pointer"
               >
-                {copiedQuery ? (
-                  <>
-                    <Check className="w-3.5 h-3.5 text-emerald-400" />
-                    <span className="text-emerald-400 font-medium">Tersalin!</span>
-                  </>
-                ) : (
-                  <>
-                    <Copy className="w-3.5 h-3.5" />
-                    <span>Salin</span>
-                  </>
-                )}
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span className="pointer-events-none absolute -top-7 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-md text-[10px] font-sans bg-slate-900/95 border border-slate-700/80 text-slate-200 whitespace-nowrap shadow-lg opacity-0 group-hover/btn:opacity-100 transition-opacity duration-150 z-30">
+                  Ajukan Ulang
+                </span>
               </button>
+            )}
 
-              {onEditQuery && (
-                <button
-                  type="button"
-                  onClick={() => onEditQuery(turn.user_query!)}
-                  title="Salin pertanyaan ke kolom pesan untuk diedit"
-                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-mono text-[#94a3b8] hover:text-[#f8fafc] hover:bg-white/[0.06] transition cursor-pointer"
-                >
-                  <Pencil className="w-3.5 h-3.5" />
-                  <span>Edit</span>
-                </button>
-              )}
+            {onEditQuery && (
+              <button
+                type="button"
+                onClick={() => onEditQuery(turn.user_query!)}
+                aria-label="Edit pertanyaan"
+                title="Salin pertanyaan ke kolom pesan untuk diedit"
+                className="relative group/btn p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.08] transition cursor-pointer"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+                <span className="pointer-events-none absolute -top-7 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-md text-[10px] font-sans bg-slate-900/95 border border-slate-700/80 text-slate-200 whitespace-nowrap shadow-lg opacity-0 group-hover/btn:opacity-100 transition-opacity duration-150 z-30">
+                  Edit
+                </span>
+              </button>
+            )}
 
-              {onSelectSuggestion && (
-                <button
-                  type="button"
-                  onClick={() => onSelectSuggestion(turn.user_query!)}
-                  title="Ajukan ulang pertanyaan ini langsung ke agent"
-                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-mono text-[#94a3b8] hover:text-[#f8fafc] hover:bg-white/[0.06] transition cursor-pointer"
-                >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  <span>Ajukan Ulang</span>
-                </button>
+            <button
+              type="button"
+              onClick={handleCopyQuery}
+              aria-label={copiedQuery ? 'Tersalin ke clipboard' : 'Salin pertanyaan'}
+              title={copiedQuery ? 'Tersalin ke clipboard' : 'Salin pertanyaan'}
+              className="relative group/btn p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.08] transition cursor-pointer"
+            >
+              {copiedQuery ? (
+                <Check className="w-3.5 h-3.5 text-emerald-400" />
+              ) : (
+                <Copy className="w-3.5 h-3.5" />
               )}
-            </div>
+              <span className="pointer-events-none absolute -top-7 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-md text-[10px] font-sans bg-slate-900/95 border border-slate-700/80 text-slate-200 whitespace-nowrap shadow-lg opacity-0 group-hover/btn:opacity-100 transition-opacity duration-150 z-30">
+                {copiedQuery ? 'Tersalin!' : 'Salin'}
+              </span>
+            </button>
           </div>
         </div>
       )}
@@ -438,20 +442,18 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
                 <button
                   type="button"
                   onClick={handleCopyAnswer}
-                  title="Salin jawaban analitik lengkap"
-                  className="flex items-center gap-1 px-2 py-0.5 rounded-md hover:bg-white/[0.06] text-slate-400 hover:text-white transition cursor-pointer"
+                  aria-label={copiedAnswer ? 'Tersalin!' : 'Salin jawaban'}
+                  title={copiedAnswer ? 'Tersalin!' : 'Salin jawaban analitik lengkap'}
+                  className="relative group/btn p-1.5 rounded-lg hover:bg-white/[0.08] text-slate-400 hover:text-white transition cursor-pointer"
                 >
                   {copiedAnswer ? (
-                    <>
-                      <Check className="w-3 h-3 text-emerald-400" />
-                      <span className="text-emerald-400 font-medium">Tersalin!</span>
-                    </>
+                    <Check className="w-3.5 h-3.5 text-emerald-400" />
                   ) : (
-                    <>
-                      <Copy className="w-3 h-3" />
-                      <span>Salin</span>
-                    </>
+                    <Copy className="w-3.5 h-3.5" />
                   )}
+                  <span className="pointer-events-none absolute -top-7 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-md text-[10px] font-sans bg-slate-900/95 border border-slate-700/80 text-slate-200 whitespace-nowrap shadow-lg opacity-0 group-hover/btn:opacity-100 transition-opacity duration-150 z-30">
+                    {copiedAnswer ? 'Tersalin!' : 'Salin'}
+                  </span>
                 </button>
               )}
             </div>

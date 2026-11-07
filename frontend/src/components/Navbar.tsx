@@ -1,12 +1,12 @@
 import React from 'react';
-import { PanelLeft, Activity, MessageSquare, LayoutDashboard, Layers } from 'lucide-react';
+import { PanelLeft, Activity } from 'lucide-react';
 import { HealthStatus, ActiveTab } from '../types';
 
 interface NavbarProps {
   health: HealthStatus | null;
   activeTab: ActiveTab;
-  widgetCount?: number;
-  onSelectTab: (tab: ActiveTab) => void;
+  isSidebarOpen?: boolean;
+  isMetricsOpen?: boolean;
   onToggleSidebar: () => void;
   onOpenMetrics: () => void;
 }
@@ -14,124 +14,69 @@ interface NavbarProps {
 const NavbarComponent: React.FC<NavbarProps> = ({
   health,
   activeTab,
-  widgetCount = 0,
-  onSelectTab,
+  isSidebarOpen = true,
+  isMetricsOpen = false,
   onToggleSidebar,
   onOpenMetrics,
 }) => {
+  const getTabTitle = () => {
+    switch (activeTab) {
+      case 'dashboard':
+        return 'Live BI Dashboard';
+      case 'batch':
+        return 'Bulk Analytics';
+      case 'chat':
+      default:
+        return 'Percakapan Analitik';
+    }
+  };
+
   return (
-    <header className="h-14 border-b border-white/[0.06] bg-[#0b1526]/90 backdrop-blur-md px-4 flex items-center justify-between z-20 shrink-0 gap-2">
-      {/* Left: Brand & Sidebar Toggle */}
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={onToggleSidebar}
-          aria-label="Buka atau tutup riwayat percakapan"
-          className="p-1.5 rounded-lg text-[#94a3b8] hover:text-[#f8fafc] hover:bg-[#14223b] transition cursor-pointer"
-          title="Buka / Tutup Riwayat"
-        >
-          <PanelLeft className="w-5 h-5" />
-        </button>
+    <header className="h-14 border-b border-white/[0.06] bg-[#0b1526]/90 backdrop-blur-md px-4 flex items-center justify-between z-20 shrink-0 gap-3">
+      {/* Left: Sidebar Toggle (when sidebar is hidden) & Section Title Breadcrumb */}
+      <div className="flex items-center gap-3 select-none">
+        {!isSidebarOpen && (
+          <button
+            type="button"
+            onClick={onToggleSidebar}
+            aria-label="Buka menu samping"
+            className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/80 transition cursor-pointer border border-transparent hover:border-slate-700/60"
+            title="Buka Menu Samping"
+          >
+            <PanelLeft className="w-4 h-4" />
+          </button>
+        )}
 
-        <div className="flex items-center gap-2.5 select-none">
-          <img
-            src="/static/logo.png?v=2"
-            alt="Harmonix Logo"
-            className="w-8 h-8 rounded-lg object-cover shadow-sm shrink-0"
-          />
-          <div className="flex flex-col hidden sm:flex">
-            <span className="text-sm font-semibold tracking-tight text-[#f8fafc] leading-tight font-sans">
-              Harmonix
-            </span>
-            <span className="text-[10px] text-[#94a3b8] font-mono leading-none">
-              Analytics Agent
-            </span>
-          </div>
+        <div className="flex items-center gap-2 select-none">
+          <span className="text-xs text-slate-400 font-sans hidden sm:inline">Harmonix</span>
+          <span className="text-slate-600 text-xs hidden sm:inline">/</span>
+          <span className="text-xs sm:text-sm font-semibold tracking-tight text-slate-100 leading-tight font-sans">
+            {getTabTitle()}
+          </span>
         </div>
-      </div>
-
-      {/* Center: Navigation Tabs (Chat vs Live BI Dashboard) */}
-      <div role="tablist" aria-label="Tampilan Utama" className="flex items-center p-1 bg-slate-900/90 rounded-xl border border-slate-800 text-xs font-medium select-none shadow-sm">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === 'chat'}
-          onClick={() => onSelectTab('chat')}
-          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs transition cursor-pointer ${
-            activeTab === 'chat'
-              ? 'bg-slate-800 text-sky-300 font-semibold shadow-sm border border-slate-700/60'
-              : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <MessageSquare className="w-3.5 h-3.5" />
-          <span>Percakapan</span>
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === 'dashboard'}
-          onClick={() => onSelectTab('dashboard')}
-          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs transition cursor-pointer ${
-            activeTab === 'dashboard'
-              ? 'bg-slate-800 text-sky-300 font-semibold shadow-sm border border-slate-700/60'
-              : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <LayoutDashboard className="w-3.5 h-3.5" />
-          <span>Live Dashboard</span>
-          {widgetCount > 0 && (
-            <span
-              className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold ${
-                activeTab === 'dashboard'
-                  ? 'bg-sky-950 text-sky-300 border border-sky-800/50'
-                  : 'bg-slate-800 text-slate-400 border border-slate-700/40'
-              }`}
-            >
-              {widgetCount}
-            </span>
-          )}
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === 'batch'}
-          onClick={() => onSelectTab('batch')}
-          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs transition cursor-pointer ${
-            activeTab === 'batch'
-              ? 'bg-slate-800 text-sky-300 font-semibold shadow-sm border border-slate-700/60'
-              : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <Layers className="w-3.5 h-3.5" />
-          <span>Bulk Analytics</span>
-        </button>
       </div>
 
       {/* Right: Health Badge & Observability Trigger */}
       <div className="flex items-center gap-2">
-        <div
-          className="hidden md:flex items-center px-2.5 py-1 rounded-full text-[11px] font-mono bg-[#0f1a2e] text-[#94a3b8] select-none"
-          title={
-            health
-              ? `Provider: ${health.llm_provider} | Database: ${health.database_connected ? 'Connected' : 'Disconnected'
-              }`
-              : 'Memuat status...'
-          }
-        >
-          {/* <span>
-            {health ? `${health.llm_provider.toUpperCase()} (${health.status})` : 'CHECKING...'}
-          </span> */}
-        </div>
-
+        {/* Observability / Metrics Trigger */}
         <button
           type="button"
           onClick={onOpenMetrics}
-          aria-label="Buka observabilitas dan metrik sistem"
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-mono text-[#94a3b8] hover:text-[#f8fafc] hover:bg-[#14223b] transition cursor-pointer"
-          title="Observabilitas & Metrik"
+          aria-label="Buka metrik observabilitas sistem"
+          aria-expanded={isMetricsOpen}
+          className={`group flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-mono transition cursor-pointer border ${
+            isMetricsOpen
+              ? 'bg-[#14223b] text-slate-100 border-slate-700/60 shadow-sm'
+              : 'bg-transparent text-slate-400 hover:text-slate-100 hover:bg-[#14223b] border-transparent hover:border-slate-800/80 active:bg-[#101c31]'
+          }`}
+          title="Observabilitas & Latensi Sistem (OB-02)"
         >
-          <Activity className="w-3.5 h-3.5 text-clay-400" />
-          <span className="hidden sm:inline">Metrik</span>
+          <Activity
+            className={`w-3.5 h-3.5 transition-colors ${
+              isMetricsOpen ? 'text-sky-400' : 'text-slate-400 group-hover:text-slate-200'
+            }`}
+          />
+          <span className="hidden sm:inline font-mono">Metrik</span>
         </button>
       </div>
     </header>

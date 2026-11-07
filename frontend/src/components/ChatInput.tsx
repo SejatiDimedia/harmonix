@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { ArrowUp, ChevronDown, Paperclip, FileSpreadsheet, Loader2, X, Square } from 'lucide-react';
+import { ArrowUp, ChevronDown, Paperclip, FileSpreadsheet, Loader2, X, Square, Cpu } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { EngineType, ModelCatalogResponse, UploadedTableSummary } from '../types';
 import { formatModelNameShort } from '../utils/formatters';
@@ -165,7 +165,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
   const shortModelName = formatModelNameShort(activeModel) || activeModel;
 
   return (
-    <div className="border-t border-white/[0.06] bg-[#080f1d] p-4 shrink-0">
+    <div className="bg-[#080f1d] p-4 shrink-0">
       <div className="max-w-4xl mx-auto relative">
         <form
           onSubmit={(e) => {
@@ -240,9 +240,56 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
           />
 
           {/* Toolbar */}
-          <div className="flex items-center justify-between px-3 pb-2.5 pt-1 border-t border-white/[0.04]">
-            {/* Left Controls: File Upload, Model Picker & Engine Toggle */}
-            <div className="flex items-center gap-2 relative">
+          <div className="flex items-center justify-between px-3 pb-2.5 pt-1.5 border-t border-white/[0.04]">
+            {/* Left Controls: Model & Engine Selector */}
+            <div className="flex items-center gap-1.5 relative">
+              {/* Model & Engine Selector Chip */}
+              <button
+                type="button"
+                onClick={() => setIsPopoverOpen(!isPopoverOpen)}
+                aria-label={`Pilih model dan engine analitik. Model: ${shortModelName}, Engine: ${engine}`}
+                aria-haspopup="dialog"
+                aria-expanded={isPopoverOpen}
+                className={`group flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-xs font-sans transition cursor-pointer border ${isPopoverOpen
+                  ? 'bg-[#14223b] text-slate-100 border-slate-700/60 shadow-sm'
+                  : 'bg-transparent text-slate-300 hover:text-white hover:bg-[#14223b] border-transparent hover:border-slate-800/80'
+                  }`}
+                title={`Model: ${activeProvider.toUpperCase()} (${activeModel}) | Engine: ${engine}`}
+              >
+                <Cpu className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+                <span className="font-medium text-xs text-slate-200 truncate max-w-[140px] sm:max-w-[220px]">
+                  {shortModelName}
+                </span>
+                <span className="text-[10px] text-slate-500 font-mono hidden sm:inline">
+                  • {engine === 'manual' ? 'Manual' : engine === 'langgraph' ? 'LangGraph' : 'Swarm'}
+                </span>
+                <ChevronDown
+                  className={`w-3 h-3 transition-transform duration-150 shrink-0 ${isPopoverOpen ? 'rotate-180 text-sky-400' : 'text-slate-400 group-hover:text-slate-200'
+                    }`}
+                />
+              </button>
+
+              <ModelPickerPopover
+                isOpen={isPopoverOpen}
+                catalog={catalog}
+                activeProvider={activeProvider}
+                activeModel={activeModel}
+                engine={engine}
+                onSetEngine={onSetEngine}
+                onSelectModel={(p, m) => {
+                  onSelectModel(p, m);
+                  setIsPopoverOpen(false);
+                }}
+                onOpenFullModal={() => {
+                  setIsPopoverOpen(false);
+                  onOpenFullModelModal();
+                }}
+                onClose={() => setIsPopoverOpen(false)}
+              />
+            </div>
+
+            {/* Right Actions: File Upload & Submit / Cancel Action Button */}
+            <div className="flex items-center gap-1.5">
               {/* Hidden File Input */}
               <input
                 ref={fileInputRef}
@@ -254,115 +301,25 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
                 className="hidden"
               />
 
-              {/* Upload Data Button */}
+              {/* Upload Data Button (Positioned next to send button) */}
               <button
                 type="button"
                 disabled={isUploading || isLoading}
                 onClick={() => fileInputRef.current?.click()}
                 aria-label="Unggah file data CSV atau Excel"
-                className="group flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-mono bg-transparent hover:bg-[#14223b] text-slate-400 hover:text-slate-100 border border-transparent hover:border-slate-800/80 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                className="group p-2 rounded-xl text-slate-400 hover:text-slate-100 hover:bg-[#14223b] border border-transparent hover:border-slate-800/80 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
                 title="Unggah CSV atau Excel (.xlsx, .xls) untuk dianalisis bersama database warehouse (Maks 10 file, 15MB/file)"
               >
                 {isUploading ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin text-clay-400" />
+                  <Loader2 className="w-4 h-4 animate-spin text-sky-400" />
                 ) : (
-                  <Paperclip className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-200 transition-colors" />
+                  <Paperclip className="w-4 h-4 text-slate-400 group-hover:text-slate-200 transition-colors" />
                 )}
-                <span className="hidden sm:inline">
-                  {isUploading ? 'Memproses...' : 'Upload Data'}
-                </span>
               </button>
 
-              {/* Model Picker Button & Popover */}
-              <button
-                type="button"
-                onClick={() => setIsPopoverOpen(!isPopoverOpen)}
-                aria-label={`Pilih model analitik. Model saat ini: ${activeProvider.toUpperCase()} (${activeModel})`}
-                aria-haspopup="dialog"
-                aria-expanded={isPopoverOpen}
-                className={`group flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-mono transition cursor-pointer border ${
-                  isPopoverOpen
-                    ? 'bg-[#14223b] text-slate-100 border-slate-700/60 shadow-sm'
-                    : 'bg-transparent text-slate-400 hover:text-slate-100 hover:bg-[#14223b] border-transparent hover:border-slate-800/80'
-                }`}
-                title={`Model Aktif: ${activeProvider.toUpperCase()} (${activeModel})`}
-              >
-                <span className="truncate max-w-[120px] sm:max-w-[180px]">
-                  {activeProvider.toUpperCase()}: {shortModelName}
-                </span>
-                <ChevronDown
-                  className={`w-3 h-3 transition-transform duration-150 ${
-                    isPopoverOpen ? 'rotate-180 text-sky-400' : 'text-slate-400 group-hover:text-slate-200'
-                  }`}
-                />
-              </button>
-
-              <ModelPickerPopover
-                isOpen={isPopoverOpen}
-                catalog={catalog}
-                activeProvider={activeProvider}
-                activeModel={activeModel}
-                onSelectModel={(p, m) => {
-                  onSelectModel(p, m);
-                  setIsPopoverOpen(false);
-                }}
-                onOpenFullModal={() => {
-                  setIsPopoverOpen(false);
-                  onOpenFullModelModal();
-                }}
-                onClose={() => setIsPopoverOpen(false)}
-              />
-
-              {/* Engine Toggle */}
-              <div
-                role="group"
-                aria-label="Pilihan Engine Orchestrator"
-                className="hidden md:flex items-center p-1 bg-slate-900/90 rounded-xl border border-slate-800 text-xs font-mono select-none shadow-sm"
-              >
-                <button
-                  type="button"
-                  onClick={() => onSetEngine('manual')}
-                  className={`px-3 py-1 rounded-lg text-xs font-medium transition cursor-pointer ${
-                    engine === 'manual'
-                      ? 'bg-slate-800 text-sky-300 font-semibold shadow-sm border border-slate-700/60'
-                      : 'text-slate-400 hover:text-slate-200'
-                  }`}
-                  title="Engine Eksekusi Cepat (Deterministic Loop)"
-                >
-                  Manual
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onSetEngine('langgraph')}
-                  className={`px-3 py-1 rounded-lg text-xs font-medium transition cursor-pointer ${
-                    engine === 'langgraph'
-                      ? 'bg-slate-800 text-sky-300 font-semibold shadow-sm border border-slate-700/60'
-                      : 'text-slate-400 hover:text-slate-200'
-                  }`}
-                  title="LangGraph Workflow Engine"
-                >
-                  LangGraph
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onSetEngine('swarm')}
-                  className={`px-3 py-1 rounded-lg text-xs font-medium transition cursor-pointer ${
-                    engine === 'swarm'
-                      ? 'bg-slate-800 text-sky-300 font-semibold shadow-sm border border-slate-700/60'
-                      : 'text-slate-400 hover:text-slate-200'
-                  }`}
-                  title="Multi-Agent Swarm (Planner-Executor & Spesialis)"
-                >
-                  Swarm
-                </button>
-              </div>
-            </div>
-
-            {/* Submit / Cancel Action Button */}
-            <div className="flex items-center gap-2">
               {isLoading && (
-                <span className="hidden sm:inline-flex text-[11px] font-mono text-slate-400 select-none">
-                  Tekan <kbd className="px-1 py-0.5 text-[10px] bg-slate-800 rounded border border-slate-700 text-slate-300">Esc</kbd> atau klik Batalkan
+                <span className="hidden sm:inline-flex text-[11px] font-mono text-slate-400 select-none mr-0.5">
+                  Tekan <kbd className="px-1 py-0.5 text-[10px] bg-slate-800 rounded border border-slate-700 text-slate-300">Esc</kbd>
                 </span>
               )}
               {isLoading ? (
@@ -381,7 +338,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
                   type="submit"
                   disabled={isUploading || !query.trim()}
                   aria-label="Kirim pertanyaan (Enter)"
-                  className="p-2 rounded-xl bg-clay-600 hover:bg-clay-500 disabled:opacity-30 disabled:hover:bg-clay-600 text-white transition shadow-sm cursor-pointer disabled:cursor-not-allowed"
+                  className="p-2 rounded-xl bg-clay-600 hover:bg-clay-500 disabled:opacity-30 disabled:hover:bg-clay-600 text-white transition shadow-sm cursor-pointer disabled:cursor-not-allowed shrink-0"
                   title="Kirim (Enter)"
                 >
                   <ArrowUp className="w-4 h-4 stroke-[2.5]" />
@@ -391,9 +348,10 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
           </div>
         </form>
 
-        <div className="text-center text-[10px] text-[#94a3b8] pt-2 font-mono select-none">
-          Harmonix Enterprise Analytics — AI Data Analyst with Multi-Model Intelligence &amp; Privacy Guardrails
-        </div>
+        {/* AI Disclaimer / Safety Notice */}
+        <p className="mt-2 text-center text-[11px] text-slate-500 font-sans select-none tracking-normal">
+          Harmonix dapat membuat kesalahan. Selalu verifikasi data dan kalkulasi analitik penting.
+        </p>
       </div>
 
       {/* Uploaded Table Schema Inspector & Data Health Modal */}

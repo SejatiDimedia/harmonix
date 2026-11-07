@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
-import { Plus, RefreshCw, MessageSquare, Trash2, Pencil, Check, X } from 'lucide-react';
-import { ChatSessionSummary } from '../types';
+import { Plus, RefreshCw, MessageSquare, LayoutDashboard, Layers, Trash2, Pencil, Check, X, PanelLeft } from 'lucide-react';
+import { ChatSessionSummary, ActiveTab } from '../types';
 import { formatSessionDate } from '../utils/formatters';
 
 interface SidebarProps {
   isOpen: boolean;
+  activeTab: ActiveTab;
+  widgetCount?: number;
+  onSelectTab: (tab: ActiveTab) => void;
   sessions: ChatSessionSummary[];
   currentSessionId: string | null;
   onSelectSession: (sessionId: string) => void;
@@ -13,10 +16,14 @@ interface SidebarProps {
   onRenameSession: (sessionId: string, newTitle: string) => void;
   onDeleteSession: (sessionId: string, title: string) => void;
   onCloseMobile: () => void;
+  onToggleSidebar?: () => void;
 }
 
 const SidebarComponent: React.FC<SidebarProps> = ({
   isOpen,
+  activeTab,
+  widgetCount = 0,
+  onSelectTab,
   sessions,
   currentSessionId,
   onSelectSession,
@@ -25,6 +32,7 @@ const SidebarComponent: React.FC<SidebarProps> = ({
   onRenameSession,
   onDeleteSession,
   onCloseMobile,
+  onToggleSidebar,
 }) => {
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState<string>('');
@@ -51,6 +59,7 @@ const SidebarComponent: React.FC<SidebarProps> = ({
     setEditingSessionId(null);
     setEditTitle('');
   };
+
   return (
     <>
       {/* Mobile backdrop */}
@@ -62,42 +71,135 @@ const SidebarComponent: React.FC<SidebarProps> = ({
 
       {/* Sidebar container */}
       <aside
-        className={`fixed md:static inset-y-0 left-0 z-40 w-72 bg-[#0f1a2e] border-r border-white/[0.06] flex flex-col transition-transform duration-200 ease-in-out shrink-0 no-print print:hidden ${isOpen ? 'translate-x-0' : '-translate-x-full md:hidden'
+        className={`fixed md:static inset-y-0 left-0 z-40 w-72 bg-[#0b1424] border-r border-white/[0.06] flex flex-col transition-transform duration-200 ease-in-out shrink-0 no-print print:hidden ${isOpen ? 'translate-x-0' : '-translate-x-full md:hidden'
           }`}
       >
-        {/* Header Action */}
-        <div className="p-3 border-b border-white/[0.06] flex items-center gap-2">
+        {/* Top Header: App Branding & Hide Sidebar Button */}
+        <div className="p-3.5 flex items-center justify-between select-none">
+          <div className="flex items-center gap-2.5">
+            <img
+              src="/static/logo.png?v=2"
+              alt="Harmonix"
+              className="w-7 h-7 rounded-lg object-cover shadow-sm shrink-0"
+            />
+            <div className="flex flex-col">
+              <span className="text-sm font-bold text-slate-100 font-sans tracking-tight leading-tight">
+                Harmonix
+              </span>
+              <span className="text-[10px] text-slate-400 font-mono leading-none">
+                Enterprise AI Analyst
+              </span>
+            </div>
+          </div>
           <button
             type="button"
-            onClick={onNewChat}
-            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-clay-600 hover:bg-clay-500 text-white font-medium text-xs shadow-sm transition cursor-pointer"
+            onClick={onToggleSidebar || onCloseMobile}
+            aria-label="Sembunyikan menu samping"
+            title="Sembunyikan Menu Samping"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/80 transition cursor-pointer border border-transparent hover:border-slate-700/60"
           >
-            <Plus className="w-4 h-4" />
-            <span>Percakapan Baru</span>
-          </button>
-          <button
-            type="button"
-            onClick={onRefreshSessions}
-            aria-label="Muat ulang riwayat sesi percakapan"
-            className="p-2 rounded-xl text-[#94a3b8] hover:text-[#f8fafc] hover:bg-[#182a47] transition cursor-pointer"
-            title="Muat Ulang Riwayat"
-          >
-            <RefreshCw className="w-4 h-4" />
-          </button>
-          <button
-            type="button"
-            onClick={onCloseMobile}
-            aria-label="Tutup menu riwayat"
-            className="p-2 rounded-xl text-[#94a3b8] hover:text-[#f8fafc] hover:bg-[#182a47] md:hidden transition cursor-pointer"
-          >
-            <X className="w-4 h-4" />
+            <PanelLeft className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Sessions list count */}
-        <div className="px-3.5 py-2 text-[10px] font-mono text-[#94a3b8] uppercase tracking-wider flex items-center justify-between">
-          <span>Riwayat Analisis</span>
-          <span>{sessions.length} sesi</span>
+        {/* Primary Action: New Chat Button (Styled like reference + New chat) */}
+        <div className="p-3 pb-2">
+          <button
+            type="button"
+            onClick={() => {
+              onNewChat();
+              onSelectTab('chat');
+              if (window.innerWidth < 768) onCloseMobile();
+            }}
+            className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-slate-800/90 hover:bg-slate-700/90 active:bg-slate-900 text-slate-200 hover:text-white font-medium text-xs shadow-sm transition border border-slate-700/60 cursor-pointer"
+          >
+            <Plus className="w-4 h-4 text-sky-400 shrink-0" />
+            <span className="font-sans font-medium text-xs">Percakapan Baru</span>
+          </button>
+        </div>
+
+        {/* Primary Workspace Navigation Tabs (Replaces top navbar tabs) */}
+        <nav aria-label="Navigasi Utama" className="px-3 py-1 space-y-1 select-none">
+          {/* Percakapan */}
+          <button
+            type="button"
+            onClick={() => {
+              onSelectTab('chat');
+              if (window.innerWidth < 768) onCloseMobile();
+            }}
+            className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition cursor-pointer border ${activeTab === 'chat'
+              ? 'bg-[#14223b] text-sky-300 font-semibold shadow-sm border-slate-700/60'
+              : 'bg-transparent text-slate-400 hover:text-slate-200 hover:bg-[#121c2e] border-transparent'
+              }`}
+          >
+            <div className="flex items-center gap-2.5">
+              <MessageSquare className={`w-4 h-4 shrink-0 ${activeTab === 'chat' ? 'text-sky-400' : 'text-slate-400'}`} />
+              <span className="font-sans">Percakapan</span>
+            </div>
+          </button>
+
+          {/* Live Dashboard */}
+          <button
+            type="button"
+            onClick={() => {
+              onSelectTab('dashboard');
+              if (window.innerWidth < 768) onCloseMobile();
+            }}
+            className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition cursor-pointer border ${activeTab === 'dashboard'
+              ? 'bg-[#14223b] text-sky-300 font-semibold shadow-sm border-slate-700/60'
+              : 'bg-transparent text-slate-400 hover:text-slate-200 hover:bg-[#121c2e] border-transparent'
+              }`}
+          >
+            <div className="flex items-center gap-2.5">
+              <LayoutDashboard className={`w-4 h-4 shrink-0 ${activeTab === 'dashboard' ? 'text-sky-400' : 'text-slate-400'}`} />
+              <span className="font-sans">Live Dashboard</span>
+            </div>
+            {widgetCount > 0 && (
+              <span
+                className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono font-semibold ${activeTab === 'dashboard'
+                  ? 'bg-sky-950 text-sky-300 border border-sky-800/60'
+                  : 'bg-slate-800 text-slate-400 border border-slate-700/50'
+                  }`}
+              >
+                {widgetCount}
+              </span>
+            )}
+          </button>
+
+          {/* Bulk Analytics */}
+          <button
+            type="button"
+            onClick={() => {
+              onSelectTab('batch');
+              if (window.innerWidth < 768) onCloseMobile();
+            }}
+            className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition cursor-pointer border ${activeTab === 'batch'
+              ? 'bg-[#14223b] text-sky-300 font-semibold shadow-sm border-slate-700/60'
+              : 'bg-transparent text-slate-400 hover:text-slate-200 hover:bg-[#121c2e] border-transparent'
+              }`}
+          >
+            <div className="flex items-center gap-2.5">
+              <Layers className={`w-4 h-4 shrink-0 ${activeTab === 'batch' ? 'text-sky-400' : 'text-slate-400'}`} />
+              <span className="font-sans">Bulk Analytics</span>
+            </div>
+          </button>
+        </nav>
+
+        {/* Section Header: Riwayat Sesi (Recents) */}
+        <div className="mt-2 pt-2.5 px-3.5 pb-1 flex items-center justify-between text-[10px] font-mono text-slate-400 select-none">
+          <div className="flex items-center gap-1.5 uppercase tracking-wider font-semibold">
+            <span>Riwayat Sesi</span>
+            <span className="text-slate-500 font-normal">({sessions.length})</span>
+          </div>
+          <button
+            type="button"
+            onClick={onRefreshSessions}
+            aria-label="Muat ulang riwayat sesi"
+            className="p-1 rounded-md text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition cursor-pointer"
+            title="Muat Ulang Riwayat"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+          </button>
         </div>
 
         {/* Sessions scrollable area */}
@@ -117,8 +219,8 @@ const SidebarComponent: React.FC<SidebarProps> = ({
                   key={s.session_id}
                   onClick={() => !isEditing && onSelectSession(s.session_id)}
                   className={`group relative flex items-center justify-between p-2.5 rounded-xl cursor-pointer transition text-xs ${isActive
-                      ? 'bg-[#14223b] text-[#f8fafc] shadow-sm font-medium'
-                      : 'text-[#94a3b8] hover:bg-[#14223b]/60 hover:text-[#f8fafc]'
+                    ? 'bg-[#14223b] text-[#f8fafc] shadow-sm font-medium'
+                    : 'text-[#94a3b8] hover:bg-[#14223b]/60 hover:text-[#f8fafc]'
                     }`}
                 >
                   {isEditing ? (
