@@ -56,11 +56,13 @@ from src.observability.metrics import get_system_metrics_summary
 from src.observability.tracer import init_traces_table
 from src.dashboard.manager import (
     PinWidgetInput,
+    WidgetLayoutItem,
     init_dashboard_table,
     pin_widget,
     get_dashboard_widgets,
     delete_dashboard_widget,
     refresh_dashboard_widgets,
+    update_dashboard_layout,
 )
 
 
@@ -891,6 +893,21 @@ async def refresh_dashboard(
     }
 
 
+class UpdateDashboardLayoutPayload(BaseModel):
+    layout: list[WidgetLayoutItem]
+
+
+@app.put("/v1/dashboard/layout/{session_id}", tags=["Dashboard"])
+async def update_dashboard_layout_endpoint(
+    session_id: str,
+    payload: UpdateDashboardLayoutPayload,
+    _auth: bool = Depends(verify_api_auth),
+):
+    """Update layout positions and span widths for pinned dashboard widgets."""
+    updated = await update_dashboard_layout(session_id=session_id, items=payload.layout)
+    return {"status": "success", "session_id": session_id, "updated_count": updated}
+
+
 # ==============================================================================
 # BYOD File Ingestion Endpoints (FR-39)
 # ==============================================================================
@@ -1069,6 +1086,14 @@ async def delete_memory_endpoint(memory_id: int):
 @app.get("/", response_class=HTMLResponse, tags=["UI"])
 async def web_ui():
     """Claude AI-inspired warm aesthetic UI for Harmonix with live streaming, HITL gate, and observability."""
+    if STATIC_INDEX_PATH.exists():
+        return HTMLResponse(content=STATIC_INDEX_PATH.read_text(encoding="utf-8"))
+    return HTMLResponse(content="<h1>Harmonix UI template not found.</h1>", status_code=404)
+
+
+@app.get("/tv/{session_id}", response_class=HTMLResponse, tags=["UI"])
+async def tv_ui(session_id: str):
+    """Standalone TV Command Center Kiosk display for Harmonix Live Dashboard."""
     if STATIC_INDEX_PATH.exists():
         return HTMLResponse(content=STATIC_INDEX_PATH.read_text(encoding="utf-8"))
     return HTMLResponse(content="<h1>Harmonix UI template not found.</h1>", status_code=404)

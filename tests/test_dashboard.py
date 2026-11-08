@@ -135,3 +135,30 @@ async def test_dashboard_api_endpoints():
         # GET dashboard empty again
         res = await client.get(f"/v1/dashboard/{test_session}")
         assert res.json()["total"] == 0
+
+
+@pytest.mark.asyncio
+async def test_dashboard_layout_api_and_tv():
+    """Verify PUT /v1/dashboard/layout/{session_id} and GET /tv/{session_id}."""
+    test_session = "test_api_sess_layout_99"
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        # Test PUT layout with empty list or arbitrary items
+        layout_res = await client.put(
+            f"/v1/dashboard/layout/{test_session}",
+            json={
+                "layout": [
+                    {"widget_id": "wgt_nonexistent_1", "position": 0, "span": "full"},
+                    {"widget_id": "wgt_nonexistent_2", "position": 1, "span": "half"},
+                ]
+            },
+        )
+        assert layout_res.status_code == 200
+        data = layout_res.json()
+        assert data["status"] == "success"
+        assert data["session_id"] == test_session
+        assert "updated_count" in data
+
+        # Test TV route endpoint
+        tv_res = await client.get(f"/tv/{test_session}")
+        assert tv_res.status_code in [200, 404]

@@ -9,7 +9,7 @@ import { DataChart } from './DataChart';
 import { AuditorGate } from './AuditorGate';
 import { FollowUpChips } from './FollowUpChips';
 import { ErrorBoundary } from './ErrorBoundary';
-import { formatPseudoTableToMarkdown } from '../utils/formatters';
+import { formatPseudoTableToMarkdown, formatRelativeTime } from '../utils/formatters';
 
 interface ChatMessageProps {
   turn: ChatTurn;
@@ -97,7 +97,11 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
           </div>
 
           {/* Quick Actions for User Query (Resend, Edit, Copy) - Only visible on hover */}
-          <div className="mt-1 flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-150 select-none min-h-[26px]">
+          <div className="mt-1 flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-150 select-none min-h-[26px]">
+            <span className="text-xs text-slate-400 font-sans mr-1 select-none">
+              {formatRelativeTime(turn.created_at)}
+            </span>
+
             {onSelectSuggestion && (
               <button
                 type="button"

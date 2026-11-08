@@ -22,6 +22,27 @@ export function formatSessionDate(isoStr?: string): string {
   }
 }
 
+export function formatRelativeTime(isoStr?: string): string {
+  if (!isoStr) return 'Baru saja';
+  try {
+    const d = new Date(isoStr);
+    if (isNaN(d.getTime())) return '';
+    const now = new Date();
+    const diffSec = Math.max(0, Math.floor((now.getTime() - d.getTime()) / 1000));
+    if (diffSec < 60) return 'Baru saja';
+    const diffMin = Math.floor(diffSec / 60);
+    if (diffMin < 60) return `${diffMin}m lalu`;
+    const diffHours = Math.floor(diffMin / 60);
+    if (diffHours < 24) return `${diffHours} jam lalu`;
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays === 1) return 'Kemarin';
+    if (diffDays < 7) return `${diffDays} hari lalu`;
+    return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+  } catch {
+    return '';
+  }
+}
+
 export function formatModelNameShort(modelId?: string): string {
   if (!modelId) return '';
   if (modelId.includes('gpt-oss-120b')) return 'GPT-OSS 120B';

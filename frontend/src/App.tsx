@@ -272,6 +272,7 @@ export const App: React.FC = () => {
         status: 'RUNNING',
         user_query: query,
         answer_text: '',
+        created_at: new Date().toISOString(),
       };
       setStreamingTurn(inFlightTurn);
 
@@ -347,6 +348,7 @@ export const App: React.FC = () => {
                 memories_recalled: data.memories_recalled,
                 working_memory: data.working_memory,
                 execution_plan: data.execution_plan,
+                created_at: inFlightTurn.created_at || new Date().toISOString(),
               };
               appendTurn(completedTurn);
               setStreamingTurn(null);
@@ -360,6 +362,7 @@ export const App: React.FC = () => {
                 status: 'ERROR',
                 user_query: query,
                 answer_text: `Error: ${data.message || 'Terjadi kesalahan sistem'}`,
+                created_at: inFlightTurn.created_at || new Date().toISOString(),
               };
               appendTurn(errorTurn);
               setStreamingTurn(null);
@@ -377,6 +380,7 @@ export const App: React.FC = () => {
           status: 'ERROR',
           user_query: query,
           answer_text: `Error: ${err.message || 'Koneksi terputus'}`,
+          created_at: inFlightTurn.created_at || new Date().toISOString(),
         };
         appendTurn(errorTurn);
         setStreamingTurn(null);
@@ -452,6 +456,7 @@ export const App: React.FC = () => {
             memories_recalled: data.memories_recalled,
             working_memory: data.working_memory,
             execution_plan: data.execution_plan,
+            created_at: new Date().toISOString(),
           };
           appendTurn(completedTurn);
           setStreamingTurn(null);
@@ -465,6 +470,7 @@ export const App: React.FC = () => {
             status: 'ERROR',
             user_query: activeUserQuery,
             answer_text: `Error: ${data.message || 'Terjadi kesalahan sistem saat resume task'}`,
+            created_at: new Date().toISOString(),
           };
           appendTurn(errorTurn);
           setStreamingTurn(null);
@@ -480,6 +486,7 @@ export const App: React.FC = () => {
         status: 'ERROR',
         user_query: activeUserQuery,
         answer_text: `Error: ${err.message || 'Koneksi resume terputus'}`,
+        created_at: new Date().toISOString(),
       };
       appendTurn(errorTurn);
       setStreamingTurn(null);
@@ -551,6 +558,7 @@ export const App: React.FC = () => {
             memories_recalled: data.memories_recalled,
             working_memory: data.working_memory,
             execution_plan: data.execution_plan,
+            created_at: new Date().toISOString(),
           };
           appendTurn(completedTurn);
           setStreamingTurn(null);
@@ -564,6 +572,7 @@ export const App: React.FC = () => {
             status: 'ERROR',
             user_query: activeUserQuery,
             answer_text: `Error: ${data.message || 'Terjadi kesalahan sistem saat resume task'}`,
+            created_at: new Date().toISOString(),
           };
           appendTurn(errorTurn);
           setStreamingTurn(null);
@@ -579,6 +588,7 @@ export const App: React.FC = () => {
         status: 'ERROR',
         user_query: activeUserQuery,
         answer_text: `Error: ${err.message || 'Koneksi resume terputus'}`,
+        created_at: new Date().toISOString(),
       };
       appendTurn(errorTurn);
       setStreamingTurn(null);
