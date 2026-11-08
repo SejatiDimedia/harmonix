@@ -13,14 +13,13 @@ import {
   CheckCircle2,
   ArrowUp,
   ArrowDown,
-  Columns2,
-  Maximize2,
   Tv,
   Clock,
   Maximize,
   X,
   Share2,
   Check,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { DashboardWidget, ChartSpec, TableData } from '../types';
 import { DataChart } from './DataChart';
@@ -68,6 +67,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
   const [lastRefreshedAt, setLastRefreshedAt] = useState<Date>(new Date());
   const [copiedTvLink, setCopiedTvLink] = useState(false);
+  const [isTvEditLayout, setIsTvEditLayout] = useState(false);
 
   const handleCopyTvLink = () => {
     if (!sessionId) {
@@ -161,11 +161,16 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
     }
   };
 
-  const handleToggleSpan = (widgetId: string) => {
+  const getSpanClass = (span?: string) => {
+    if (span === 'full') return 'lg:col-span-12';
+    if (span === 'third') return 'lg:col-span-4';
+    return 'lg:col-span-6';
+  };
+
+  const handleSetSpan = (widgetId: string, span: 'half' | 'full' | 'third') => {
     const updated = localWidgets.map((w) => {
       if (w.widget_id === widgetId) {
-        const nextSpan: 'half' | 'full' = w.layout_span === 'full' ? 'half' : 'full';
-        return { ...w, layout_span: nextSpan };
+        return { ...w, layout_span: span };
       }
       return w;
     });
@@ -224,29 +229,26 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
               <div className="flex flex-col min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="font-bold text-sm sm:text-base text-slate-100 font-sans tracking-tight truncate max-w-xs md:max-w-md">
-                    {sessionTitle || 'Harmonix Live Dashboard'}
+                    {sessionTitle || 'Harmonix Dashboard'}
                   </span>
                 </div>
-                <span className="text-[10px] text-slate-400 font-mono tracking-wide uppercase truncate">
-                  Executive Command Center • Realtime Warehouse
+                <span className="text-[11px] text-slate-400 font-sans tracking-normal truncate">
+                  Pemantauan Data Operasional
                 </span>
               </div>
             </div>
 
-            {/* Pulsing Live Badge */}
-            <div className="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-full bg-rose-950/60 border border-rose-600/40 text-rose-300 font-mono text-[11px] font-semibold tracking-wider shadow-sm shrink-0">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
-              </span>
-              <span>LIVE MONITORING</span>
+            {/* Static Clean Live Badge */}
+            <div className="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#14223b] border border-white/[0.08] text-slate-300 font-mono text-[11px]">
+              <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+              <span>Live Sync</span>
             </div>
           </div>
 
           {/* Center: Realtime Digital Clock */}
           <div className="hidden md:flex flex-col items-center justify-center font-mono select-none">
             <div className="text-xl font-bold tracking-widest text-slate-100 drop-shadow-sm flex items-center gap-1.5">
-              <Clock className="w-4 h-4 text-sky-400 animate-pulse" />
+              <Clock className="w-4 h-4 text-sky-400" />
               <span>
                 {currentTime.toLocaleTimeString('id-ID', {
                   hour: '2-digit',
@@ -256,7 +258,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
               </span>
               <span className="text-xs text-sky-400 font-bold ml-0.5">WIB</span>
             </div>
-            <div className="text-[10px] text-slate-400 uppercase tracking-wider font-sans">
+            <div className="text-[10px] text-slate-400 tracking-normal font-sans">
               {currentTime.toLocaleDateString('id-ID', {
                 weekday: 'long',
                 day: 'numeric',
@@ -325,6 +327,21 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
               <Maximize className="w-3.5 h-3.5 text-slate-300" />
             </button>
 
+            {/* Atur Layout Toggle Button in TV */}
+            <button
+              type="button"
+              onClick={() => setIsTvEditLayout((prev) => !prev)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-sans transition cursor-pointer border ${
+                isTvEditLayout
+                  ? 'bg-sky-600 text-white border-sky-500 shadow-sm'
+                  : 'bg-[#14223b] hover:bg-[#182a47] text-slate-200 border-white/[0.06]'
+              }`}
+              title="Atur kolom dan tata letak widget langsung di layar TV"
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">{isTvEditLayout ? 'Selesai Atur' : 'Atur Layout'}</span>
+            </button>
+
             {/* Shareable Link Button in TV Header */}
             <button
               type="button"
@@ -368,7 +385,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
           <div className="flex items-center gap-3">
             <span className="flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-              <span>PostgreSQL 16 Enterprise • Direct Warehouse Connection</span>
+              <span>PostgreSQL 16 • Terhubung</span>
             </span>
             <span className="hidden sm:inline text-slate-600">|</span>
             <span className="hidden sm:inline text-slate-400">Total: {localWidgets.length} Komponen Aktif</span>
@@ -394,9 +411,8 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full max-w-full">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-5 w-full max-w-full">
               {localWidgets.map((w, idx) => {
-                const isFull = w.layout_span === 'full';
                 const isChart = w.widget_type === 'chart' && w.chart_spec;
                 const isTable = w.widget_type === 'table' && w.table_data;
                 const displayTitle =
@@ -409,12 +425,12 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                 return (
                   <div
                     key={w.widget_id}
-                    className={`rounded-2xl bg-[#0b1424] border border-white/[0.08] p-5 shadow-xl flex flex-col justify-between transition-all duration-300 space-y-4 ${
-                      isFull ? 'lg:col-span-2' : 'lg:col-span-1'
-                    }`}
+                    className={`rounded-2xl bg-[#0b1424] border border-white/[0.08] p-5 shadow-xl flex flex-col justify-between transition-all duration-300 space-y-4 ${getSpanClass(
+                      w.layout_span
+                    )}`}
                   >
                     {/* Header */}
-                    <div className="flex items-center justify-between pb-3 border-b border-white/[0.06]">
+                    <div className="flex items-center justify-between pb-3 border-b border-white/[0.06] gap-3">
                       <div className="flex items-center gap-2.5 min-w-0">
                         <span className="inline-flex items-center justify-center w-6 h-6 rounded-lg bg-[#14223b] text-sky-400 font-mono text-xs font-bold border border-white/[0.06] shrink-0">
                           {idx + 1}
@@ -423,9 +439,67 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                           {displayTitle}
                         </h2>
                       </div>
-                      <span className="text-[10px] font-mono uppercase px-2.5 py-1 rounded-md bg-[#14223b] text-sky-300 border border-white/[0.04] shrink-0">
-                        {w.widget_type === 'chart' ? (w.chart_spec?.chart_type || 'CHART') : 'TABEL DATA'}
-                      </span>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        {/* Interactive TV Layout Controls */}
+                        {isTvEditLayout && (
+                          <div className="flex items-center gap-1.5 animate-fadeIn">
+                            {/* Reorder Up/Down */}
+                            <div className="flex items-center bg-[#14223b] rounded-lg p-0.5 border border-white/[0.06]">
+                              <button
+                                type="button"
+                                onClick={() => handleMoveWidget(w.widget_id, 'up')}
+                                disabled={idx === 0}
+                                className="p-1 rounded text-slate-400 hover:text-white disabled:opacity-25 transition cursor-pointer"
+                                title="Pindah ke atas"
+                              >
+                                <ArrowUp className="w-3 h-3" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleMoveWidget(w.widget_id, 'down')}
+                                disabled={idx === localWidgets.length - 1}
+                                className="p-1 rounded text-slate-400 hover:text-white disabled:opacity-25 transition cursor-pointer"
+                                title="Pindah ke bawah"
+                              >
+                                <ArrowDown className="w-3 h-3" />
+                              </button>
+                            </div>
+
+                            {/* Segmented Width Selector */}
+                            <div className="inline-flex rounded-lg bg-[#14223b] p-0.5 border border-white/[0.06]">
+                              <button
+                                type="button"
+                                onClick={() => handleSetSpan(w.widget_id, 'half')}
+                                className={`px-2 py-0.5 text-[10px] font-mono rounded transition cursor-pointer ${
+                                  w.layout_span === 'half' || !w.layout_span
+                                    ? 'bg-sky-600 text-white font-medium shadow-sm'
+                                    : 'text-slate-400 hover:text-white'
+                                }`}
+                                title="2 Kolom per baris (50% lebar)"
+                              >
+                                2 Kolom
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleSetSpan(w.widget_id, 'full')}
+                                className={`px-2 py-0.5 text-[10px] font-mono rounded transition cursor-pointer ${
+                                  w.layout_span === 'full'
+                                    ? 'bg-sky-600 text-white font-medium shadow-sm'
+                                    : 'text-slate-400 hover:text-white'
+                                }`}
+                                title="1 Kolom per baris (100% penuh)"
+                              >
+                                1 Kolom
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        <span className="text-[10px] font-mono uppercase px-2.5 py-1 rounded-md bg-[#14223b] text-sky-300 border border-white/[0.04] shrink-0">
+                          {w.widget_type === 'chart' ? (w.chart_spec?.chart_type || 'CHART') : 'TABEL DATA'}
+                        </span>
+                      </div>
                     </div>
 
                     {/* Card Body */}
@@ -623,11 +697,11 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
               type="button"
               onClick={() => setIsTvMode(true)}
               disabled={widgets.length === 0}
-              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-sky-600 to-cyan-600 hover:from-sky-500 hover:to-cyan-500 disabled:opacity-40 text-white text-xs font-medium transition shadow-md shadow-sky-950/40 cursor-pointer disabled:cursor-not-allowed"
-              aria-label="Buka Mode TV Command Center"
-              title="Tampilkan dashboard dalam Mode TV Command Center Layar Penuh"
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#14223b] hover:bg-[#1a2d4e] disabled:opacity-40 text-slate-100 border border-slate-700/60 text-xs font-medium transition shadow-sm cursor-pointer disabled:cursor-not-allowed"
+              aria-label="Buka Mode TV Kiosk"
+              title="Tampilkan dashboard dalam Mode TV Kiosk Layar Penuh"
             >
-              <Tv className="w-3.5 h-3.5" />
+              <Tv className="w-3.5 h-3.5 text-sky-400" />
               <span>Mode TV Kiosk</span>
             </button>
 
@@ -687,12 +761,11 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
 
         {/* Widgets Grid */}
         {localWidgets.length > 0 && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 print:block print:space-y-6 gap-6 w-full max-w-full">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 print:block print:space-y-6 gap-6 w-full max-w-full">
             {localWidgets.map((w, idx) => {
               const isChart = w.widget_type === 'chart' && w.chart_spec;
               const isTable = w.widget_type === 'table' && w.table_data;
               const isSqlExpanded = !!expandedSqlIds[w.widget_id];
-              const isFull = w.layout_span === 'full';
               const displayTitle =
                 w.widget_type === 'chart'
                   ? getChartDescriptiveTitle(w.chart_spec, w.title)
@@ -703,9 +776,9 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
               return (
                 <div
                   key={w.widget_id}
-                  className={`print-widget-card rounded-2xl bg-[#0f1a2e] print:bg-white border border-white/[0.06] print:border-gray-300 p-5 shadow-md shadow-black/20 flex flex-col justify-between transition-all duration-200 space-y-4 print:space-y-3 print:rounded-xl print:p-0 print:overflow-hidden ${
-                    isFull ? 'lg:col-span-2' : 'lg:col-span-1'
-                  }`}
+                  className={`print-widget-card rounded-2xl bg-[#0f1a2e] print:bg-white border border-white/[0.06] print:border-gray-300 p-5 shadow-md shadow-black/20 flex flex-col justify-between transition-all duration-200 space-y-4 print:space-y-3 print:rounded-xl print:p-0 print:overflow-hidden ${getSpanClass(
+                    w.layout_span
+                  )}`}
                 >
                   {/* Card Header (Corporate Styled on Print) */}
                   <div className="flex items-start justify-between gap-3 pb-3 border-b border-white/[0.04] print:bg-gray-50/80 print:p-4 print:pb-3 print:border-b print:border-gray-200">
@@ -767,30 +840,35 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                         <ArrowDown className="w-3.5 h-3.5" />
                       </button>
 
-                      {/* Toggle Ukuran Lebar 50% vs 100% */}
-                      <button
-                        type="button"
-                        onClick={() => handleToggleSpan(w.widget_id)}
-                        className={`flex items-center gap-1 text-[11px] font-mono px-2 py-1 rounded transition cursor-pointer shadow-sm ${
-                          isFull
-                            ? 'bg-sky-950/60 text-sky-300 border border-sky-800/60 hover:bg-sky-900/60'
-                            : 'bg-[#14223b] hover:bg-[#182a47] text-[#94a3b8] hover:text-[#f8fafc]'
-                        }`}
-                        aria-label={isFull ? 'Ubah ke ukuran 50%' : 'Ubah ke ukuran 100%'}
-                        title={isFull ? 'Ubah ke ukuran 50% (setengah baris)' : 'Ubah ke ukuran 100% (lebar penuh)'}
-                      >
-                        {isFull ? (
-                          <>
-                            <Maximize2 className="w-3 h-3 text-sky-400" />
-                            <span>100%</span>
-                          </>
-                        ) : (
-                          <>
-                            <Columns2 className="w-3 h-3 text-slate-400" />
-                            <span>50%</span>
-                          </>
-                        )}
-                      </button>
+                      {/* Segmented Width Selector: 2 Kolom vs 1 Kolom */}
+                      <div className="inline-flex rounded-lg bg-[#14223b] p-0.5 border border-white/[0.06] shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => handleSetSpan(w.widget_id, 'half')}
+                          className={`px-2 py-1 text-[11px] font-mono rounded transition cursor-pointer ${
+                            w.layout_span === 'half' || !w.layout_span
+                              ? 'bg-sky-600 text-white font-medium shadow-sm'
+                              : 'text-[#94a3b8] hover:text-[#f8fafc]'
+                          }`}
+                          aria-label="Atur tampilan 2 kolom per baris (50%)"
+                          title="2 Kolom per baris (50% lebar baris)"
+                        >
+                          2 Kolom
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleSetSpan(w.widget_id, 'full')}
+                          className={`px-2 py-1 text-[11px] font-mono rounded transition cursor-pointer ${
+                            w.layout_span === 'full'
+                              ? 'bg-sky-600 text-white font-medium shadow-sm'
+                              : 'text-[#94a3b8] hover:text-[#f8fafc]'
+                          }`}
+                          aria-label="Atur tampilan 1 kolom per baris (100% penuh)"
+                          title="1 Kolom per baris (100% lebar penuh)"
+                        >
+                          1 Kolom
+                        </button>
+                      </div>
 
                       {/* Unduh CSV Button for Table Widget */}
                       {isTable && w.table_data && (

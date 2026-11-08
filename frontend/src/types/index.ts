@@ -258,7 +258,7 @@ export interface QueueJob {
 }
 
 export type WidgetType = 'chart' | 'table' | 'kpi';
-export type LayoutSpan = 'half' | 'full';
+export type LayoutSpan = 'half' | 'full' | 'third';
 
 export interface DashboardWidget {
   widget_id: string;
