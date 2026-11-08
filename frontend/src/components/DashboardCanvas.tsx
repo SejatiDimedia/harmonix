@@ -15,6 +15,10 @@ import {
   ArrowDown,
   Columns2,
   Maximize2,
+  Tv,
+  Clock,
+  Maximize,
+  X,
 } from 'lucide-react';
 import { DashboardWidget, ChartSpec, TableData } from '../types';
 import { DataChart } from './DataChart';
@@ -33,6 +37,9 @@ interface DashboardCanvasProps {
   sessionId?: string;
   activeModel?: string;
   showToast?: (msg: string) => void;
+  initialTvMode?: boolean;
+  isStandaloneTv?: boolean;
+  onExitTv?: () => void;
 }
 
 export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
@@ -46,10 +53,67 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
   sessionId,
   activeModel,
   showToast,
+  initialTvMode = false,
+  isStandaloneTv = false,
+  onExitTv,
 }) => {
   const [expandedSqlIds, setExpandedSqlIds] = useState<Record<string, boolean>>({});
   const [localWidgets, setLocalWidgets] = useState<DashboardWidget[]>(widgets);
   const [isSavingLayout, setIsSavingLayout] = useState(false);
+  const [isTvMode, setIsTvMode] = useState<boolean>(initialTvMode);
+  const [refreshIntervalSec, setRefreshIntervalSec] = useState<number>(30);
+  const [countdownSec, setCountdownSec] = useState<number>(30);
+  const [currentTime, setCurrentTime] = useState<Date>(new Date());
+  const [lastRefreshedAt, setLastRefreshedAt] = useState<Date>(new Date());
+
+  // 1. Digital Clock Timer (1s updates)
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // 2. Auto-Refresh Loop for TV Mode
+  useEffect(() => {
+    if (!isTvMode || refreshIntervalSec <= 0) return;
+
+    setCountdownSec(refreshIntervalSec);
+    const interval = setInterval(() => {
+      setCountdownSec((prev) => {
+        if (prev <= 1) {
+          onRefresh();
+          setLastRefreshedAt(new Date());
+          return refreshIntervalSec;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isTvMode, refreshIntervalSec, onRefresh]);
+
+  // 3. Escape key to exit TV mode
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isTvMode && !isStandaloneTv) {
+        setIsTvMode(false);
+        if (onExitTv) onExitTv();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isTvMode, isStandaloneTv, onExitTv]);
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+      }
+    }
+  };
 
   useEffect(() => {
     const sorted = [...widgets].sort((a, b) => (a.layout_position ?? 0) - (b.layout_position ?? 0));
@@ -125,6 +189,263 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
     hour: '2-digit',
     minute: '2-digit',
   });
+
+  if (isTvMode) {
+    return (
+      <div className="fixed inset-0 z-50 bg-[#080f1d] text-[#f8fafc] flex flex-col overflow-hidden select-none">
+        {/* TV Header Bar */}
+        <header className="h-16 px-6 bg-[#0b1424]/95 border-b border-white/[0.08] backdrop-blur-md flex items-center justify-between shrink-0 sticky top-0 z-40 gap-4">
+          {/* Left: Branding & Live Badge */}
+          <div className="flex items-center gap-4 min-w-0">
+            <div className="flex items-center gap-3">
+              <img
+                src="/static/logo.png?v=2"
+                alt="Harmonix"
+                className="w-9 h-9 rounded-xl object-cover shadow-md shadow-sky-950/50 shrink-0"
+              />
+              <div className="flex flex-col min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-sm sm:text-base text-slate-100 font-sans tracking-tight truncate max-w-xs md:max-w-md">
+                    {sessionTitle || 'Harmonix Live Dashboard'}
+                  </span>
+                </div>
+                <span className="text-[10px] text-slate-400 font-mono tracking-wide uppercase truncate">
+                  Executive Command Center • Realtime Warehouse
+                </span>
+              </div>
+            </div>
+
+            {/* Pulsing Live Badge */}
+            <div className="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-full bg-rose-950/60 border border-rose-600/40 text-rose-300 font-mono text-[11px] font-semibold tracking-wider shadow-sm shrink-0">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+              </span>
+              <span>LIVE MONITORING</span>
+            </div>
+          </div>
+
+          {/* Center: Realtime Digital Clock */}
+          <div className="hidden md:flex flex-col items-center justify-center font-mono select-none">
+            <div className="text-xl font-bold tracking-widest text-slate-100 drop-shadow-sm flex items-center gap-1.5">
+              <Clock className="w-4 h-4 text-sky-400 animate-pulse" />
+              <span>
+                {currentTime.toLocaleTimeString('id-ID', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  second: '2-digit',
+                })}
+              </span>
+              <span className="text-xs text-sky-400 font-bold ml-0.5">WIB</span>
+            </div>
+            <div className="text-[10px] text-slate-400 uppercase tracking-wider font-sans">
+              {currentTime.toLocaleDateString('id-ID', {
+                weekday: 'long',
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric',
+              })}
+            </div>
+          </div>
+
+          {/* Right: Auto-Refresh Controls & Actions */}
+          <div className="flex items-center gap-2.5 shrink-0">
+            {/* Auto-Refresh Interval Selector */}
+            <div className="flex items-center gap-1 bg-[#14223b] p-1 rounded-xl border border-white/[0.06] text-xs font-mono">
+              <span className="text-[10px] text-slate-400 px-1.5 hidden xl:inline">Refresh:</span>
+              {[
+                { label: 'Off', val: 0 },
+                { label: '10s', val: 10 },
+                { label: '30s', val: 30 },
+                { label: '60s', val: 60 },
+                { label: '5m', val: 300 },
+              ].map((item) => (
+                <button
+                  key={item.val}
+                  type="button"
+                  onClick={() => setRefreshIntervalSec(item.val)}
+                  className={`px-2 py-0.5 rounded-lg text-[10px] transition cursor-pointer ${
+                    refreshIntervalSec === item.val
+                      ? 'bg-sky-500 text-white font-bold shadow-sm'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Countdown Ticker */}
+            {refreshIntervalSec > 0 && (
+              <span className="text-[11px] font-mono text-sky-400 hidden lg:inline font-semibold">
+                {countdownSec}s
+              </span>
+            )}
+
+            {/* Manual Refresh Button */}
+            <button
+              type="button"
+              onClick={() => {
+                onRefresh();
+                setLastRefreshedAt(new Date());
+                setCountdownSec(refreshIntervalSec);
+              }}
+              disabled={isRefreshing}
+              className="p-2 rounded-xl bg-[#14223b] hover:bg-[#182a47] text-slate-200 border border-white/[0.06] transition cursor-pointer"
+              title="Segarkan data sekarang"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 text-sky-400 ${isRefreshing ? 'animate-spin' : ''}`} />
+            </button>
+
+            {/* Fullscreen Button */}
+            <button
+              type="button"
+              onClick={toggleFullscreen}
+              className="p-2 rounded-xl bg-[#14223b] hover:bg-[#182a47] text-slate-200 border border-white/[0.06] transition cursor-pointer"
+              title="Toggle Fullscreen Layar Penuh"
+            >
+              <Maximize className="w-3.5 h-3.5 text-slate-300" />
+            </button>
+
+            {/* Exit Button (unless standalone TV) */}
+            {!isStandaloneTv && (
+              <button
+                type="button"
+                onClick={() => {
+                  setIsTvMode(false);
+                  if (onExitTv) onExitTv();
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-sans transition cursor-pointer border border-slate-700/60"
+                title="Keluar dari mode TV (Esc)"
+              >
+                <X className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Keluar</span>
+              </button>
+            )}
+          </div>
+        </header>
+
+        {/* TV Sub-header Status Bar */}
+        <div className="h-8 px-6 bg-[#0a1120] border-b border-white/[0.04] flex items-center justify-between text-[11px] font-mono text-slate-400 shrink-0">
+          <div className="flex items-center gap-3">
+            <span className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+              <span>PostgreSQL 16 Enterprise • Direct Warehouse Connection</span>
+            </span>
+            <span className="hidden sm:inline text-slate-600">|</span>
+            <span className="hidden sm:inline text-slate-400">Total: {localWidgets.length} Komponen Aktif</span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span>Sinkronisasi: {lastRefreshedAt.toLocaleTimeString('id-ID')}</span>
+          </div>
+        </div>
+
+        {/* TV Main Grid */}
+        <main className="flex-1 p-6 overflow-y-auto">
+          {localWidgets.length === 0 ? (
+            <div className="h-full flex flex-col items-center justify-center space-y-4 text-center py-20">
+              <div className="w-16 h-16 rounded-2xl bg-[#14223b] flex items-center justify-center text-slate-400 shadow-lg">
+                <Tv className="w-8 h-8 text-sky-400" />
+              </div>
+              <h2 className="text-lg font-semibold text-slate-100 font-sans">
+                Menunggu Komponen Dashboard Tersemat
+              </h2>
+              <p className="text-xs text-slate-400 max-w-md">
+                Belum ada widget grafik atau tabel yang disematkan ke dashboard ini.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full max-w-full">
+              {localWidgets.map((w, idx) => {
+                const isFull = w.layout_span === 'full';
+                const isChart = w.widget_type === 'chart' && w.chart_spec;
+                const isTable = w.widget_type === 'table' && w.table_data;
+                const displayTitle =
+                  w.widget_type === 'chart'
+                    ? getChartDescriptiveTitle(w.chart_spec, w.title)
+                    : w.title && w.title.toLowerCase() !== 'table'
+                      ? w.title
+                      : `Tabel Data (${w.table_data?.rows?.length || 0} baris)`;
+
+                return (
+                  <div
+                    key={w.widget_id}
+                    className={`rounded-2xl bg-[#0b1424] border border-white/[0.08] p-5 shadow-xl flex flex-col justify-between transition-all duration-300 space-y-4 ${
+                      isFull ? 'lg:col-span-2' : 'lg:col-span-1'
+                    }`}
+                  >
+                    {/* Header */}
+                    <div className="flex items-center justify-between pb-3 border-b border-white/[0.06]">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span className="inline-flex items-center justify-center w-6 h-6 rounded-lg bg-[#14223b] text-sky-400 font-mono text-xs font-bold border border-white/[0.06] shrink-0">
+                          {idx + 1}
+                        </span>
+                        <h2 className="text-base font-semibold text-[#f8fafc] font-sans tracking-tight truncate">
+                          {displayTitle}
+                        </h2>
+                      </div>
+                      <span className="text-[10px] font-mono uppercase px-2.5 py-1 rounded-md bg-[#14223b] text-sky-300 border border-white/[0.04] shrink-0">
+                        {w.widget_type === 'chart' ? (w.chart_spec?.chart_type || 'CHART') : 'TABEL DATA'}
+                      </span>
+                    </div>
+
+                    {/* Card Body */}
+                    <div className="flex-1 min-h-[300px] flex flex-col items-center justify-center">
+                      {isChart && (
+                        <div className="w-full flex-1 flex flex-col items-center justify-center">
+                          <DataChart charts={[w.chart_spec as ChartSpec]} hideHeader={true} isKiosk={true} />
+                        </div>
+                      )}
+                      {isTable && (
+                        <div className="overflow-x-auto rounded-xl border border-white/[0.06] bg-[#0b1322] w-full max-h-[360px]">
+                          <table className="w-full text-xs text-left border-collapse table-auto">
+                            <thead className="sticky top-0 bg-[#14223b] z-10">
+                              <tr>
+                                {(w.table_data?.columns || []).map((col, cIdx) => (
+                                  <th
+                                    key={cIdx}
+                                    scope="col"
+                                    className="p-3 text-[11px] font-mono uppercase text-[#94a3b8] border-b border-white/[0.06]"
+                                  >
+                                    {col}
+                                  </th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-white/[0.04]">
+                              {(w.table_data?.rows || []).slice(0, 15).map((row, rIdx) => (
+                                <tr key={rIdx} className="hover:bg-white/[0.02] transition">
+                                  {row.map((val, cellIdx) => {
+                                    const colName = w.table_data?.columns?.[cellIdx];
+                                    const { formatted, isNumeric } = formatTableCellValue(val, colName);
+                                    return (
+                                      <td
+                                        key={cellIdx}
+                                        className={`p-3 text-xs font-mono ${
+                                          isNumeric ? 'text-[#38bdf8] font-medium' : 'text-slate-300 font-sans'
+                                        }`}
+                                      >
+                                        {formatted}
+                                      </td>
+                                    );
+                                  })}
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 overflow-y-auto px-4 py-6 scroll-smooth print:p-0 print:m-0 print:w-full print:max-w-full print:overflow-visible print:bg-white print:block">
@@ -239,6 +560,18 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
           </div>
 
           <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
+            <button
+              type="button"
+              onClick={() => setIsTvMode(true)}
+              disabled={widgets.length === 0}
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-sky-600 to-cyan-600 hover:from-sky-500 hover:to-cyan-500 disabled:opacity-40 text-white text-xs font-medium transition shadow-md shadow-sky-950/40 cursor-pointer disabled:cursor-not-allowed"
+              aria-label="Buka Mode TV Command Center"
+              title="Tampilkan dashboard dalam Mode TV Command Center Layar Penuh"
+            >
+              <Tv className="w-3.5 h-3.5" />
+              <span>Mode TV Kiosk</span>
+            </button>
+
             <button
               type="button"
               onClick={triggerExecutivePDFPrint}
