@@ -258,6 +258,7 @@ export interface QueueJob {
 }
 
 export type WidgetType = 'chart' | 'table' | 'kpi';
+export type LayoutSpan = 'half' | 'full';
 
 export interface DashboardWidget {
   widget_id: string;
@@ -268,8 +269,20 @@ export interface DashboardWidget {
   chart_spec?: ChartSpec | null;
   table_data?: TableData | null;
   metric_summary?: string | null;
+  layout_position?: number;
+  layout_span?: LayoutSpan;
   created_at: string;
   updated_at?: string;
+}
+
+export interface WidgetLayoutItem {
+  widget_id: string;
+  position: number;
+  span: LayoutSpan;
+}
+
+export interface UpdateDashboardLayoutPayload {
+  layout: WidgetLayoutItem[];
 }
 
 export interface PinWidgetPayload {
@@ -280,6 +293,8 @@ export interface PinWidgetPayload {
   chart_spec?: ChartSpec | null;
   table_data?: TableData | null;
   metric_summary?: string | null;
+  layout_position?: number;
+  layout_span?: LayoutSpan;
 }
 
 export interface DashboardListResponse {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   LayoutDashboard,
   RefreshCw,
@@ -11,11 +11,16 @@ import {
   Download,
   FileDown,
   CheckCircle2,
+  ArrowUp,
+  ArrowDown,
+  Columns2,
+  Maximize2,
 } from 'lucide-react';
 import { DashboardWidget, ChartSpec, TableData } from '../types';
 import { DataChart } from './DataChart';
 import { formatSQL, getChartDescriptiveTitle, formatTableCellValue } from '../utils/formatters';
 import { exportTableToCSV, triggerExecutivePDFPrint } from '../utils/exportUtils';
+import { updateDashboardLayout } from '../services/api';
 
 interface DashboardCanvasProps {
   widgets: DashboardWidget[];
@@ -27,6 +32,7 @@ interface DashboardCanvasProps {
   sessionTitle?: string;
   sessionId?: string;
   activeModel?: string;
+  showToast?: (msg: string) => void;
 }
 
 export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
@@ -39,8 +45,66 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
   sessionTitle,
   sessionId,
   activeModel,
+  showToast,
 }) => {
   const [expandedSqlIds, setExpandedSqlIds] = useState<Record<string, boolean>>({});
+  const [localWidgets, setLocalWidgets] = useState<DashboardWidget[]>(widgets);
+  const [isSavingLayout, setIsSavingLayout] = useState(false);
+
+  useEffect(() => {
+    const sorted = [...widgets].sort((a, b) => (a.layout_position ?? 0) - (b.layout_position ?? 0));
+    setLocalWidgets(sorted);
+  }, [widgets]);
+
+  const persistLayout = async (newWidgets: DashboardWidget[]) => {
+    if (!sessionId) return;
+    try {
+      setIsSavingLayout(true);
+      const items = newWidgets.map((w, idx) => ({
+        widget_id: w.widget_id,
+        position: idx,
+        span: w.layout_span || 'half',
+      }));
+      await updateDashboardLayout(sessionId, items);
+      if (showToast) {
+        showToast('Tata letak dashboard tersimpan');
+      }
+    } catch (err) {
+      console.error('Failed to save dashboard layout:', err);
+      if (showToast) {
+        showToast('Gagal menyimpan tata letak dashboard');
+      }
+    } finally {
+      setIsSavingLayout(false);
+    }
+  };
+
+  const handleToggleSpan = (widgetId: string) => {
+    const updated = localWidgets.map((w) => {
+      if (w.widget_id === widgetId) {
+        const nextSpan: 'half' | 'full' = w.layout_span === 'full' ? 'half' : 'full';
+        return { ...w, layout_span: nextSpan };
+      }
+      return w;
+    });
+    setLocalWidgets(updated);
+    persistLayout(updated);
+  };
+
+  const handleMoveWidget = (widgetId: string, direction: 'up' | 'down') => {
+    const idx = localWidgets.findIndex((w) => w.widget_id === widgetId);
+    if (idx === -1) return;
+    const targetIdx = direction === 'up' ? idx - 1 : idx + 1;
+    if (targetIdx < 0 || targetIdx >= localWidgets.length) return;
+
+    const copy = [...localWidgets];
+    const [moved] = copy.splice(idx, 1);
+    copy.splice(targetIdx, 0, moved);
+
+    const reindexed = copy.map((w, pos) => ({ ...w, layout_position: pos }));
+    setLocalWidgets(reindexed);
+    persistLayout(reindexed);
+  };
 
   const toggleSql = (id: string) => {
     setExpandedSqlIds((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -159,8 +223,14 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
               <div className="p-2 rounded-xl bg-clay-500/15 text-clay-400">
                 <LayoutDashboard className="w-5 h-5" />
               </div>
-              <h1 className="text-lg font-semibold text-[#f8fafc] font-sans">
-                Live BI Dashboard Canvas
+              <h1 className="text-lg font-semibold text-[#f8fafc] font-sans flex items-center gap-2.5">
+                <span>Live BI Dashboard Canvas</span>
+                {isSavingLayout && (
+                  <span className="flex items-center gap-1 text-[11px] font-mono text-sky-400 bg-sky-950/60 px-2 py-0.5 rounded border border-sky-800/40">
+                    <RefreshCw className="w-2.5 h-2.5 animate-spin" />
+                    <span>Menyimpan layout...</span>
+                  </span>
+                )}
               </h1>
             </div>
             <p className="text-xs text-[#94a3b8] leading-relaxed max-w-xl">
@@ -224,12 +294,13 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
         )}
 
         {/* Widgets Grid */}
-        {widgets.length > 0 && (
+        {localWidgets.length > 0 && (
           <div className="grid grid-cols-1 lg:grid-cols-2 print:block print:space-y-6 gap-6 w-full max-w-full">
-            {widgets.map((w, idx) => {
+            {localWidgets.map((w, idx) => {
               const isChart = w.widget_type === 'chart' && w.chart_spec;
               const isTable = w.widget_type === 'table' && w.table_data;
               const isSqlExpanded = !!expandedSqlIds[w.widget_id];
+              const isFull = w.layout_span === 'full';
               const displayTitle =
                 w.widget_type === 'chart'
                   ? getChartDescriptiveTitle(w.chart_spec, w.title)
@@ -240,7 +311,9 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
               return (
                 <div
                   key={w.widget_id}
-                  className="print-widget-card rounded-2xl bg-[#0f1a2e] print:bg-white border border-white/[0.06] print:border-gray-300 p-5 shadow-md shadow-black/20 flex flex-col justify-between transition space-y-4 print:space-y-3 print:rounded-xl print:p-0 print:overflow-hidden"
+                  className={`print-widget-card rounded-2xl bg-[#0f1a2e] print:bg-white border border-white/[0.06] print:border-gray-300 p-5 shadow-md shadow-black/20 flex flex-col justify-between transition-all duration-200 space-y-4 print:space-y-3 print:rounded-xl print:p-0 print:overflow-hidden ${
+                    isFull ? 'lg:col-span-2' : 'lg:col-span-1'
+                  }`}
                 >
                   {/* Card Header (Corporate Styled on Print) */}
                   <div className="flex items-start justify-between gap-3 pb-3 border-b border-white/[0.04] print:bg-gray-50/80 print:p-4 print:pb-3 print:border-b print:border-gray-200">
@@ -277,7 +350,56 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-1.5 shrink-0 no-print">
+                    <div className="flex items-center gap-1.5 shrink-0 no-print flex-wrap justify-end">
+                      {/* Urutan Posisi Ke Atas */}
+                      <button
+                        type="button"
+                        onClick={() => handleMoveWidget(w.widget_id, 'up')}
+                        disabled={idx === 0}
+                        className="p-1.5 rounded-lg text-[#94a3b8] hover:text-[#f8fafc] hover:bg-[#14223b] disabled:opacity-25 disabled:cursor-not-allowed transition cursor-pointer"
+                        aria-label="Pindahkan widget ke atas"
+                        title="Pindahkan widget ke posisi sebelumnya"
+                      >
+                        <ArrowUp className="w-3.5 h-3.5" />
+                      </button>
+
+                      {/* Urutkan Posisi Ke Bawah */}
+                      <button
+                        type="button"
+                        onClick={() => handleMoveWidget(w.widget_id, 'down')}
+                        disabled={idx === localWidgets.length - 1}
+                        className="p-1.5 rounded-lg text-[#94a3b8] hover:text-[#f8fafc] hover:bg-[#14223b] disabled:opacity-25 disabled:cursor-not-allowed transition cursor-pointer"
+                        aria-label="Pindahkan widget ke bawah"
+                        title="Pindahkan widget ke posisi selanjutnya"
+                      >
+                        <ArrowDown className="w-3.5 h-3.5" />
+                      </button>
+
+                      {/* Toggle Ukuran Lebar 50% vs 100% */}
+                      <button
+                        type="button"
+                        onClick={() => handleToggleSpan(w.widget_id)}
+                        className={`flex items-center gap-1 text-[11px] font-mono px-2 py-1 rounded transition cursor-pointer shadow-sm ${
+                          isFull
+                            ? 'bg-sky-950/60 text-sky-300 border border-sky-800/60 hover:bg-sky-900/60'
+                            : 'bg-[#14223b] hover:bg-[#182a47] text-[#94a3b8] hover:text-[#f8fafc]'
+                        }`}
+                        aria-label={isFull ? 'Ubah ke ukuran 50%' : 'Ubah ke ukuran 100%'}
+                        title={isFull ? 'Ubah ke ukuran 50% (setengah baris)' : 'Ubah ke ukuran 100% (lebar penuh)'}
+                      >
+                        {isFull ? (
+                          <>
+                            <Maximize2 className="w-3 h-3 text-sky-400" />
+                            <span>100%</span>
+                          </>
+                        ) : (
+                          <>
+                            <Columns2 className="w-3 h-3 text-slate-400" />
+                            <span>50%</span>
+                          </>
+                        )}
+                      </button>
+
                       {/* Unduh CSV Button for Table Widget */}
                       {isTable && w.table_data && (
                         <button

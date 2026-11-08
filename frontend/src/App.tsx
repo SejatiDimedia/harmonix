@@ -872,6 +872,7 @@ export const App: React.FC = () => {
             sessionTitle={sessionDetailsData?.title}
             sessionId={currentSessionId || undefined}
             activeModel={activeModel}
+            showToast={showToast}
           />
         ) : (
           <BatchRunner

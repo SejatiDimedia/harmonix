@@ -8,6 +8,7 @@ import {
   DashboardListResponse,
   DashboardWidget,
   PinWidgetPayload,
+  WidgetLayoutItem,
   APIKeysResponse,
   APIKeyInfo,
   UpdateAPIKeysPayload,
@@ -248,6 +249,19 @@ export async function refreshDashboardWidgets(sessionId: string): Promise<Dashbo
     method: 'POST',
   });
   if (!res.ok) throw new Error('Failed to refresh dashboard widgets');
+  return res.json();
+}
+
+export async function updateDashboardLayout(
+  sessionId: string,
+  layout: WidgetLayoutItem[]
+): Promise<{ status: string; session_id: string; updated_count: number }> {
+  const res = await fetch(`/v1/dashboard/layout/${sessionId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ layout }),
+  });
+  if (!res.ok) throw new Error('Failed to update dashboard layout');
   return res.json();
 }
 
