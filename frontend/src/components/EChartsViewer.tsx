@@ -207,42 +207,55 @@ export const EChartsViewer: React.FC<EChartsViewerProps> = ({
 
       option.legend = {
         orient: 'horizontal',
-        bottom: 4,
-        textStyle: { color: '#94a3b8', fontSize: isKiosk ? 12 : 11 },
-        type: labels.length > 6 ? 'scroll' : 'plain',
+        bottom: 8,
+        textStyle: { color: '#94a3b8', fontSize: 11 },
+        type: labels.length > 5 ? 'scroll' : 'plain',
         pageTextStyle: { color: '#94a3b8' },
         pageIconColor: '#008cd0',
+        pageIconInactiveColor: '#334155',
       };
+
+      const showCalloutLabels = labels.length <= 6;
 
       option.series = [
         {
           name: spec.title || spec.y_axis,
           type: 'pie',
-          radius: isDoughnut ? ['42%', '70%'] : '68%',
+          radius: isDoughnut ? ['45%', '72%'] : ['0%', '72%'],
           center: ['50%', '46%'],
           avoidLabelOverlap: true,
+          minShowLabelAngle: 12,
           itemStyle: {
             borderRadius: isDoughnut ? 6 : 4,
-            borderColor: '#0f1a2e',
+            borderColor: '#0b1424',
             borderWidth: 2,
           },
           label: {
-            show: isKiosk || labels.length <= 8,
+            show: showCalloutLabels,
             color: '#94a3b8',
-            fontSize: isKiosk ? 12 : 11,
+            fontSize: 11,
             formatter: '{b}: {d}%',
+          },
+          labelLine: {
+            show: showCalloutLabels,
+            length: 8,
+            length2: 10,
+            lineStyle: {
+              color: '#334155',
+            },
           },
           emphasis: {
             label: {
               show: true,
-              fontSize: isKiosk ? 14 : 12,
+              fontSize: 13,
               fontWeight: 'bold',
               color: '#ffffff',
+              formatter: '{b}\n{d}%',
             },
             itemStyle: {
-              shadowBlur: 12,
+              shadowBlur: 14,
               shadowOffsetX: 0,
-              shadowColor: 'rgba(0, 140, 208, 0.5)',
+              shadowColor: 'rgba(0, 0, 0, 0.5)',
             },
           },
           data: pieData,

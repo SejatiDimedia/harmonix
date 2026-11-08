@@ -216,153 +216,130 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
   if (isTvMode) {
     return (
       <div className="fixed inset-0 z-50 bg-[#080f1d] text-[#f8fafc] flex flex-col overflow-hidden select-none">
-        {/* TV Header Bar */}
-        <header className="h-16 px-6 bg-[#0b1424]/95 border-b border-white/[0.08] backdrop-blur-md flex items-center justify-between shrink-0 sticky top-0 z-40 gap-4">
-          {/* Left: Branding & Live Badge */}
-          <div className="flex items-center gap-4 min-w-0">
-            <div className="flex items-center gap-3">
-              <img
-                src="/static/logo.png?v=2"
-                alt="Harmonix"
-                className="w-9 h-9 rounded-xl object-cover shadow-md shadow-sky-950/50 shrink-0"
+        {/* TV Header Bar - Production Clean Single Bar */}
+        <header className="h-14 px-6 bg-[#0b1424]/95 border-b border-white/[0.06] backdrop-blur-md flex items-center justify-between shrink-0 sticky top-0 z-40 gap-4">
+          {/* Left: Branding & Connection Status */}
+          <div className="flex items-center gap-3 min-w-0">
+            <img
+              src="/static/logo.png?v=2"
+              alt="Harmonix"
+              className="w-7 h-7 rounded-lg object-contain shadow-sm shrink-0"
+            />
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="font-semibold text-sm sm:text-base text-slate-100 font-sans tracking-tight truncate max-w-xs md:max-w-md">
+                {sessionTitle || 'Harmonix Dashboard'}
+              </span>
+              <span
+                className="w-2 h-2 rounded-full bg-emerald-400 shrink-0"
+                title={`PostgreSQL Terhubung • Terakhir sinkronisasi: ${lastRefreshedAt.toLocaleTimeString('id-ID')}`}
               />
-              <div className="flex flex-col min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-sm sm:text-base text-slate-100 font-sans tracking-tight truncate max-w-xs md:max-w-md">
-                    {sessionTitle || 'Harmonix Dashboard'}
-                  </span>
-                </div>
-                <span className="text-[11px] text-slate-400 font-sans tracking-normal truncate">
-                  Pemantauan Data Operasional
-                </span>
+            </div>
+          </div>
+
+          {/* Center: Realtime Digital Clock (Single-line executive display) */}
+          <div className="hidden md:flex items-center gap-2 font-mono text-xs text-slate-300 select-none">
+            <Clock className="w-3.5 h-3.5 text-sky-400" />
+            <span className="font-semibold text-slate-100 tracking-wider">
+              {currentTime.toLocaleTimeString('id-ID', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+              })}
+            </span>
+            <span className="text-slate-500">•</span>
+            <span className="text-slate-400 font-sans text-xs">
+              {currentTime.toLocaleDateString('id-ID', {
+                weekday: 'short',
+                day: 'numeric',
+                month: 'short',
+              })}
+            </span>
+          </div>
+
+          {/* Right: Consolidated Minimalist Actions */}
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Compact Refresh Pill */}
+            <div className="flex items-center bg-[#14223b] rounded-lg p-0.5 border border-white/[0.06] text-xs">
+              <button
+                type="button"
+                onClick={() => {
+                  onRefresh();
+                  setLastRefreshedAt(new Date());
+                  setCountdownSec(refreshIntervalSec);
+                }}
+                disabled={isRefreshing}
+                className="p-1.5 text-slate-300 hover:text-white transition cursor-pointer flex items-center gap-1"
+                title={`Segarkan data sekarang ${refreshIntervalSec > 0 ? `(Auto: ${countdownSec}s)` : ''}`}
+              >
+                <RefreshCw className={`w-3.5 h-3.5 text-sky-400 ${isRefreshing ? 'animate-spin' : ''}`} />
+                {refreshIntervalSec > 0 && (
+                  <span className="text-[10px] font-mono text-sky-400 font-semibold">{countdownSec}s</span>
+                )}
+              </button>
+              <div className="h-3 w-px bg-white/[0.08]" />
+              <div className="flex items-center px-1">
+                {[
+                  { label: 'Off', val: 0 },
+                  { label: '30s', val: 30 },
+                  { label: '60s', val: 60 },
+                  { label: '5m', val: 300 },
+                ].map((item) => (
+                  <button
+                    key={item.val}
+                    type="button"
+                    onClick={() => setRefreshIntervalSec(item.val)}
+                    className={`px-2 py-0.5 rounded text-[11px] font-mono transition cursor-pointer ${
+                      refreshIntervalSec === item.val
+                        ? 'bg-sky-600 text-white font-medium shadow-sm'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
               </div>
             </div>
 
-            {/* Static Clean Live Badge */}
-            <div className="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#14223b] border border-white/[0.08] text-slate-300 font-mono text-[11px]">
-              <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-              <span>Live Sync</span>
-            </div>
-          </div>
-
-          {/* Center: Realtime Digital Clock */}
-          <div className="hidden md:flex flex-col items-center justify-center font-mono select-none">
-            <div className="text-xl font-bold tracking-widest text-slate-100 drop-shadow-sm flex items-center gap-1.5">
-              <Clock className="w-4 h-4 text-sky-400" />
-              <span>
-                {currentTime.toLocaleTimeString('id-ID', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  second: '2-digit',
-                })}
-              </span>
-              <span className="text-xs text-sky-400 font-bold ml-0.5">WIB</span>
-            </div>
-            <div className="text-[10px] text-slate-400 tracking-normal font-sans">
-              {currentTime.toLocaleDateString('id-ID', {
-                weekday: 'long',
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric',
-              })}
-            </div>
-          </div>
-
-          {/* Right: Auto-Refresh Controls & Actions */}
-          <div className="flex items-center gap-2.5 shrink-0">
-            {/* Auto-Refresh Interval Selector */}
-            <div className="flex items-center gap-1 bg-[#14223b] p-1 rounded-xl border border-white/[0.06] text-xs font-mono">
-              <span className="text-[10px] text-slate-400 px-1.5 hidden xl:inline">Refresh:</span>
-              {[
-                { label: 'Off', val: 0 },
-                { label: '10s', val: 10 },
-                { label: '30s', val: 30 },
-                { label: '60s', val: 60 },
-                { label: '5m', val: 300 },
-              ].map((item) => (
-                <button
-                  key={item.val}
-                  type="button"
-                  onClick={() => setRefreshIntervalSec(item.val)}
-                  className={`px-2 py-0.5 rounded-lg text-[10px] transition cursor-pointer ${
-                    refreshIntervalSec === item.val
-                      ? 'bg-sky-500 text-white font-bold shadow-sm'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  {item.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Countdown Ticker */}
-            {refreshIntervalSec > 0 && (
-              <span className="text-[11px] font-mono text-sky-400 hidden lg:inline font-semibold">
-                {countdownSec}s
-              </span>
-            )}
-
-            {/* Manual Refresh Button */}
+            {/* Atur Layout Toggle */}
             <button
               type="button"
-              onClick={() => {
-                onRefresh();
-                setLastRefreshedAt(new Date());
-                setCountdownSec(refreshIntervalSec);
-              }}
-              disabled={isRefreshing}
-              className="p-2 rounded-xl bg-[#14223b] hover:bg-[#182a47] text-slate-200 border border-white/[0.06] transition cursor-pointer"
-              title="Segarkan data sekarang"
+              onClick={() => setIsTvEditLayout((prev) => !prev)}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-sans transition cursor-pointer border ${
+                isTvEditLayout
+                  ? 'bg-sky-600 text-white border-sky-500 shadow-sm'
+                  : 'bg-[#14223b] hover:bg-[#1a2d4e] text-slate-300 border-white/[0.06]'
+              }`}
+              title="Atur kolom dan tata letak widget langsung di layar TV"
             >
-              <RefreshCw className={`w-3.5 h-3.5 text-sky-400 ${isRefreshing ? 'animate-spin' : ''}`} />
+              <SlidersHorizontal className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Layout</span>
+            </button>
+
+            {/* Shareable Link Button */}
+            <button
+              type="button"
+              onClick={handleCopyTvLink}
+              className="p-1.5 rounded-lg bg-[#14223b] hover:bg-[#1a2d4e] text-slate-300 border border-white/[0.06] transition cursor-pointer shadow-sm"
+              title="Salin tautan TV Command Center untuk dibagikan"
+            >
+              {copiedTvLink ? (
+                <Check className="w-3.5 h-3.5 text-emerald-400" />
+              ) : (
+                <Share2 className="w-3.5 h-3.5" />
+              )}
             </button>
 
             {/* Fullscreen Button */}
             <button
               type="button"
               onClick={toggleFullscreen}
-              className="p-2 rounded-xl bg-[#14223b] hover:bg-[#182a47] text-slate-200 border border-white/[0.06] transition cursor-pointer"
+              className="p-1.5 rounded-lg bg-[#14223b] hover:bg-[#1a2d4e] text-slate-300 border border-white/[0.06] transition cursor-pointer"
               title="Toggle Fullscreen Layar Penuh"
             >
               <Maximize className="w-3.5 h-3.5 text-slate-300" />
             </button>
 
-            {/* Atur Layout Toggle Button in TV */}
-            <button
-              type="button"
-              onClick={() => setIsTvEditLayout((prev) => !prev)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-sans transition cursor-pointer border ${
-                isTvEditLayout
-                  ? 'bg-sky-600 text-white border-sky-500 shadow-sm'
-                  : 'bg-[#14223b] hover:bg-[#182a47] text-slate-200 border-white/[0.06]'
-              }`}
-              title="Atur kolom dan tata letak widget langsung di layar TV"
-            >
-              <SlidersHorizontal className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">{isTvEditLayout ? 'Selesai Atur' : 'Atur Layout'}</span>
-            </button>
-
-            {/* Shareable Link Button in TV Header */}
-            <button
-              type="button"
-              onClick={handleCopyTvLink}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#14223b] hover:bg-[#182a47] text-slate-200 border border-white/[0.06] text-xs font-sans transition cursor-pointer shadow-sm"
-              title="Salin tautan TV Command Center untuk dibagikan"
-            >
-              {copiedTvLink ? (
-                <>
-                  <Check className="w-3.5 h-3.5 text-emerald-400" />
-                  <span className="text-emerald-400 font-sans hidden sm:inline">Tersalin!</span>
-                </>
-              ) : (
-                <>
-                  <Share2 className="w-3.5 h-3.5 text-sky-400" />
-                  <span className="hidden sm:inline">Salin Link</span>
-                </>
-              )}
-            </button>
-
-            {/* Exit Button (unless standalone TV) */}
+            {/* Exit Button */}
             {!isStandaloneTv && (
               <button
                 type="button"
@@ -370,36 +347,19 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                   setIsTvMode(false);
                   if (onExitTv) onExitTv();
                 }}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-sans transition cursor-pointer border border-slate-700/60"
+                className="p-1.5 rounded-lg bg-[#14223b] hover:bg-rose-950/40 text-slate-400 hover:text-rose-300 border border-white/[0.06] transition cursor-pointer"
                 title="Keluar dari mode TV (Esc)"
               >
                 <X className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Keluar</span>
               </button>
             )}
           </div>
         </header>
 
-        {/* TV Sub-header Status Bar */}
-        <div className="h-8 px-6 bg-[#0a1120] border-b border-white/[0.04] flex items-center justify-between text-[11px] font-mono text-slate-400 shrink-0">
-          <div className="flex items-center gap-3">
-            <span className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-              <span>PostgreSQL 16 • Terhubung</span>
-            </span>
-            <span className="hidden sm:inline text-slate-600">|</span>
-            <span className="hidden sm:inline text-slate-400">Total: {localWidgets.length} Komponen Aktif</span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <span>Sinkronisasi: {lastRefreshedAt.toLocaleTimeString('id-ID')}</span>
-          </div>
-        </div>
-
         {/* TV Main Grid */}
-        <main className="flex-1 p-6 overflow-y-auto">
+        <main className="flex-1 p-5 overflow-y-auto flex flex-col">
           {localWidgets.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center space-y-4 text-center py-20">
+            <div className="h-full flex-1 flex flex-col items-center justify-center space-y-4 text-center py-20">
               <div className="w-16 h-16 rounded-2xl bg-[#14223b] flex items-center justify-center text-slate-400 shadow-lg">
                 <Tv className="w-8 h-8 text-sky-400" />
               </div>
@@ -411,7 +371,11 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-5 w-full max-w-full">
+            <div
+              className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-5 w-full max-w-full ${
+                localWidgets.length <= 2 ? 'flex-1' : ''
+              }`}
+            >
               {localWidgets.map((w, idx) => {
                 const isChart = w.widget_type === 'chart' && w.chart_spec;
                 const isTable = w.widget_type === 'table' && w.table_data;
@@ -425,92 +389,81 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                 return (
                   <div
                     key={w.widget_id}
-                    className={`rounded-2xl bg-[#0b1424] border border-white/[0.08] p-5 shadow-xl flex flex-col justify-between transition-all duration-300 space-y-4 ${getSpanClass(
-                      w.layout_span
-                    )}`}
+                    className={`rounded-2xl bg-[#0b1424] border border-white/[0.08] p-5 shadow-xl flex flex-col justify-between transition-all duration-300 ${
+                      localWidgets.length <= 2 ? 'min-h-[calc(100vh-100px)]' : 'min-h-[440px]'
+                    } ${getSpanClass(w.layout_span)}`}
                   >
                     {/* Header */}
                     <div className="flex items-center justify-between pb-3 border-b border-white/[0.06] gap-3">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <span className="inline-flex items-center justify-center w-6 h-6 rounded-lg bg-[#14223b] text-sky-400 font-mono text-xs font-bold border border-white/[0.06] shrink-0">
-                          {idx + 1}
-                        </span>
-                        <h2 className="text-base font-semibold text-[#f8fafc] font-sans tracking-tight truncate">
-                          {displayTitle}
-                        </h2>
-                      </div>
+                      <h2 className="text-sm sm:text-base font-semibold text-[#f8fafc] font-sans tracking-tight truncate">
+                        {displayTitle}
+                      </h2>
 
-                      <div className="flex items-center gap-2 shrink-0">
-                        {/* Interactive TV Layout Controls */}
-                        {isTvEditLayout && (
-                          <div className="flex items-center gap-1.5 animate-fadeIn">
-                            {/* Reorder Up/Down */}
-                            <div className="flex items-center bg-[#14223b] rounded-lg p-0.5 border border-white/[0.06]">
-                              <button
-                                type="button"
-                                onClick={() => handleMoveWidget(w.widget_id, 'up')}
-                                disabled={idx === 0}
-                                className="p-1 rounded text-slate-400 hover:text-white disabled:opacity-25 transition cursor-pointer"
-                                title="Pindah ke atas"
-                              >
-                                <ArrowUp className="w-3 h-3" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleMoveWidget(w.widget_id, 'down')}
-                                disabled={idx === localWidgets.length - 1}
-                                className="p-1 rounded text-slate-400 hover:text-white disabled:opacity-25 transition cursor-pointer"
-                                title="Pindah ke bawah"
-                              >
-                                <ArrowDown className="w-3 h-3" />
-                              </button>
-                            </div>
-
-                            {/* Segmented Width Selector */}
-                            <div className="inline-flex rounded-lg bg-[#14223b] p-0.5 border border-white/[0.06]">
-                              <button
-                                type="button"
-                                onClick={() => handleSetSpan(w.widget_id, 'half')}
-                                className={`px-2 py-0.5 text-[10px] font-mono rounded transition cursor-pointer ${
-                                  w.layout_span === 'half' || !w.layout_span
-                                    ? 'bg-sky-600 text-white font-medium shadow-sm'
-                                    : 'text-slate-400 hover:text-white'
-                                }`}
-                                title="2 Kolom per baris (50% lebar)"
-                              >
-                                2 Kolom
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleSetSpan(w.widget_id, 'full')}
-                                className={`px-2 py-0.5 text-[10px] font-mono rounded transition cursor-pointer ${
-                                  w.layout_span === 'full'
-                                    ? 'bg-sky-600 text-white font-medium shadow-sm'
-                                    : 'text-slate-400 hover:text-white'
-                                }`}
-                                title="1 Kolom per baris (100% penuh)"
-                              >
-                                1 Kolom
-                              </button>
-                            </div>
+                      {/* Interactive TV Layout Controls */}
+                      {isTvEditLayout && (
+                        <div className="flex items-center gap-1.5 animate-fadeIn shrink-0">
+                          {/* Reorder Up/Down */}
+                          <div className="flex items-center bg-[#14223b] rounded-lg p-0.5 border border-white/[0.06]">
+                            <button
+                              type="button"
+                              onClick={() => handleMoveWidget(w.widget_id, 'up')}
+                              disabled={idx === 0}
+                              className="p-1 rounded text-slate-400 hover:text-white disabled:opacity-25 transition cursor-pointer"
+                              title="Pindah ke atas"
+                            >
+                              <ArrowUp className="w-3 h-3" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleMoveWidget(w.widget_id, 'down')}
+                              disabled={idx === localWidgets.length - 1}
+                              className="p-1 rounded text-slate-400 hover:text-white disabled:opacity-25 transition cursor-pointer"
+                              title="Pindah ke bawah"
+                            >
+                              <ArrowDown className="w-3 h-3" />
+                            </button>
                           </div>
-                        )}
 
-                        <span className="text-[10px] font-mono uppercase px-2.5 py-1 rounded-md bg-[#14223b] text-sky-300 border border-white/[0.04] shrink-0">
-                          {w.widget_type === 'chart' ? (w.chart_spec?.chart_type || 'CHART') : 'TABEL DATA'}
-                        </span>
-                      </div>
+                          {/* Segmented Width Selector */}
+                          <div className="inline-flex rounded-lg bg-[#14223b] p-0.5 border border-white/[0.06]">
+                            <button
+                              type="button"
+                              onClick={() => handleSetSpan(w.widget_id, 'half')}
+                              className={`px-2 py-0.5 text-[10px] font-mono rounded transition cursor-pointer ${
+                                w.layout_span === 'half' || !w.layout_span
+                                  ? 'bg-sky-600 text-white font-medium shadow-sm'
+                                  : 'text-slate-400 hover:text-white'
+                              }`}
+                              title="2 Kolom per baris (50% lebar)"
+                            >
+                              2 Kolom
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleSetSpan(w.widget_id, 'full')}
+                              className={`px-2 py-0.5 text-[10px] font-mono rounded transition cursor-pointer ${
+                                w.layout_span === 'full'
+                                  ? 'bg-sky-600 text-white font-medium shadow-sm'
+                                  : 'text-slate-400 hover:text-white'
+                              }`}
+                              title="1 Kolom per baris (100% penuh)"
+                            >
+                              1 Kolom
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* Card Body */}
-                    <div className="flex-1 min-h-[300px] flex flex-col items-center justify-center">
+                    <div className="flex-1 w-full min-h-[320px] flex flex-col items-center justify-center pt-2">
                       {isChart && (
-                        <div className="w-full flex-1 flex flex-col items-center justify-center">
+                        <div className="w-full h-full flex-1 flex flex-col items-center justify-center">
                           <DataChart charts={[w.chart_spec as ChartSpec]} hideHeader={true} isKiosk={true} />
                         </div>
                       )}
                       {isTable && (
-                        <div className="overflow-x-auto rounded-xl border border-white/[0.06] bg-[#0b1322] w-full max-h-[360px]">
+                        <div className="overflow-x-auto rounded-xl border border-white/[0.06] bg-[#0b1322] w-full max-h-[calc(100vh-220px)]">
                           <table className="w-full text-xs text-left border-collapse table-auto">
                             <thead className="sticky top-0 bg-[#14223b] z-10">
                               <tr>
@@ -526,7 +479,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-white/[0.04]">
-                              {(w.table_data?.rows || []).slice(0, 15).map((row, rIdx) => (
+                              {(w.table_data?.rows || []).slice(0, 20).map((row, rIdx) => (
                                 <tr key={rIdx} className="hover:bg-white/[0.02] transition">
                                   {row.map((val, cellIdx) => {
                                     const colName = w.table_data?.columns?.[cellIdx];

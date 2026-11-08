@@ -31,7 +31,9 @@ const SingleChartCanvas: React.FC<SingleChartProps> = ({
     <div
       className={
         hideHeader
-          ? 'relative w-full h-full min-h-[260px]'
+          ? isKiosk
+            ? 'relative w-full h-full flex-1 min-h-[360px] flex flex-col'
+            : 'relative w-full h-full min-h-[260px]'
           : 'rounded-xl border border-white/[0.06] bg-[#0f1a2e] p-4 overflow-hidden shadow-sm'
       }
     >
@@ -61,7 +63,15 @@ const SingleChartCanvas: React.FC<SingleChartProps> = ({
         </div>
       )}
 
-      <div className={hideHeader ? 'chart-wrapper w-full h-full min-h-[260px]' : 'chart-wrapper relative w-full h-64 md:h-72 print:h-[250px] print:max-w-xl print:mx-auto'}>
+      <div
+        className={
+          hideHeader
+            ? isKiosk
+              ? 'chart-wrapper w-full h-full flex-1 min-h-[360px]'
+              : 'chart-wrapper w-full h-full min-h-[260px]'
+            : 'chart-wrapper relative w-full h-64 md:h-72 print:h-[250px] print:max-w-xl print:mx-auto'
+        }
+      >
         <EChartsViewer
           spec={spec}
           tables={tables}
@@ -83,7 +93,7 @@ export const DataChart: React.FC<DataChartProps> = ({
   if (!charts || charts.length === 0) return null;
 
   return (
-    <div className={hideHeader ? 'w-full' : 'space-y-4 mt-4'}>
+    <div className={hideHeader ? (isKiosk ? 'w-full h-full flex-1 flex flex-col' : 'w-full') : 'space-y-4 mt-4'}>
       {charts.map((c, idx) => (
         <SingleChartCanvas
           key={idx}
