@@ -208,6 +208,8 @@ export interface BatchJobRecord {
   completed_queries: number;
   failed_queries: number;
   engine: string;
+  model?: string;
+  provider?: string;
   items: BatchQueryItem[];
   created_at: number;
   completed_at?: number | null;

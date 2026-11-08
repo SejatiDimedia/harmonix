@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   X,
   FileText,
@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
-import { BatchJobRecord, BatchQueryItem } from '../types';
+import { BatchJobRecord } from '../types';
 import { getBatchJob } from '../services/api';
 import { formatPseudoTableToMarkdown } from '../utils/formatters';
 
@@ -419,7 +419,7 @@ export const BatchResultsModal: React.FC<BatchResultsModalProps> = ({
 
                 {/* Items List */}
                 <div className="flex-1 overflow-y-auto p-2 space-y-1.5">
-                  {filteredItems.map((item, idx) => {
+                  {filteredItems.map((item) => {
                     const isSelected = item.query_id === selectedItem?.query_id;
                     const itemIndex = items.findIndex((it) => it.query_id === item.query_id) + 1;
                     return (

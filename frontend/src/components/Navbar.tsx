@@ -12,7 +12,7 @@ interface NavbarProps {
 }
 
 const NavbarComponent: React.FC<NavbarProps> = ({
-  health,
+  health: _health,
   activeTab,
   isSidebarOpen = true,
   isMetricsOpen = false,

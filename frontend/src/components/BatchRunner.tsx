@@ -13,8 +13,6 @@ import {
   ChevronDown,
   ChevronRight,
   Upload,
-  Database,
-  Sliders,
   FileSpreadsheet,
   Check,
   Copy,
