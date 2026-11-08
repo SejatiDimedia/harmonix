@@ -91,6 +91,37 @@ export const App: React.FC = () => {
   const abortControllerRef = useRef<AbortController | null>(null);
   const hasAutoRestored = useRef(false);
 
+  // Standalone TV Kiosk Route Detection (/tv/:sessionId or ?tv=true&session=:sessionId)
+  const [isStandaloneTv, setIsStandaloneTv] = useState(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const path = window.location.pathname;
+    return searchParams.get('tv') === 'true' || path.startsWith('/tv/');
+  });
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const path = window.location.pathname;
+    let targetSessionId: string | null = null;
+
+    if (path.startsWith('/tv/')) {
+      const parts = path.split('/').filter(Boolean);
+      if (parts.length >= 2) {
+        targetSessionId = parts[1];
+      }
+    } else if (searchParams.get('session')) {
+      targetSessionId = searchParams.get('session');
+    }
+
+    if (targetSessionId) {
+      setCurrentSessionId(targetSessionId);
+    }
+
+    if (searchParams.get('tv') === 'true' || path.startsWith('/tv/')) {
+      setIsStandaloneTv(true);
+      setActiveTab('dashboard');
+    }
+  }, [setCurrentSessionId, setActiveTab]);
+
   // Auto-restore most recent session on initial load if none is selected
   useEffect(() => {
     if (!hasAutoRestored.current && !currentSessionId && sessionsData?.sessions && sessionsData.sessions.length > 0) {
@@ -739,6 +770,37 @@ export const App: React.FC = () => {
 
   const showHero = turns.length === 0 && !streamingTurn;
   const widgetCount = dashboardData?.total || 0;
+
+  if (isStandaloneTv) {
+    return (
+      <div className="flex h-screen w-screen overflow-hidden bg-[#080f1d] text-[#f8fafc] font-sans antialiased">
+        <DashboardCanvas
+          widgets={dashboardData?.widgets || []}
+          isLoading={isDashboardLoading}
+          isRefreshing={refreshDashboardMutation.isPending}
+          onRefresh={handleRefreshDashboard}
+          onDeleteWidget={handleDeleteWidget}
+          onSwitchToChat={() => {
+            setIsStandaloneTv(false);
+            window.history.pushState({}, '', '/');
+            setActiveTab('chat');
+          }}
+          sessionTitle={sessionDetailsData?.title}
+          sessionId={currentSessionId || undefined}
+          activeModel={activeModel}
+          showToast={showToast}
+          initialTvMode={true}
+          isStandaloneTv={true}
+          onExitTv={() => {
+            setIsStandaloneTv(false);
+            window.history.pushState({}, '', '/');
+            setActiveTab('dashboard');
+          }}
+        />
+        <Toast message={toastMessage} />
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[#080f1d] text-[#f8fafc] print:h-auto print:w-full print:max-w-full print:bg-white print:overflow-visible print:text-gray-900 print:block">

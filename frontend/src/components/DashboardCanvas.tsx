@@ -19,6 +19,8 @@ import {
   Clock,
   Maximize,
   X,
+  Share2,
+  Check,
 } from 'lucide-react';
 import { DashboardWidget, ChartSpec, TableData } from '../types';
 import { DataChart } from './DataChart';
@@ -65,6 +67,22 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
   const [countdownSec, setCountdownSec] = useState<number>(30);
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
   const [lastRefreshedAt, setLastRefreshedAt] = useState<Date>(new Date());
+  const [copiedTvLink, setCopiedTvLink] = useState(false);
+
+  const handleCopyTvLink = () => {
+    if (!sessionId) {
+      if (showToast) showToast('Pilih atau buat sesi percakapan terlebih dahulu');
+      return;
+    }
+    const origin = window.location.origin;
+    const tvUrl = `${origin}/tv/${sessionId}`;
+    navigator.clipboard.writeText(tvUrl);
+    setCopiedTvLink(true);
+    setTimeout(() => setCopiedTvLink(false), 2500);
+    if (showToast) {
+      showToast('Tautan TV Command Center disalin ke clipboard!');
+    }
+  };
 
   // 1. Digital Clock Timer (1s updates)
   useEffect(() => {
@@ -305,6 +323,26 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
               title="Toggle Fullscreen Layar Penuh"
             >
               <Maximize className="w-3.5 h-3.5 text-slate-300" />
+            </button>
+
+            {/* Shareable Link Button in TV Header */}
+            <button
+              type="button"
+              onClick={handleCopyTvLink}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#14223b] hover:bg-[#182a47] text-slate-200 border border-white/[0.06] text-xs font-sans transition cursor-pointer shadow-sm"
+              title="Salin tautan TV Command Center untuk dibagikan"
+            >
+              {copiedTvLink ? (
+                <>
+                  <Check className="w-3.5 h-3.5 text-emerald-400" />
+                  <span className="text-emerald-400 font-sans hidden sm:inline">Tersalin!</span>
+                </>
+              ) : (
+                <>
+                  <Share2 className="w-3.5 h-3.5 text-sky-400" />
+                  <span className="hidden sm:inline">Salin Link</span>
+                </>
+              )}
             </button>
 
             {/* Exit Button (unless standalone TV) */}
@@ -560,6 +598,27 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
           </div>
 
           <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
+            <button
+              type="button"
+              onClick={handleCopyTvLink}
+              disabled={widgets.length === 0}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#14223b] hover:bg-[#182a47] disabled:opacity-40 text-[#94a3b8] hover:text-[#f8fafc] text-xs font-medium transition shadow-sm cursor-pointer disabled:cursor-not-allowed"
+              aria-label="Salin tautan TV Command Center untuk dibagikan"
+              title="Salin URL mode TV untuk dibuka di browser lain atau monitor kantor"
+            >
+              {copiedTvLink ? (
+                <>
+                  <Check className="w-3.5 h-3.5 text-emerald-400" />
+                  <span className="text-emerald-400 font-sans">Tersalin!</span>
+                </>
+              ) : (
+                <>
+                  <Share2 className="w-3.5 h-3.5 text-sky-400" />
+                  <span>Bagikan Link TV</span>
+                </>
+              )}
+            </button>
+
             <button
               type="button"
               onClick={() => setIsTvMode(true)}
