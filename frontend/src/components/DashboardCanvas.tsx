@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   LayoutDashboard,
   RefreshCw,
@@ -162,44 +162,205 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
     }
   };
 
-  const getSpanClass = (span?: string) => {
-    if (span === 'full') return 'lg:col-span-12';
-    if (span === 'third') return 'lg:col-span-4';
-    return 'lg:col-span-6';
+  const tvGridRef = useRef<HTMLDivElement>(null);
+  const normalGridRef = useRef<HTMLDivElement>(null);
+
+  interface ResizingState {
+    widgetId: string;
+    startX: number;
+    startY: number;
+    startCols: number;
+    startHeight: number;
+    currentCols: number;
+    currentHeight: number;
+    gridWidth: number;
+  }
+  const [resizingState, setResizingState] = useState<ResizingState | null>(null);
+
+  const parseColSpan = (span?: string | number): number => {
+    if (typeof span === 'number') return Math.max(3, Math.min(12, span));
+    if (!span) return 6;
+    if (span === 'full') return 12;
+    if (span === 'half') return 6;
+    if (span === 'third') return 4;
+    const num = parseInt(span, 10);
+    return isNaN(num) ? 6 : Math.max(3, Math.min(12, num));
   };
 
-  const getHeightClass = (height?: string, isKiosk: boolean = false) => {
-    if (isKiosk) {
-      if (height === 'compact') return 'min-h-[340px]';
-      if (height === 'tall') return 'min-h-[580px]';
-      return 'min-h-[460px]';
+  const parseHeightPx = (height?: string | number, isKiosk: boolean = false): number => {
+    if (typeof height === 'number') return Math.max(260, Math.min(900, height));
+    if (!height) return isKiosk ? 460 : 440;
+    if (height === 'compact') return isKiosk ? 340 : 320;
+    if (height === 'normal') return isKiosk ? 460 : 440;
+    if (height === 'tall') return isKiosk ? 580 : 560;
+    const num = parseInt(height, 10);
+    return isNaN(num) ? (isKiosk ? 460 : 440) : Math.max(260, Math.min(900, num));
+  };
+
+  const getSpanClass = (span?: string | number): string => {
+    const n = parseColSpan(span);
+    switch (n) {
+      case 3:
+        return 'col-span-12 sm:col-span-6 md:col-span-4 lg:col-span-3';
+      case 4:
+        return 'col-span-12 sm:col-span-6 md:col-span-6 lg:col-span-4';
+      case 5:
+        return 'col-span-12 sm:col-span-6 md:col-span-6 lg:col-span-5';
+      case 6:
+        return 'col-span-12 md:col-span-6 lg:col-span-6';
+      case 7:
+        return 'col-span-12 md:col-span-12 lg:col-span-7';
+      case 8:
+        return 'col-span-12 md:col-span-12 lg:col-span-8';
+      case 9:
+        return 'col-span-12 md:col-span-12 lg:col-span-9';
+      case 10:
+        return 'col-span-12 md:col-span-12 lg:col-span-10';
+      case 11:
+        return 'col-span-12 md:col-span-12 lg:col-span-11';
+      case 12:
+        return 'col-span-12 md:col-span-12 lg:col-span-12';
+      default:
+        return 'col-span-12 md:col-span-6 lg:col-span-6';
     }
-    if (height === 'compact') return 'min-h-[320px]';
-    if (height === 'tall') return 'min-h-[560px]';
-    return 'min-h-[440px]';
   };
 
-  const handleSetSpan = (widgetId: string, span: 'half' | 'full' | 'third') => {
-    const updated = localWidgets.map((w) => {
-      if (w.widget_id === widgetId) {
-        return { ...w, layout_span: span };
-      }
-      return w;
+  const handleStartResize = (
+    e: React.MouseEvent,
+    widgetId: string,
+    currentCols: number,
+    currentHeight: number,
+    isTv: boolean
+  ) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const gridEl = isTv ? tvGridRef.current : normalGridRef.current;
+    const gridWidth = gridEl ? gridEl.getBoundingClientRect().width : window.innerWidth;
+
+    setResizingState({
+      widgetId,
+      startX: e.clientX,
+      startY: e.clientY,
+      startCols: currentCols,
+      startHeight: currentHeight,
+      currentCols,
+      currentHeight,
+      gridWidth,
     });
-    setLocalWidgets(updated);
-    persistLayout(updated);
   };
 
-  const handleSetHeight = (widgetId: string, height: 'compact' | 'normal' | 'tall') => {
-    const updated = localWidgets.map((w) => {
-      if (w.widget_id === widgetId) {
-        return { ...w, layout_height: height };
-      }
-      return w;
+  const handleStartResizeTouch = (
+    e: React.TouchEvent,
+    widgetId: string,
+    currentCols: number,
+    currentHeight: number,
+    isTv: boolean
+  ) => {
+    if (e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    const gridEl = isTv ? tvGridRef.current : normalGridRef.current;
+    const gridWidth = gridEl ? gridEl.getBoundingClientRect().width : window.innerWidth;
+
+    setResizingState({
+      widgetId,
+      startX: touch.clientX,
+      startY: touch.clientY,
+      startCols: currentCols,
+      startHeight: currentHeight,
+      currentCols,
+      currentHeight,
+      gridWidth,
     });
-    setLocalWidgets(updated);
-    persistLayout(updated);
   };
+
+  useEffect(() => {
+    if (!resizingState) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const deltaX = e.clientX - resizingState.startX;
+      const deltaY = e.clientY - resizingState.startY;
+
+      const colWidth = Math.max(40, resizingState.gridWidth / 12);
+      const deltaCols = Math.round(deltaX / colWidth);
+      const newCols = Math.max(3, Math.min(12, resizingState.startCols + deltaCols));
+      const newHeight = Math.max(260, Math.min(900, Math.round(resizingState.startHeight + deltaY)));
+
+      setResizingState((prev) =>
+        prev
+          ? {
+              ...prev,
+              currentCols: newCols,
+              currentHeight: newHeight,
+            }
+          : null
+      );
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (e.touches.length !== 1) return;
+      const touch = e.touches[0];
+      const deltaX = touch.clientX - resizingState.startX;
+      const deltaY = touch.clientY - resizingState.startY;
+
+      const colWidth = Math.max(40, resizingState.gridWidth / 12);
+      const deltaCols = Math.round(deltaX / colWidth);
+      const newCols = Math.max(3, Math.min(12, resizingState.startCols + deltaCols));
+      const newHeight = Math.max(260, Math.min(900, Math.round(resizingState.startHeight + deltaY)));
+
+      setResizingState((prev) =>
+        prev
+          ? {
+              ...prev,
+              currentCols: newCols,
+              currentHeight: newHeight,
+            }
+          : null
+      );
+    };
+
+    const handleEnd = () => {
+      const finalState = resizingState;
+      if (!finalState) return;
+
+      const { widgetId, currentCols, currentHeight, startCols, startHeight } = finalState;
+      setResizingState(null);
+
+      if (currentCols !== startCols || currentHeight !== startHeight) {
+        setLocalWidgets((prev) => {
+          const updated = prev.map((w) => {
+            if (w.widget_id === widgetId) {
+              return {
+                ...w,
+                layout_span: String(currentCols),
+                layout_height: String(currentHeight),
+              };
+            }
+            return w;
+          });
+          persistLayout(updated);
+          return updated;
+        });
+      }
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleEnd);
+    window.addEventListener('touchmove', handleTouchMove);
+    window.addEventListener('touchend', handleEnd);
+
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'se-resize';
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleEnd);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleEnd);
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+    };
+  }, [resizingState]);
 
   const handleMoveWidget = (widgetId: string, direction: 'up' | 'down') => {
     const idx = localWidgets.findIndex((w) => w.widget_id === widgetId);
@@ -332,10 +493,10 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                   ? 'bg-sky-600 text-white border-sky-500 shadow-sm'
                   : 'bg-[#14223b] hover:bg-[#1a2d4e] text-slate-300 border-white/[0.06]'
               }`}
-              title="Atur kolom dan tata letak widget langsung di layar TV"
+              title="Atur ukuran dan tata letak widget langsung di layar TV"
             >
               <SlidersHorizontal className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Layout</span>
+              <span className="hidden sm:inline">{isTvEditLayout ? 'Selesai Atur' : 'Atur Layout'}</span>
             </button>
 
             {/* Shareable Link Button */}
@@ -395,13 +556,18 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
             </div>
           ) : (
             <div
-              className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-5 w-full max-w-full ${
-                localWidgets.length <= 2 ? 'flex-1' : ''
-              }`}
+              ref={tvGridRef}
+              className="grid grid-cols-12 gap-5 w-full max-w-full"
             >
               {localWidgets.map((w, idx) => {
                 const isChart = w.widget_type === 'chart' && w.chart_spec;
                 const isTable = w.widget_type === 'table' && w.table_data;
+                const isBeingResized = resizingState?.widgetId === w.widget_id;
+                const effectiveCols = isBeingResized ? resizingState.currentCols : parseColSpan(w.layout_span);
+                const effectiveHeight = isBeingResized
+                  ? resizingState.currentHeight
+                  : parseHeightPx(w.layout_height, true);
+
                 const displayTitle =
                   w.widget_type === 'chart'
                     ? getChartDescriptiveTitle(w.chart_spec, w.title)
@@ -412,19 +578,22 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                 return (
                   <div
                     key={w.widget_id}
-                    className={`rounded-2xl bg-[#0b1424] border border-white/[0.08] p-5 shadow-xl flex flex-col justify-between transition-all duration-300 ${
-                      localWidgets.length <= 2 ? 'min-h-[calc(100vh-100px)]' : getHeightClass(w.layout_height, true)
-                    } ${getSpanClass(w.layout_span)}`}
+                    style={{ height: `${effectiveHeight}px`, minHeight: `${effectiveHeight}px` }}
+                    className={`relative rounded-2xl bg-[#0b1424] border border-white/[0.08] p-5 shadow-xl flex flex-col justify-between ${
+                      isBeingResized
+                        ? 'transition-none ring-2 ring-sky-500/80 shadow-2xl shadow-sky-950/50 z-30'
+                        : 'transition-all duration-150'
+                    } ${getSpanClass(effectiveCols)}`}
                   >
                     {/* Header */}
-                    <div className="flex items-center justify-between pb-3 border-b border-white/[0.06] gap-3">
+                    <div className="flex items-center justify-between pb-3 border-b border-white/[0.06] gap-3 shrink-0">
                       <h2 className="text-sm sm:text-base font-semibold text-[#f8fafc] font-sans tracking-tight truncate">
                         {displayTitle}
                       </h2>
 
                       {/* Interactive TV Layout Controls */}
                       {isTvEditLayout && (
-                        <div className="flex items-center gap-1.5 animate-fadeIn shrink-0">
+                        <div className="flex items-center gap-2 animate-fadeIn shrink-0">
                           {/* Reorder Up/Down */}
                           <div className="flex items-center bg-[#14223b] rounded-lg p-0.5 border border-white/[0.06]">
                             <button
@@ -447,98 +616,23 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                             </button>
                           </div>
 
-                          {/* Segmented Width Selector */}
-                          <div className="inline-flex rounded-lg bg-[#14223b] p-0.5 border border-white/[0.06]">
-                            <button
-                              type="button"
-                              onClick={() => handleSetSpan(w.widget_id, 'third')}
-                              className={`px-2 py-0.5 text-[10px] font-mono rounded transition cursor-pointer ${
-                                w.layout_span === 'third'
-                                  ? 'bg-sky-600 text-white font-medium shadow-sm'
-                                  : 'text-slate-400 hover:text-white'
-                              }`}
-                              title="3 Kolom per baris (33% lebar)"
-                            >
-                              1/3
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleSetSpan(w.widget_id, 'half')}
-                              className={`px-2 py-0.5 text-[10px] font-mono rounded transition cursor-pointer ${
-                                w.layout_span === 'half' || !w.layout_span
-                                  ? 'bg-sky-600 text-white font-medium shadow-sm'
-                                  : 'text-slate-400 hover:text-white'
-                              }`}
-                              title="2 Kolom per baris (50% lebar)"
-                            >
-                              1/2
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleSetSpan(w.widget_id, 'full')}
-                              className={`px-2 py-0.5 text-[10px] font-mono rounded transition cursor-pointer ${
-                                w.layout_span === 'full'
-                                  ? 'bg-sky-600 text-white font-medium shadow-sm'
-                                  : 'text-slate-400 hover:text-white'
-                              }`}
-                              title="1 Kolom per baris (100% penuh)"
-                            >
-                              Penuh
-                            </button>
-                          </div>
-
-                          {/* Segmented Height Selector */}
-                          <div className="inline-flex rounded-lg bg-[#14223b] p-0.5 border border-white/[0.06]">
-                            <button
-                              type="button"
-                              onClick={() => handleSetHeight(w.widget_id, 'compact')}
-                              className={`px-2 py-0.5 text-[10px] font-mono rounded transition cursor-pointer ${
-                                w.layout_height === 'compact'
-                                  ? 'bg-sky-600 text-white font-medium shadow-sm'
-                                  : 'text-slate-400 hover:text-white'
-                              }`}
-                              title="Tinggi ringkas (340px)"
-                            >
-                              T: S
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleSetHeight(w.widget_id, 'normal')}
-                              className={`px-2 py-0.5 text-[10px] font-mono rounded transition cursor-pointer ${
-                                w.layout_height === 'normal' || !w.layout_height
-                                  ? 'bg-sky-600 text-white font-medium shadow-sm'
-                                  : 'text-slate-400 hover:text-white'
-                              }`}
-                              title="Tinggi standar (460px)"
-                            >
-                              T: M
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleSetHeight(w.widget_id, 'tall')}
-                              className={`px-2 py-0.5 text-[10px] font-mono rounded transition cursor-pointer ${
-                                w.layout_height === 'tall'
-                                  ? 'bg-sky-600 text-white font-medium shadow-sm'
-                                  : 'text-slate-400 hover:text-white'
-                              }`}
-                              title="Tinggi maksimal (580px)"
-                            >
-                              T: L
-                            </button>
-                          </div>
+                          {/* Dimension Indicator Badge */}
+                          <span className="text-[11px] font-mono text-slate-300 px-2 py-0.5 rounded bg-[#14223b] border border-white/[0.06]">
+                            {effectiveCols}/12 Kolom • {effectiveHeight}px
+                          </span>
                         </div>
                       )}
                     </div>
 
                     {/* Card Body */}
-                    <div className="flex-1 w-full min-h-[320px] flex flex-col items-center justify-center pt-2">
+                    <div className="flex-1 w-full min-h-0 flex flex-col items-center justify-center pt-2 overflow-hidden">
                       {isChart && (
-                        <div className="w-full h-full flex-1 flex flex-col items-center justify-center">
+                        <div className="w-full h-full flex-1 flex flex-col items-center justify-center min-h-0">
                           <DataChart charts={[w.chart_spec as ChartSpec]} hideHeader={true} isKiosk={true} />
                         </div>
                       )}
                       {isTable && (
-                        <div className="overflow-x-auto rounded-xl border border-white/[0.06] bg-[#0b1322] w-full max-h-[calc(100vh-220px)]">
+                        <div className="overflow-x-auto overflow-y-auto rounded-xl border border-white/[0.06] bg-[#0b1322] w-full h-full max-h-full">
                           <table className="w-full text-xs text-left border-collapse table-auto">
                             <thead className="sticky top-0 bg-[#14223b] z-10">
                               <tr>
@@ -554,7 +648,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-white/[0.04]">
-                              {(w.table_data?.rows || []).slice(0, 20).map((row, rIdx) => (
+                              {(w.table_data?.rows || []).slice(0, 50).map((row, rIdx) => (
                                 <tr key={rIdx} className="hover:bg-white/[0.02] transition">
                                   {row.map((val, cellIdx) => {
                                     const colName = w.table_data?.columns?.[cellIdx];
@@ -577,6 +671,29 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                         </div>
                       )}
                     </div>
+
+                    {/* Interactive Drag-to-Resize Corner Handle */}
+                    {isTvEditLayout && (
+                      <div
+                        onMouseDown={(e) => handleStartResize(e, w.widget_id, effectiveCols, effectiveHeight, true)}
+                        onTouchStart={(e) => handleStartResizeTouch(e, w.widget_id, effectiveCols, effectiveHeight, true)}
+                        className="absolute bottom-1.5 right-1.5 w-6 h-6 rounded-md bg-[#14223b]/90 hover:bg-sky-600 text-slate-400 hover:text-white flex items-center justify-center cursor-se-resize transition-all border border-white/[0.08] hover:border-sky-400/50 z-30 group shadow-md select-none"
+                        title="Tarik sudut untuk mengatur lebar kolom dan tinggi pixel"
+                      >
+                        <svg className="w-3.5 h-3.5 text-slate-400 group-hover:text-white" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round">
+                          <line x1="6" y1="14" x2="14" y2="6" />
+                          <line x1="10" y1="14" x2="14" y2="10" />
+                          <line x1="13.5" y1="14" x2="14" y2="13.5" />
+                        </svg>
+                      </div>
+                    )}
+
+                    {/* Floating dimension tooltip badge during drag */}
+                    {isBeingResized && (
+                      <div className="absolute top-3 right-3 px-2.5 py-1 rounded-md bg-sky-600/95 text-white font-mono text-xs font-semibold shadow-lg backdrop-blur-sm border border-sky-400/50 pointer-events-none z-40 animate-pulse">
+                        {effectiveCols}/12 Kolom • {effectiveHeight}px
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -789,11 +906,20 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
 
         {/* Widgets Grid */}
         {localWidgets.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 print:block print:space-y-6 gap-6 w-full max-w-full">
+          <div
+            ref={normalGridRef}
+            className="grid grid-cols-12 print:block print:space-y-6 gap-6 w-full max-w-full"
+          >
             {localWidgets.map((w, idx) => {
               const isChart = w.widget_type === 'chart' && w.chart_spec;
               const isTable = w.widget_type === 'table' && w.table_data;
               const isSqlExpanded = !!expandedSqlIds[w.widget_id];
+              const isBeingResized = resizingState?.widgetId === w.widget_id;
+              const effectiveCols = isBeingResized ? resizingState.currentCols : parseColSpan(w.layout_span);
+              const effectiveHeight = isBeingResized
+                ? resizingState.currentHeight
+                : parseHeightPx(w.layout_height, false);
+
               const displayTitle =
                 w.widget_type === 'chart'
                   ? getChartDescriptiveTitle(w.chart_spec, w.title)
@@ -804,12 +930,17 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
               return (
                 <div
                   key={w.widget_id}
-                  className={`print-widget-card rounded-2xl bg-[#0f1a2e] print:bg-white border border-white/[0.06] print:border-gray-300 p-5 shadow-md shadow-black/20 flex flex-col justify-between transition-all duration-200 space-y-4 print:space-y-3 print:rounded-xl print:p-0 print:overflow-hidden ${getSpanClass(
-                    w.layout_span
-                  )} ${getHeightClass(w.layout_height, false)}`}
+                  style={{ height: `${effectiveHeight}px`, minHeight: `${effectiveHeight}px` }}
+                  className={`print-widget-card relative rounded-2xl bg-[#0f1a2e] print:bg-white border border-white/[0.06] print:border-gray-300 p-5 shadow-md shadow-black/20 flex flex-col justify-between ${
+                    isBeingResized
+                      ? 'transition-none ring-2 ring-sky-500/80 shadow-2xl shadow-sky-950/50 z-30'
+                      : 'transition-all duration-150'
+                  } space-y-4 print:space-y-3 print:rounded-xl print:p-0 print:overflow-hidden ${getSpanClass(
+                    effectiveCols
+                  )}`}
                 >
                   {/* Card Header (Corporate Styled on Print) */}
-                  <div className="flex items-start justify-between gap-3 pb-3 border-b border-white/[0.04] print:bg-gray-50/80 print:p-4 print:pb-3 print:border-b print:border-gray-200">
+                  <div className="flex items-start justify-between gap-3 pb-3 border-b border-white/[0.04] print:bg-gray-50/80 print:p-4 print:pb-3 print:border-b print:border-gray-200 shrink-0">
                     <div className="space-y-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="print-only hidden inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-900 text-white font-mono text-[10px] font-bold shrink-0">
@@ -868,91 +999,13 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                         <ArrowDown className="w-3.5 h-3.5" />
                       </button>
 
-                      {/* Segmented Width Selector: 1/3, 1/2, Penuh */}
-                      <div className="inline-flex rounded-lg bg-[#14223b] p-0.5 border border-white/[0.06] shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => handleSetSpan(w.widget_id, 'third')}
-                          className={`px-2 py-1 text-[11px] font-mono rounded transition cursor-pointer ${
-                            w.layout_span === 'third'
-                              ? 'bg-sky-600 text-white font-medium shadow-sm'
-                              : 'text-[#94a3b8] hover:text-[#f8fafc]'
-                          }`}
-                          aria-label="Atur tampilan 3 kolom per baris (33%)"
-                          title="3 Kolom per baris (33% lebar baris)"
-                        >
-                          1/3
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleSetSpan(w.widget_id, 'half')}
-                          className={`px-2 py-1 text-[11px] font-mono rounded transition cursor-pointer ${
-                            w.layout_span === 'half' || !w.layout_span
-                              ? 'bg-sky-600 text-white font-medium shadow-sm'
-                              : 'text-[#94a3b8] hover:text-[#f8fafc]'
-                          }`}
-                          aria-label="Atur tampilan 2 kolom per baris (50%)"
-                          title="2 Kolom per baris (50% lebar baris)"
-                        >
-                          1/2
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleSetSpan(w.widget_id, 'full')}
-                          className={`px-2 py-1 text-[11px] font-mono rounded transition cursor-pointer ${
-                            w.layout_span === 'full'
-                              ? 'bg-sky-600 text-white font-medium shadow-sm'
-                              : 'text-[#94a3b8] hover:text-[#f8fafc]'
-                          }`}
-                          aria-label="Atur tampilan 1 kolom per baris (100% penuh)"
-                          title="1 Kolom per baris (100% lebar penuh)"
-                        >
-                          Penuh
-                        </button>
-                      </div>
-
-                      {/* Segmented Height Selector: S (320px), M (440px), L (560px) */}
-                      <div className="inline-flex rounded-lg bg-[#14223b] p-0.5 border border-white/[0.06] shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => handleSetHeight(w.widget_id, 'compact')}
-                          className={`px-2 py-1 text-[11px] font-mono rounded transition cursor-pointer ${
-                            w.layout_height === 'compact'
-                              ? 'bg-sky-600 text-white font-medium shadow-sm'
-                              : 'text-[#94a3b8] hover:text-[#f8fafc]'
-                          }`}
-                          aria-label="Atur tinggi ringkas (320px)"
-                          title="Tinggi ringkas (320px)"
-                        >
-                          T: S
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleSetHeight(w.widget_id, 'normal')}
-                          className={`px-2 py-1 text-[11px] font-mono rounded transition cursor-pointer ${
-                            w.layout_height === 'normal' || !w.layout_height
-                              ? 'bg-sky-600 text-white font-medium shadow-sm'
-                              : 'text-[#94a3b8] hover:text-[#f8fafc]'
-                          }`}
-                          aria-label="Atur tinggi standar (440px)"
-                          title="Tinggi standar (440px)"
-                        >
-                          T: M
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleSetHeight(w.widget_id, 'tall')}
-                          className={`px-2 py-1 text-[11px] font-mono rounded transition cursor-pointer ${
-                            w.layout_height === 'tall'
-                              ? 'bg-sky-600 text-white font-medium shadow-sm'
-                              : 'text-[#94a3b8] hover:text-[#f8fafc]'
-                          }`}
-                          aria-label="Atur tinggi maksimal (560px)"
-                          title="Tinggi maksimal (560px)"
-                        >
-                          T: L
-                        </button>
-                      </div>
+                      {/* Dimension Indicator Badge */}
+                      <span
+                        className="text-[11px] font-mono text-slate-300 px-2 py-1 rounded-lg bg-[#14223b] border border-white/[0.06] shrink-0"
+                        title="Ukuran grid saat ini (kolom x pixel)"
+                      >
+                        {effectiveCols}/12 Kolom • {effectiveHeight}px
+                      </span>
 
                       {/* Unduh CSV Button for Table Widget */}
                       {isTable && w.table_data && (
@@ -995,10 +1048,10 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                   </div>
 
                   {/* Card Body: Chart or Table */}
-                  <div className="flex-1 min-h-[240px] flex flex-col items-center justify-center print:bg-white print:p-4 print:pt-1">
+                  <div className="flex-1 w-full min-h-0 flex flex-col items-center justify-center overflow-hidden print:bg-white print:p-4 print:pt-1">
                     {isChart && (
-                      <div className="w-full flex-1 flex flex-col items-center justify-center print:bg-white">
-                        <div className="chart-wrapper w-full flex-1 flex items-center justify-center print:h-[250px] print:max-w-xl print:mx-auto">
+                      <div className="w-full h-full flex-1 min-h-0 flex flex-col items-center justify-center print:bg-white">
+                        <div className="chart-wrapper w-full h-full flex-1 min-h-0 flex items-center justify-center print:h-[250px] print:max-w-xl print:mx-auto">
                           <DataChart charts={[w.chart_spec as ChartSpec]} hideHeader={true} />
                         </div>
                         <div className="print-only hidden text-center text-[8.5pt] text-gray-500 font-sans mt-3 italic">
@@ -1008,7 +1061,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                     )}
 
                     {isTable && (
-                      <div className="overflow-x-auto rounded-xl border border-white/[0.06] bg-[#0b1322] w-full print:bg-white print:border print:border-gray-200 print:rounded-lg print:overflow-hidden">
+                      <div className="overflow-x-auto overflow-y-auto rounded-xl border border-white/[0.06] bg-[#0b1322] w-full h-full max-h-full print:bg-white print:border print:border-gray-200 print:rounded-lg print:overflow-hidden">
                         <table className="w-full text-xs text-left border-collapse table-auto print:bg-white">
                           <thead>
                             <tr className="print:bg-gray-100">
@@ -1024,7 +1077,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                             </tr>
                           </thead>
                           <tbody>
-                            {(w.table_data?.rows || []).slice(0, 25).map((row, rIdx) => (
+                            {(w.table_data?.rows || []).slice(0, 50).map((row, rIdx) => (
                               <tr
                                 key={rIdx}
                                 className={`${rIdx % 2 === 0 ? 'bg-[#0f1a2e]' : 'bg-[#111e33]'
@@ -1048,9 +1101,9 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                             ))}
                           </tbody>
                         </table>
-                        {(w.table_data?.rows?.length || 0) > 25 && (
+                        {(w.table_data?.rows?.length || 0) > 50 && (
                           <div className="print-only hidden text-[8pt] text-gray-500 font-mono mt-1.5 italic">
-                            * Menampilkan 25 baris pertama dari total {w.table_data?.rows?.length} baris data.
+                            * Menampilkan 50 baris pertama dari total {w.table_data?.rows?.length} baris data.
                           </div>
                         )}
                       </div>
@@ -1081,6 +1134,27 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                           {formatSQL(w.sql_query)}
                         </div>
                       )}
+                    </div>
+                  )}
+
+                  {/* Interactive Drag-to-Resize Corner Handle */}
+                  <div
+                    onMouseDown={(e) => handleStartResize(e, w.widget_id, effectiveCols, effectiveHeight, false)}
+                    onTouchStart={(e) => handleStartResizeTouch(e, w.widget_id, effectiveCols, effectiveHeight, false)}
+                    className="no-print absolute bottom-1.5 right-1.5 w-6 h-6 rounded-md bg-[#14223b]/90 hover:bg-sky-600 text-slate-400 hover:text-white flex items-center justify-center cursor-se-resize transition-all border border-white/[0.08] hover:border-sky-400/50 z-30 group shadow-md select-none"
+                    title="Tarik sudut untuk mengatur lebar kolom dan tinggi pixel"
+                  >
+                    <svg className="w-3.5 h-3.5 text-slate-400 group-hover:text-white" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round">
+                      <line x1="6" y1="14" x2="14" y2="6" />
+                      <line x1="10" y1="14" x2="14" y2="10" />
+                      <line x1="13.5" y1="14" x2="14" y2="13.5" />
+                    </svg>
+                  </div>
+
+                  {/* Floating dimension tooltip badge during drag */}
+                  {isBeingResized && (
+                    <div className="absolute top-3 right-3 px-2.5 py-1 rounded-md bg-sky-600/95 text-white font-mono text-xs font-semibold shadow-lg backdrop-blur-sm border border-sky-400/50 pointer-events-none z-40 animate-pulse">
+                      {effectiveCols}/12 Kolom • {effectiveHeight}px
                     </div>
                   )}
                 </div>

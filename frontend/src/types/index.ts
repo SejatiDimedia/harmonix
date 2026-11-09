@@ -260,8 +260,8 @@ export interface QueueJob {
 }
 
 export type WidgetType = 'chart' | 'table' | 'kpi';
-export type LayoutSpan = 'half' | 'full' | 'third';
-export type LayoutHeight = 'compact' | 'normal' | 'tall';
+export type LayoutSpan = 'half' | 'full' | 'third' | (string & {});
+export type LayoutHeight = 'compact' | 'normal' | 'tall' | (string & {});
 
 export interface DashboardWidget {
   widget_id: string;

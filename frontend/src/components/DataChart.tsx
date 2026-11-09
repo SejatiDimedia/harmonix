@@ -31,9 +31,7 @@ const SingleChartCanvas: React.FC<SingleChartProps> = ({
     <div
       className={
         hideHeader
-          ? isKiosk
-            ? 'relative w-full h-full flex-1 min-h-[360px] flex flex-col'
-            : 'relative w-full h-full min-h-[260px]'
+          ? 'relative w-full h-full flex-1 min-h-0 flex flex-col'
           : 'rounded-xl border border-white/[0.06] bg-[#0f1a2e] p-4 overflow-hidden shadow-sm'
       }
     >
@@ -66,9 +64,7 @@ const SingleChartCanvas: React.FC<SingleChartProps> = ({
       <div
         className={
           hideHeader
-            ? isKiosk
-              ? 'chart-wrapper w-full h-full flex-1 min-h-[360px]'
-              : 'chart-wrapper w-full h-full min-h-[260px]'
+            ? 'chart-wrapper w-full h-full flex-1 min-h-0'
             : 'chart-wrapper relative w-full h-64 md:h-72 print:h-[250px] print:max-w-xl print:mx-auto'
         }
       >

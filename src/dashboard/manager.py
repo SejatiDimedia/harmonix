@@ -18,8 +18,8 @@ from src.tools.database import RunSQLTool
 logger = logging.getLogger(__name__)
 
 WidgetType = Literal["chart", "table", "kpi"]
-LayoutSpan = Literal["half", "full", "third"]
-LayoutHeight = Literal["compact", "normal", "tall"]
+LayoutSpan = str  # 'half', 'full', 'third', or column count '3'..'12'
+LayoutHeight = str  # 'compact', 'normal', 'tall', or pixel height '280'..'900'
 
 
 class DashboardWidgetModel(BaseModel):
@@ -238,8 +238,8 @@ async def get_dashboard_widgets(session_id: str) -> list[DashboardWidgetModel]:
                 table_data=table_data,
                 metric_summary=r[7],
                 layout_position=int(r[8]),
-                layout_span=r[9] if r[9] in ("half", "full", "third") else "half",
-                layout_height=r[10] if r[10] in ("compact", "normal", "tall") else "normal",
+                layout_span=r[9] if r[9] else "half",
+                layout_height=r[10] if r[10] else "normal",
                 created_at=r[11],
                 updated_at=r[12],
             )
