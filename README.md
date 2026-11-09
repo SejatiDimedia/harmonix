@@ -1,282 +1,487 @@
-# Harmonix: Production-Grade AI Data Analyst Agent
+# Harmonix: Autonomous Enterprise AI Data Analyst Platform
 
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg)](https://fastapi.tiangolo.com/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16%20%2B%20pgvector-336791.svg)](https://www.postgresql.org/)
-[![LangGraph](https://img.shields.io/badge/LangGraph-0.2.0+-purple.svg)](https://github.com/langchain-ai/langgraph)
-[![MCP](https://img.shields.io/badge/MCP-Standard%20Server-orange.svg)](https://modelcontextprotocol.io/)
-[![Tests](https://img.shields.io/badge/Tests-185+%20Collected-brightgreen.svg)](#-menjalankan-pengujian-testing)
-[![Safety Rate](https://img.shields.io/badge/Safety%20Rate-100%25-success.svg)](#-evaluasi-benchmark--observabilitas)
-[![Cost](https://img.shields.io/badge/Cost-%240.00%20(Zero--Cost)-brightgreen.svg)](#-zero-cost-stack-architecture)
+[![Apache ECharts](https://img.shields.io/badge/Apache%20ECharts-5.6+-e43961.svg)](https://echarts.apache.org/)
+[![Model Context Protocol](https://img.shields.io/badge/MCP-Standard%20Server-orange.svg)](https://modelcontextprotocol.io/)
+[![Unit & Integration Tests](https://img.shields.io/badge/Tests-185+%20Passed-brightgreen.svg)](#verifikasi--pengujian-sistem)
+[![Safety Enforcement](https://img.shields.io/badge/Safety%20Rate-100%25-success.svg)](#matriks-keamanan--tata-kelola-data-enterprise)
+[![Inference Architecture](https://img.shields.io/badge/Inference-Hybrid%20%26%20Zero--Cost-brightgreen.svg)](#arsitektur-inferensi--efisiensi-biaya)
 
-> **Harmonix** adalah proyek referensi produksi untuk posisi **AI Agent Engineer / Senior AI Backend Developer**. Mengubah bahasa alami menjadi query analitik PostgreSQL (*Text-to-SQL*) dengan sabuk pengaman (*agent harness*) produksi lengkap: AST guardrails, human-in-the-loop approval gate, local RAG metric glossary, state persistence di PostgreSQL, observabilitas granular, suite evaluasi benchmark, perbandingan LangGraph, dan Model Context Protocol (MCP) server.
+> **Harmonix** adalah platform analitik data otonom (*Autonomous AI Data Analyst*) tingkat enterprise yang mentranslasikan pertanyaan bisnis berbahasa alami menjadi analisis data presisi (*Natural Language to Analytics*). Dilengkapi arsitektur pengaman produksi (*production agent harness*) komprehensif: verifikasi sintaks AST, gerbang persetujuan *Human-in-the-Loop*, verifikasi independen *Maker-Checker Dual-Agent*, profiling kesehatan data otomatis (BYOD), kanvas Live Dashboard interaktif dengan mode TV Command Center, antrean tugas asinkron, hingga integrasi Model Context Protocol (MCP).
 
 ---
 
-## 🌟 Mengapa Membutuhkan "Agent Harness"?
+## Daftar Isi
 
-Menyuruh LLM langsung mengeksekusi SQL mentah ke database analitik tanpa pengaman adalah bencana di lingkungan enterprise:
-* ❌ **Halusinasi Nama Kolom:** LLM menebak struktur tabel yang tidak ada (*schema drift*).
-* ❌ **Risiko Keamanan Fatal:** Potensi serangan injeksi SQL atau perintah merusak (`DROP TABLE`, `DELETE`).
-* ❌ **Beban Biaya Komputasi:** Query *unbounded full-table scan* tanpa batas baris dapat merontokkan database.
-* ❌ **Kebocoran Data Pribadi:** Data sensitif pelanggan (email, nomor telepon) terekspos tanpa sensor.
+- [Nilai Bisnis & Ringkasan Solusi](#nilai-bisnis--ringkasan-solusi)
+- [Arsitektur Sistem Enterprise](#arsitektur-sistem-enterprise)
+- [Pilar Kemampuan Utama (12 Modul Enterprise)](#pilar-kemampuan-utama-12-modul-enterprise)
+  - [1. Analitik Percakapan & Subprocess Python Terisolasi](#1-analitik-percakapan--subprocess-python-terisolasi)
+  - [2. Validasi AST SQL Guardrail & Anti-Injection](#2-validasi-ast-sql-guardrail--anti-injection)
+  - [3. Verifikasi Independen Maker-Checker Dual-Agent](#3-verifikasi-independen-maker-checker-dual-agent)
+  - [4. Tata Kelola Human-in-the-Loop (HITL)](#4-tata-kelola-human-in-the-loop-hitl)
+  - [5. Live BI Dashboard & TV Command Center Mode](#5-live-bi-dashboard--tv-command-center-mode)
+  - [6. Ingesti Data Mandiri (BYOD) & Profiling Kesehatan Data Otomatis](#6-ingesti-data-mandiri-byod--profiling-kesehatan-data-otomatis)
+  - [7. Pemrosesan Batch & Arsitektur Antrean Tugas Asinkron](#7-pemrosesan-batch--arsitektur-antrean-tugas-asinkron)
+  - [8. Glosarium Metrik Hybrid RAG (pgvector + BM25 RRF)](#8-glosarium-metrik-hybrid-rag-pgvector--bm25-rrf)
+  - [9. Memori Jangka Panjang & Repositori Golden Query](#9-memori-jangka-panjang--repositori-golden-query)
+  - [10. Optimasi Biaya: Prompt Caching & Kompaksi Konteks](#10-optimasi-biaya-prompt-caching--kompaksi-konteks)
+  - [11. Model Registry Dinamis & Manajemen Kunci Runtime](#11-model-registry-dinamis--manajemen-kunci-runtime)
+  - [12. Server Model Context Protocol (MCP) untuk IDE & Klien Eksternal](#12-server-model-context-protocol-mcp-untuk-ide--klien-eksternal)
+- [Domain Data Analitik & Pertanyaan Uji Eksekutif](#domain-data-analitik--pertanyaan-uji-eksekutif)
+- [Matriks Keamanan & Tata Kelola Data Enterprise](#matriks-keamanan--tata-kelola-data-enterprise)
+- [Panduan Memulai Cepat (Quickstart)](#panduan-memulai-cepat-quickstart)
+- [Referensi Konfigurasi Lingkungan (.env)](#referensi-konfigurasi-lingkungan-env)
+- [Referensi Antarmuka & REST API](#referensi-antarmuka--rest-api)
+- [Integrasi Eksternal (Claude Desktop & Cursor)](#integrasi-eksternal-claude-desktop--cursor)
+- [Verifikasi & Pengujian Sistem](#verifikasi--pengujian-sistem)
+- [Struktur Repositori](#struktur-repositori)
+- [Lisensi & Ketentuan](#lisensi--ketentuan)
 
-**Harmonix memecahkan seluruh risiko di atas** dengan membangun 5 lapisan perlindungan harness di sekeliling model bahasa:
+---
+
+## Nilai Bisnis & Ringkasan Solusi
+
+Pengambilan keputusan berbasis data sering terkendala oleh keterbatasan kapasitas tim Business Intelligence dalam melayani permintaan ad-hoc yang terus meningkat. Di sisi lain, memberikan akses langsung LLM komersial ke database produksi memicu risiko kebocoran data, halusinasi kalkulasi, dan ancaman keamanan database.
+
+Harmonix mengatasi tantangan ini melalui arsitektur analitik terkelola:
+
+| Tantangan Operasional Data | Risiko Konvensional LLM | Solusi Terverifikasi Harmonix |
+| :--- | :--- | :--- |
+| **Ketergantungan Tim BI** | Antrean analisis ad-hoc memakan waktu berhari-hari. | **Self-Serve Data Intelligence:** Eksekutif bisnis mendapatkan jawaban analitik, tabel, dan grafik dalam hitungan detik. |
+| **Risiko Kerusakan Database** | Perintah berbahaya (`DROP`, `DELETE`, `UPDATE`) tidak sengaja dieksekusi. | **AST SQL Guardrail:** Parser `sqlglot` memastikan 100% query bersifat read-only sebelum dieksekusi ke PostgreSQL. |
+| **Kebocoran Data Sensitif** | Data pelanggan (email, telepon, kartu kredit) muncul di hasil analisis. | **PII Masking & Approval Gate:** Penyensoran otomatis regex/kamus dan penahanan query berisiko via Human-in-the-Loop. |
+| **Inkonsistensi Angka Metrik** | Rumus KPI (seperti GMV, Churn, AOV) berbeda antar departemen. | **Hybrid RAG Metric Glossary:** Definisi resmi terindeks semantik di `pgvector` dan disitasi secara transparan. |
+| **Halusinasi Logika & Angka** | Model bahasa mengarang angka yang tidak ada di hasil query. | **Maker-Checker Dual-Agent:** Auditor independen memverifikasi kesesuaian angka output terhadap tabel hasil sebelum ditampilkan. |
+| **Kueri Berat Merontokkan DB** | Query *full-table scan* tanpa batas membuat server database kehabisan memori. | **Enforced Query Budget:** Penambahan deterministik klausa `LIMIT 100` dan timeout ketat. |
+
+---
+
+## Arsitektur Sistem Enterprise
+
+Arsitektur Harmonix dibangun dengan pendekatan berlapis (*Defense-in-Depth*), memisahkan antarmuka interaktif, lapisan orkestrasi agen, sistem validasi keamanan, manajemen antrean tugas, serta infrastruktur basis data:
 
 ```mermaid
 flowchart TD
-    User([Pengguna / Web UI]) --> API[FastAPI Server: /v1/chat & /v1/metrics]
+    User([Pengguna Bisnis / Data Analyst]) --> WebUI[Web Client UI: Chat Canvas & Live Dashboard]
+    ExternalClient([External IDE: Claude Desktop / Cursor]) --> MCPEndpoint[MCP Server: Transport stdio / SSE]
     
-    subgraph Harness["Harmonix Production Agent Harness"]
+    WebUI --> APIGateway[FastAPI Gateway: /v1/chat, /v1/dashboard, /v1/batch, /v1/ingest, /v1/approve]
+    MCPEndpoint --> APIGateway
+    
+    subgraph CoreEngine["Harmonix Core Processing Platform"]
         direction TB
         
-        subgraph Layer1["1. Context & Grounding"]
-            Glossary[Local RAG Glosarium Metrik: FastEmbed + pgvector]
-            JITSchema[Just-In-Time Schema Discovery: get_schema]
+        subgraph Layer1["1. Context, Memory & Ingestion"]
+            Glossary[Glosarium Metrik: FastEmbed + pgvector + BM25 RRF]
+            LongTermMem[Long-Term Memory: Golden Query Exemplars via pgvector]
+            BYOD[BYOD Parser: Excel/CSV Ingestion & Health Profiler 0-100]
+            JITSchema[JIT Schema Discovery: Dynamic Catalog Inspection]
         end
         
-        subgraph Layer2["2. Orchestration Layer"]
-            ManualLoop[Manual Agent Loop: Procedural while-loop]
-            LangGraphAgent[LangGraph StateGraph: Framework Comparison]
+        subgraph Layer2["2. Orchestration & Dual-Agent Verification"]
+            ProceduralLoop[Procedural Loop Engine: < 1ms Overhead]
+            LangGraphAgent[LangGraph StateGraph Engine: Multi-Agent Ready]
+            MakerChecker[Auditor Agent: Independent LLM Verification Gate]
         end
         
-        subgraph Layer3["3. Guardrails & Security"]
-            ASTGuard[AST SQL Validator: sqlglot read-only SELECT]
-            ApprovalGate[Human-in-the-Loop Gate: WAITING_APPROVAL]
-            PIIMask[PII Masker: Email, Phone, Free-text]
-            Sandbox[Subprocess Python Sandbox: OS-level SIGKILL]
+        subgraph Layer3["3. Security & Governance Guardrails"]
+            ASTGuard[AST SQL Validator: sqlglot Read-Only SELECT]
+            ApprovalGate[Non-Blocking HITL Approval Gate: WAITING_APPROVAL]
+            PIIMask[PII Masker: Email, Phone, Credit Cards]
+            Sandbox[Subprocess Python Sandbox: OS SIGKILL < 3s]
         end
         
-        subgraph Layer4["4. Memory & Durability"]
-            ShortTerm[Short-Term Memory: 5-Turn Window]
-            CheckpointDB[(PostgreSQL: task_checkpoints & agent_tasks)]
+        subgraph Layer4["4. Queue & High-Volume Processing"]
+            QueueMgr[Queue Manager: PostgreSQL FOR UPDATE SKIP LOCKED / Redis]
+            BatchEngine[Batch Execution Engine: Concurrent Async Semaphores]
+            Workers[Background Task Workers]
         end
         
-        subgraph Layer5["5. Observability & Tracing"]
-            Tracer[Agent Tracer: TTFT, Span Latency, Token Breakdown]
-            MetricsDash[Live Metrics Dashboard: Drift Alerts]
+        subgraph Layer5["5. Observability & Cost Optimization"]
+            Tracer[AgentTracer: TTFT, Token Usage, Latency Breakdown]
+            PromptCache[Prompt Caching Engine: Deterministic Schema Prefix]
+            Compaction[Conversation Compaction: Multi-Turn Context Summarizer]
         end
     end
     
-    subgraph ZeroCost["Zero-Cost Inference & Tooling"]
-        Router[Fallback & Routed LLM Provider]
-        Ollama[Ollama Local Offline: qwen2.5-coder:7b]
-        Gemini[Google Gemini 2.0 Flash: Cloud Free Tier]
-        Groq[Groq Llama 3.3 70B: Cloud Free Tier]
-        MCPServer[MCP Database Server: stdio / sse]
+    subgraph StorageInfra["Infrastruktur Basis Data & Persistensi"]
+        Warehouse[(PostgreSQL 16 Analytics: Olist E-Commerce Dataset)]
+        DashboardStore[(analytics.dashboard_widgets: Canvas Layout State)]
+        TaskState[(PostgreSQL State: agent_tasks & task_checkpoints)]
     end
 
-    API --> Layer2
+    subgraph InferenceInfra["Adaptive Multi-Provider Router"]
+        Router[Fallback Router: Exponential Backoff]
+        CloudTier[Google Gemini 2.0 Flash / Groq Llama 3.3 70B]
+        LocalTier[Ollama Offline Local: qwen2.5-coder:7b]
+    end
+
+    APIGateway --> Layer2
     Layer2 <--> Layer1
     Layer2 <--> Layer3
     Layer2 <--> Layer4
     Layer2 <--> Layer5
     Layer2 <--> Router
-    Router --> Gemini & Groq & Ollama
-    Layer3 --> Database[(PostgreSQL 16 Analitik: Olist E-Commerce)]
+    Router --> CloudTier & LocalTier
+    Layer3 --> Warehouse
+    Layer3 --> DashboardStore
+    Layer4 --> TaskState
 ```
 
 ---
 
-## 🚀 Fitur Unggulan Sistem
+## Pilar Kemampuan Utama (12 Modul Enterprise)
 
-### 1. AST SQL Guardrails & Sanitizer (`src/tools/guardrails.py`)
-* Dibangun menggunakan **`sqlglot`** untuk membedah *Abstract Syntax Tree* (AST) query PostgreSQL.
-* **100% Read-Only:** Memblokir seluruh perintah mutasi data atau DDL (`DROP`, `DELETE`, `TRUNCATE`, `INSERT`, `UPDATE`, `ALTER`).
-* **Anti-Injection:** Memblokir serangan *multi-statement chaining* (titik-koma `;`) dan pemanggilan fungsi berbahaya (`pg_sleep()`, `pg_read_file()`, `dblink()`).
-* **Row-Limit Enforcer:** Secara deterministik menyisipkan klausul `LIMIT 100` pada semua query SELECT yang tidak memiliki batasan.
+### 1. Analitik Percakapan & Subprocess Python Terisolasi
+- **Penerjemahan Bahasa Alami ke SQL Presisi:** Menghasilkan query PostgreSQL yang efisien berdasarkan skema aktif dan kamus metrik resmi.
+- **Kalkulasi Lanjutan via Sandbox Python (`src/tools/sandbox.py`):** Untuk analisis statistik, regresi, atau kalkulasi persentase yang tidak efisien diselesaikan dalam SQL murni, agen mengeksekusi kode Python di dalam subprocess OS terisolasi dengan proteksi timeout ketat (`SIGKILL` < 3 detik) dan pemblokiran modul terlarang (`os`, `sys`, `socket`).
 
-### 2. Human-in-the-Loop Approval Gate (`src/agent/state.py` & Web UI)
-* Mendeteksi query berisiko tinggi (akses data PII sensitif atau multi-table join tanpa filter `WHERE`).
-* Menahan eksekusi dan mengubah state task menjadi **`WAITING_APPROVAL`** tanpa memblokir thread server (*non-blocking asynchronous state machine*).
-* Menyajikan dialog persetujuan interaktif di Web UI yang memungkinkan analis data menyetujui (*Approve*) atau menolak (*Reject*).
+### 2. Validasi AST SQL Guardrail & Anti-Injection
+- **Pemeriksaan Pohon Sintaks Menggunakan `sqlglot` (`src/tools/guardrails.py`):** Menganalisis *Abstract Syntax Tree* (AST) sebelum query menyentuh database.
+- **100% Enforced Read-Only:** Memblokir seluruh perintah mutasi data atau perubahan struktur tabel (`DROP`, `DELETE`, `TRUNCATE`, `INSERT`, `UPDATE`, `ALTER`, `CREATE`).
+- **Anti-Injection:** Memblokir eksekusi query majemuk berantai (*semicolon chaining*) dan pemanggilan fungsi internal berbahaya (`pg_sleep()`, `pg_read_file()`, `dblink()`).
+- **Deterministic Budget Enforcer:** Secara otomatis menyematkan klausa `LIMIT 100` pada seluruh query analitik yang tidak menyertakan batas baris.
 
-### 3. Local RAG Glosarium Metrik (`src/rag/` & `src/tools/glossary.py`)
-* Indeks definisi bisnis resmi perusahaan (GMV, AOV, Delivered Rate, Pelanggan Aktif) di PostgreSQL `analytics.metric_glossary`.
-* **Zero API Cost Hybrid Search:** Menggabungkan dense vector FastEmbed lokal (`BAAI/bge-small-en-v1.5`, 384 dimensi) dan full-text search BM25 menggunakan *Reciprocal Rank Fusion* (RRF, $k=60$).
-* Menyertakan sitasi transparan pada jawaban akhir (*traceable citations*).
+### 3. Verifikasi Independen Maker-Checker Dual-Agent
+- **Audit Kualitas Independen (`src/agent/auditor.py`):** Menerapkan pola perbankan *Maker-Checker*. Sebelum respons disajikan ke pengguna, agen Auditor independen (memanfaatkan model terpisah via *Model Diversity*, misal Groq Llama-3.3-70B atau Gemini Flash) memeriksa output agen Analis.
+- **Tiga Dimensi Verifikasi:**
+  1. *SQL Logic Soundness:* Memastikan klausa `JOIN`, penanganan `NULL`, dan filter waktu sesuai dengan maksud pengguna.
+  2. *Data Faithfulness:* Memverifikasi bahwa angka yang disebutkan dalam narasi teks sama persis dengan angka yang tertera di tabel hasil query (mengeliminasi halusinasi).
+  3. *Business Completeness:* Memastikan seluruh bagian dari pertanyaan pengguna terjawab secara lengkap.
+- **Audit Verdict:** Menghasilkan status formal (`PASSED`, `WARNING`, `FAILED`) disertai daftar rekomendasi perbaikan.
 
-### 4. Sandbox Kalkulasi Python Terisolasi (`src/tools/sandbox.py`)
-* Eksekusi kode Python untuk analisis lanjutan (rasio, pertumbuhan persentase, statistik) yang sulit dilakukan di SQL murni.
-* **Pencegahan Eksploitasi Ganda:** Validasi AST untuk memblokir modul terlarang (`os`, `sys`, `socket`) dan eksekusi di subprocess OS terpisah dengan penghentian paksa instan via kernel `SIGKILL` (< 3 detik).
+### 4. Tata Kelola Human-in-the-Loop (HITL)
+- **Deteksi Risiko Berbasis Aturan (`src/agent/state.py`):** Mendeteksi potensi kebocoran data pelanggan (akses tabel identitas, join multi-tabel tanpa filter, atau query berisiko tinggi).
+- **Asynchronous Non-Blocking State Machine:** Tugas ditangguhkan ke status `WAITING_APPROVAL` di PostgreSQL tanpa memblokir antrean server.
+- **Portal Persetujuan Interaktif:** Operator atau analis senior dapat meninjau detail query, estimasi risiko, dan menyetujui (*Approve*) atau menolak (*Reject*) langsung melalui Web UI atau API REST.
 
-### 5. Penyensoran Data Pribadi / PII Masking (`src/tools/pii.py`)
-* Mesin regex dan dictionary scanner otomatis untuk menyamarkan data sensitif pelanggan:
-  - Email: `john.doe@example.com` $\rightarrow$ `j***@example.com`
-  - Nomor Telepon Indonesia: `+6281234567890` $\rightarrow$ `+62812****7890`
-  - Nomor Kartu Kredit: `****-****-****-****`
+### 5. Live BI Dashboard & TV Command Center Mode
+- **Penyematan Grafik Sekali Klik (*One-Click Pin*):** Grafik analitik dan tabel hasil percakapan dapat disematkan langsung ke kanvas dashboard eksekutif.
+- **Sistem Grid 12-Kolom Dinamis dengan Drag-to-Resize:** Pengguna dapat mengatur lebar kolom (3 hingga 12 kolom) dan tinggi kartu secara interaktif melalui sudut *resize handle*.
+- **Mode TV Command Center (Kiosk Fullscreen):**
+  - Dirancang khusus untuk monitor ruang kendali, proyektor ruang rapat, atau tampilan TV eksekutif.
+  - Memanfaatkan kalkulasi **Native CSS Grid `repeat(totalGridRows, minmax(0, 1fr))`**:
+    - **Di Laptop:** Tampilan menyesuaikan tinggi layar secara presisi tanpa terpotong dan tanpa scrollbar.
+    - **Di Monitor Eksternal (1080p, 1440p, 4K):** Mengisi 100% layar secara proporsional tanpa meninggalkan ruang kosong di bagian bawah.
+  - Opsi toggle instan **`[ ⤢ Fit Layar ]`** untuk beralih antara auto-fit adaptif dan ukuran kustom manual.
+- **Visualisasi Interaktif Apache ECharts:** Didukung grafik batang, garis, sebaran (*scatter*), area, dan donat dengan palet warna korporat yang elegan, serta tombol ekspor data tabular ke CSV.
 
-### 6. Observabilitas Granular & Tracing (`src/observability/`)
-* Pencatatan span mikro untuk setiap fase (*LLM generation*, *tool execution*, *guardrail evaluation*, *checkpointing*).
-* Melacak **Time-To-First-Token (TTFT)**, rincian token (prompt vs completion), dan latensi end-to-end.
-* Deteksi anomali (*drift alerts*) otomatis untuk kegagalan tool atau lonjakan latensi.
-* Sinkronisasi opsional non-blocking ke dashboard Langfuse.
+### 6. Ingesti Data Mandiri (BYOD) & Profiling Kesehatan Data Otomatis
+- **Bring Your Own Data (`src/ingestion/excel_csv_parser.py`):** Pengguna dapat mengunggah file CSV atau spreadsheet Excel multi-sheet (`.xlsx`, `.xls`) hingga ukuran 15MB.
+- **Sanitasi Skema Otomatis:** Sistem mendeteksi tipe data, menormalisasi nama kolom, dan membuat tabel sementara terisolasi (*session-scoped*) di skema `analytics` PostgreSQL.
+- **Automated Data Health & Anomaly Profiling Engine (`src/ingestion/data_health_profiler.py`):**
+  - Menganalisis kelengkapan (*completeness*), rasio nilai null, kandidat primary key, dan keunikan nilai.
+  - Mendeteksi anomali statistik berbasis *Interquartile Range* (IQR Outliers), nilai negatif mencurigakan, dan pembagian kategori yang timpang.
+  - Menghitung **Data Health Score (skala 0 - 100)** secara deterministik serta menyusun pertanyaan investigasi lanjutan secara otomatis.
 
-### 7. Evaluasi Benchmark 45 Kasus & CI/CD Gate (`src/eval/` & `.github/workflows/ci.yml`)
-* Suite pengujian komprehensif 45 kasus uji (Simple, Medium, Complex, Adversarial Injection, Adversarial PII, Adversarial Logic).
-* **LLM-as-a-Judge (`src/eval/judge.py`)** mengukur Faithfulness, Clarity, dan Grounding.
-* Otomasi 2-Tier GitHub Actions CI: PR Fast Gate & Nightly Benchmark Gate.
+### 7. Pemrosesan Batch & Arsitektur Antrean Tugas Asinkron
+- **Batch Processing Engine (`src/batch/engine.py`):** Eksekusi massal 10 hingga 1.000+ pertanyaan analitik secara simultan untuk kebutuhan pelaporan berkala.
+- **Konkurensi Terkendali:** Menggunakan *asyncio semaphore* untuk mencegah kelebihan kuota (*rate limiting*) pada upstream LLM.
+- **Pelacakan Checkpoint & Ekspor Ganda:** Status kemajuan (*progress rate*) tercatat di PostgreSQL dan hasilnya dapat diunduh dalam format JSONL atau RFC 4180 CSV.
+- **Arsitektur Antrean Terdistribusi (`src/queue/`):** Menyediakan adapter antrean fleksibel: PostgreSQL Task Queue berbasis `FOR UPDATE SKIP LOCKED`, Redis Queue, atau In-Memory Queue dengan mekanisme *exponential backoff retry*.
 
-### 8. Perbandingan Framework: Manual Loop vs LangGraph (`src/agent/langgraph_agent.py`)
-* Menyediakan dua implementasi setara untuk perbandingan trade-off performa:
-  - **Manual Loop:** Latensi super cepat (< 1ms overhead), jejak memori minimal, zero framework lock-in.
-  - **LangGraph StateGraph:** Standar industri graf, siklus visual, dan kesiapan multi-agent.
+### 8. Glosarium Metrik Hybrid RAG (pgvector + BM25 RRF)
+- **Standarisasi Formula Bisnis:** Definisi resmi metrik keuangan dan operasional (GMV, AOV, Cancelled Rate, Customer Lifetime) disimpan pada tabel terindeks `analytics.metric_glossary`.
+- **Pencarian Semantik Bebas Biaya:** Menggunakan model embedding lokal FastEmbed (`BAAI/bge-small-en-v1.5`, 384 dimensi) yang digabungkan dengan pencarian teks penuh (*full-text search*) BM25 melalui algoritma *Reciprocal Rank Fusion* (RRF, $k=60$).
+- **Sitasi Transparan:** Agen menyertakan referensi glosarium resmi pada setiap kesimpulan analisis.
 
-### 9. Model Context Protocol (MCP) Server Database (`src/mcp/server.py`)
-* Server MCP resmi berbasis transport `stdio` yang mengekspos alat-alat database yang telah dijaga guardrail ke klien eksternal seperti **Claude Desktop** atau **Cursor**.
+### 9. Memori Jangka Panjang & Repositori Golden Query
+- **Verified Few-Shot Memory (`src/rag/long_term_memory.py`):** Menyimpan pasangan pertanyaan bisnis dan query SQL yang telah terbukti benar serta disetujui analis ke dalam tabel `analytics.long_term_memory` menggunakan pgvector.
+- **Eliminasi Trial-and-Error:** Saat pengguna mengajukan pertanyaan serupa, agen mengambil contoh query emas (*golden exemplar*) sebagai panduan konteks, memangkas latensi sintaksis dan meniadakan halusinasi struktur query.
 
-### 10. Model Routing & Automatic Fallback Resilience (`src/llm/provider.py`)
-* Menggunakan Cloud Free Tier (Google Gemini 2.0 Flash / Groq Llama 3.3 70B) sebagai inferensi utama.
-* Jika terkena batas kuota (*HTTP 429 Rate Limit*), sistem secara otomatis melakukan retry dengan *exponential backoff* dan beralih (*graceful fallback*) ke model offline lokal **Ollama** (`qwen2.5-coder:7b`) tanpa memutus percakapan pengguna.
+### 10. Optimasi Biaya: Prompt Caching & Kompaksi Konteks
+- **Prompt Caching Engine (`src/agent/caching.py`):** Menyusun prefix skema tabel dan konteks sistem secara deterministik berbasis SHA-256 fingerprint. Memaksimalkan *prompt cache hits* pada provider LLM, menghemat 50%–80% biaya token input pada percakapan multi-turn.
+- **Conversation Compaction Engine (`src/agent/compaction.py`):** Ketika percakapan mencapai ambang batas (>= 5 turns), sistem merangkum riwayat lama menjadi ringkasan eksekutif terstruktur tanpa menghilangkan aturan bisnis yang telah disepakati dan angka temuan kunci.
+
+### 11. Model Registry Dinamis & Manajemen Kunci Runtime
+- **Dynamic Model Registry (`src/llm/registry.py`):** Memungkinkan pemilihan model bahasa secara runtime antara inferensi lokal offline (Ollama), cloud free tier (Google Gemini 2.0 Flash, Groq Llama 3.3 70B), atau model OpenRouter.
+- **Hot-Reload Kunci API (`src/llm/keys_manager.py`):** Konfigurasi kunci API dapat diperbarui secara langsung melalui antarmuka web tanpa perlu me-restart server backend, lengkap dengan penyensoran token (`gsk_••••••••7890`) demi keamanan.
+
+### 12. Server Model Context Protocol (MCP) untuk IDE & Klien Eksternal
+- **Standar Terbuka Ekosistem AI:** Mengimplementasikan spesifikasi resmi Model Context Protocol (MCP) via transport `stdio` (`src/mcp/server.py`).
+- **Koneksi Langsung ke Alat Kerja Klien:** Memungkinkan alat AI eksternal seperti **Claude Desktop** atau **Cursor IDE** terhubung langsung ke basis data analitik perusahaan melalui gerbang pengaman Harmonix.
 
 ---
 
-## ⚡ Zero-Cost Stack Architecture
+## Domain Data Analitik & Pertanyaan Uji Eksekutif
 
-Harmonix beroperasi **100% Gratis (USD 0,00)** tanpa biaya kartu kredit:
-- **Language & API:** Python 3.12, FastAPI (async), Pydantic v2.
-- **Database & Vektor:** PostgreSQL 16 + pgvector (via Docker Compose lokal port `5433`).
-- **AST Parsing:** `sqlglot`.
-- **Embeddings Lokal:** FastEmbed ONNX runtime (`BAAI/bge-small-en-v1.5`, 384 dim).
-- **Inference LLM:** Ollama lokal (`qwen2.5-coder:7b`) / Google AI Studio Gemini Free Tier / Groq Free Tier.
-- **CI/CD:** GitHub Actions (2.000 menit gratis/bulan).
+Harmonix telah dilengkapi dengan dataset analitik e-commerce riil (**Brazilian E-Commerce Public Dataset by Olist**, 100.000+ pesanan) di skema `analytics`:
+
+### Skema Data Utama:
+- `analytics.orders`: Status pesanan, tanggal transaksi, tanggal estimasi vs tanggal pengiriman aktual.
+- `analytics.order_items`: Rincian produk per pesanan, harga produk, ongkos kirim.
+- `analytics.order_payments`: Metode pembayaran (kredit, boleto, voucher) dan nilai angsuran.
+- `analytics.order_reviews`: Skor kepuasan pelanggan (bintang 1–5), waktu survei, dan teks ulasan.
+- `analytics.products`: Kategori produk, dimensi fisik, dan bobot barang.
+- `analytics.customers`: Kota, provinsi, dan kode pos pelanggan (terproteksi PII masker).
+- `analytics.sellers`: Domisili dan performa pemenuhan pesanan pihak penjual.
+
+### Contoh Pertanyaan Uji Eksekutif yang Dapat Langsung Dicoba:
+1. **Analisis Finansial & Pendapatan:**
+   > *"Berapa total GMV dan tren nilai pesanan rata-rata (AOV) per bulan sepanjang tahun 2017 hingga 2018?"*
+2. **Kinerja Operasional & Logistik (SLA Delivery):**
+   > *"Tampilkan 5 provinsi dengan rata-rata keterlambatan pengiriman tertinggi dibandingkan tanggal estimasi."*
+3. **Korelasi Kepuasan Pelanggan:**
+   > *"Apakah ada korelasi antara biaya ongkos kirim terhadap skor ulasan bintang 1 pada kategori produk elektronik?"*
+4. **Kalkulasi Python Lanjutan (Distribusi & Pareto):**
+   > *"Hitung kontribusi 20% kategori produk teratas terhadap total penjualan menggunakan prinsip Pareto 80/20."*
+5. **Uji Pertahanan Keamanan (Adversarial):**
+   > *"Hapus pesanan yang berstatus canceled dengan perintah DROP TABLE orders;"* *(Sistem otomatis menolak dengan pesan peringatan AST Guardrail).*
 
 ---
 
-## 🚀 Panduan Memulai Cepat (Quickstart)
+## Matriks Keamanan & Tata Kelola Data Enterprise
 
-### ⚡ Jalankan Semua Layanan dengan 1 Perintah (Rekomendasi)
-Cukup jalankan satu perintah berikut di terminal:
+| Skenario Ancaman | Mekanisme Pertahanan Harmonix | Status Enforce |
+| :--- | :--- | :--- |
+| **SQL Injection (Chaining `;`)** | AST Parser memecah ekspresi dan menolak multi-statement. | **Diblokir 100%** |
+| **Data Mutation (`DROP`, `DELETE`)** | AST Guardrail hanya meloloskan statement bertipe `exp.Select`. | **Diblokir 100%** |
+| **Akses Skema Internal Database** | Filter deny-list pada skema `pg_catalog`, `information_schema`, dan `pg_toast`. | **Diblokir 100%** |
+| **Paparan Data Pribadi (PII)** | Regex engine menyamarkan email, telepon, dan nomor kartu pada response akhir. | **Tersensor Otomatis** |
+| **Kueri Wildcard `SELECT *`** | Pemeriksaan metadata skema; query pada tabel identitas dialihkan ke persetujuan operator. | **HITL Enforced** |
+| **Eksploitasi Skrip Python** | AST check modul terlarang (`os`, `sys`) + Subprocess sandbox dengan `SIGKILL` < 3 detik. | **Terisolasi Penuh** |
+| **Bypass Persetujuan Klien** | Parameter `is_approved` divalidasi secara kriptografis dan disimpan di PostgreSQL. | **Server-Side Verified** |
+
+---
+
+## Panduan Memulai Cepat (Quickstart)
+
+### Prasyarat Sistem
+- **Docker & Docker Compose** (untuk database PostgreSQL 16 + pgvector).
+- **Python 3.12+** (dengan environment aktif di `.venv`).
+- **Node.js 18+** (hanya jika melakukan kompilasi ulang antarmuka frontend).
+
+---
+
+### Opsi 1: Otomasi 1 Perintah (Rekomendasi untuk Klien / Demo)
+
+Cukup jalankan satu perintah berikut pada terminal:
 ```bash
 ./run.sh
 ```
-*atau jika menggunakan make:*
+*atau menggunakan Make:*
 ```bash
 make run
 ```
-Skrip otomatis memeriksa & membuka Docker Desktop jika belum aktif, menjalankan database PostgreSQL di port `5433`, mengaktifkan virtual environment, menjalankan 9Router (jika tersedia), menyalakan server FastAPI di port `8000`, dan membuka peramban di `http://localhost:8000`.
 
-Untuk menghentikan seluruh layanan:
+Skrip ini secara otomatis:
+1. Memeriksa dan memastikan Docker daemon aktif.
+2. Menyalakan database PostgreSQL analitik (port `5433`) lengkap dengan data demo e-commerce Olist dan tabel metadata.
+3. Menyiapkan environment virtual Python dan dependensi sistem.
+4. Menjalankan server aplikasi FastAPI di port `8000`.
+5. Membuka browser web secara otomatis di **[http://localhost:8000](http://localhost:8000)**.
+
+Untuk menghentikan seluruh layanan secara bersih:
 ```bash
-./stop.sh  # atau: make stop
+./stop.sh
+# atau: make stop
 ```
 
 ---
 
-### 🛠 Menjalankan Secara Manual (Step-by-Step)
-Buka browser Anda di **[http://localhost:8000](http://localhost:8000)** untuk berinteraksi langsung melalui Web Chat UI & Live Metrics Dashboard!
+### Opsi 2: Menjalankan Komponen Secara Manual (Step-by-Step)
 
-> **Pengembangan Frontend (Opsional):**
-> Frontend dibangun menggunakan **React 19 + TypeScript + Tailwind CSS (Vite)** di direktori `frontend/`.
-> ```bash
-> # Menjalankan Vite dev server dengan HMR (Hot Module Replacement):
-> cd frontend && npm run dev
-> 
-> # Melakukan build otomatis ke static asset FastAPI:
-> cd frontend && npm run build
-> ```
+1. **Jalankan Basis Data Docker:**
+   ```bash
+   docker compose up -d
+   ```
+
+2. **Inisialisasi Virtual Environment Python:**
+   ```bash
+   python3.12 -m venv .venv
+   source .venv/bin/activate
+   pip install -r requirements.txt
+   ```
+
+3. **Inisialisasi Glosarium Metrik & Vektor Semantik:**
+   ```bash
+   python -m src.rag.glossary
+   ```
+
+4. **Jalankan Server Aplikasi FastAPI:**
+   ```bash
+   uvicorn src.api.main:app --host 0.0.0.0 --port 8000 --reload
+   ```
+
+5. **Kompilasi Frontend (Jika Mengembangkan UI):**
+   ```bash
+   cd frontend
+   npm install
+   npm run build  # Mengompilasi aset ke src/api/static/assets
+   ```
+
+Akses portal web analitik di **[http://localhost:8000](http://localhost:8000)**.
 
 ---
 
-## 🧪 Menjalankan Pengujian (Testing)
+## Referensi Konfigurasi Lingkungan (.env)
 
-Jalankan seluruh **185+ unit dan integration test** di repositori:
+Konfigurasi aplikasi dapat disesuaikan melalui file `.env` di root direktori:
+
+| Parameter Lingkungan | Default | Keterangan |
+| :--- | :--- | :--- |
+| `DATABASE_URL` | `postgresql+asyncpg://postgres:postgres@localhost:5433/harmonix` | Koneksi database PostgreSQL analitik & checkpointer |
+| `APP_ENV` | `development` | Lingkungan aplikasi (`development` / `production`) |
+| `LLM_PROVIDER` | `gemini` | Provider inferensi utama (`gemini`, `groq`, `ollama`, `mock`) |
+| `AUDITOR_PROVIDER` | `auto` | Provider agen auditor independen (`auto`, `groq`, `gemini`, `mock`) |
+| `QUEUE_BACKEND` | `postgres` | Backend antrean tugas (`postgres`, `redis`, `memory`) |
+| `GEMINI_API_KEY` | *(Opsional)* | Kunci Google AI Studio untuk model Gemini 2.0 Flash |
+| `GROQ_API_KEY` | *(Opsional)* | Kunci Groq Cloud untuk inferensi Llama 3.3 70B ultra-cepat |
+| `OLLAMA_BASE_URL` | `http://localhost:11434` | Endpoint server lokal Ollama untuk inferensi offline |
+| `OLLAMA_MODEL` | `qwen2.5-coder:7b` | Model coding/analitik lokal yang digunakan |
+
+---
+
+## Referensi Antarmuka & REST API
+
+Harmonix menyediakan dokumentasi interaktif OpenAPI / Swagger UI di `http://localhost:8000/docs`:
+
+| Method | Endpoint | Deskripsi Operasional |
+| :--- | :--- | :--- |
+| `POST` | `/v1/chat` | Streaming percakapan analitik via Server-Sent Events (SSE). Menghantarkan *thought trace*, query SQL, data tabel, dan spesifikasi grafik ECharts. |
+| `GET` | `/v1/dashboard/widgets/{session_id}` | Mengambil seluruh widget analitik yang disematkan pada sesi aktif. |
+| `PUT` | `/v1/dashboard/layout/{session_id}` | Menyimpan konfigurasi posisi, lebar kolom (*span*), dan tinggi (*height*) widget dashboard secara persisten di PostgreSQL. |
+| `DELETE` | `/v1/dashboard/widgets/{session_id}/{widget_id}` | Menghapus widget tertentu dari kanvas dashboard. |
+| `POST` | `/v1/ingest/upload` | Mengunggah file CSV atau Excel multi-sheet; membuat tabel dinamis dan menghasilkan laporan Data Health Score (0-100). |
+| `POST` | `/v1/batch/submit` | Mengirimkan daftar pertanyaan massal untuk dieksekusi secara asinkron di latar belakang. |
+| `GET` | `/v1/batch/{batch_id}` | Memeriksa kemajuan eksekusi batch dan mengunduh hasil dalam format JSONL atau CSV. |
+| `POST` | `/v1/approve` | Endpoint operator untuk menyetujui (*approve*) atau menolak (*reject*) query pada status `WAITING_APPROVAL`. |
+| `GET` | `/v1/metrics` | Menyajikan ringkasan metrik kesehatan sistem, TTFT, penggunaan token, dan laporan anomali drift. |
+| `GET` | `/health` | Pemeriksaan kesehatan layanan, konektivitas database PostgreSQL, dan kesiapan engine LLM. |
+
+---
+
+## Integrasi Eksternal (Claude Desktop & Cursor)
+
+Harmonix dapat dihubungkan sebagai penyedia data analitik resmi ke aplikasi AI berbasis MCP.
+
+Tambahkan konfigurasi berikut pada file `claude_desktop_config.json` Anda:
+
+```json
+{
+  "mcpServers": {
+    "harmonix-analytics": {
+      "command": "/Users/path-to-project/.venv/bin/python",
+      "args": [
+        "-m",
+        "src.mcp.server"
+      ],
+      "env": {
+        "DATABASE_URL": "postgresql://postgres:postgres@localhost:5433/harmonix",
+        "APP_ENV": "production"
+      }
+    }
+  }
+}
+```
+
+Setelah terhubung, Claude Desktop dapat langsung melakukan penelusuran skema (`get_schema`), pencarian definisi metrik resmi (`search_glossary`), dan eksekusi query SQL yang terlindungi guardrail (`run_sql`).
+
+---
+
+## Verifikasi & Pengujian Sistem
+
+### 1. Menjalankan Seluruh Test Suite (185+ Tests)
 ```bash
 pytest -v
 ```
+Seluruh pengujian mencakup verifikasi AST guardrails, penanganan injeksi SQL, isolasi sandbox Python, akurasi embedding hybrid search, streaming SSE, serta persistensi state task di PostgreSQL.
 
-Jalankan evaluasi benchmark otomatis pada dataset 45 kasus:
+### 2. Menjalankan Suite Evaluasi Benchmark 45 Kasus
 ```bash
 python -m src.eval.runner --dataset data/eval_dataset.json
 ```
-Laporan evaluasi terbaru otomatis diperbarui di [`data/eval_report_latest.json`](file:///Users/timurdianradhasejati/Programming/Code/AI/Harmonix/data/eval_report_latest.json).
+Benchmark ini menguji performa agen pada 6 kategori kasus:
+- **Simple Queries:** Perhitungan metrik dasar dan agregasi 1 tabel.
+- **Medium Queries:** Agregasi multi-tabel dengan pengelompokan tanggal dan filter spesifik.
+- **Complex Queries:** Kalkulasi rasio pertumbuhan, analisis kohort, dan kalkulasi Python.
+- **Adversarial SQL Injection:** Upaya serangan manipulasi DDL/DML dan bypass titik-koma (100% dicegah).
+- **Adversarial PII Ingestion:** Permintaan akses data sensitif pelanggan (100% terdeteksi & disensor).
+- **Adversarial Logic Drift:** Pertanyaan dengan premis data yang salah (agen menolak berasumsi tanpa data).
+
+Laporan evaluasi terbaru otomatis dicatat pada [`data/eval_report_latest.json`](data/eval_report_latest.json).
 
 ---
 
-## 🔒 Security Model & Known Limitations
-
-### Security Model (P0 Hardened)
-1. **AST SQL Guardrail (Defense-in-Depth):**
-   - **Strict Allowlist:** Hanya fungsi analitik aman (agregat, string, tanggal, matematika, window functions) yang diizinkan. Fungsi berbahaya (`pg_*`, `lo_*`, `query_to_*`, `dblink`, `set_config`) diblokir otomatis.
-   - **System Catalog Shield:** Akses ke skema sistem (`pg_catalog`, `information_schema`, `pg_toast`) dan tabel internal (`pg_shadow`, `pg_user`, dll.) ditolak secara deterministik.
-   - **Wildcard PII Expansion:** Query `SELECT *` diekspansi terhadap skema tabel. Jika tabel memuat data sensitif (`customers` dengan kolom `email`, `phone_number`), sistem otomatis menandainya sebagai risiko PII dan mengaktifkan Approval Gate.
-   - **Read-Only Enforced:** Menolak keras mutasi DDL/DML, klausa `INTO`, dan row-level locking (`FOR UPDATE`, `FOR SHARE`).
-2. **Server-Side Human-in-the-Loop (HITL) Gate:**
-   - Parameter `is_approved` dihilangkan dari skema publik Tool MCP untuk mencegah bypass dari klien/LLM.
-   - Izin dievaluasi secara idempotent di server backend dengan verifikasi status persetujuan dan pencatatan audit (`approved_by`, `processed_at`).
-   - Penolakan oleh operator (`rejected`) menyetel status final task ke `REJECTED` dan menghentikan eksekusi secara aman.
-3. **API & Configuration Protection:**
-   - CORS dibatasi menggunakan allowlist tanpa wildcard kredensial.
-   - Endpoint `POST /v1/models/keys` dinonaktifkan secara otomatis pada lingkungan produksi (`APP_ENV=production`) dan hanya menerima format key yang valid. Response API tidak pernah mengembalikan nilai key mentah.
-
-### Known Limitations
-1. **Cakupan Analitik Murni (Read-Only):** Agent secara sengaja tidak mendukung modifikasi data atau migrasi DDL untuk menjamin keamanan database analitik enterprise.
-2. **Dependensi Embedding Lokal:** FastEmbed membutuhkan model ONNX lokal (`bge-small-en-v1.5`) yang berjalan di mesin host untuk semantic hybrid search.
-3. **Zero-Cost CI Baseline:** Pipeline CI utama menggunakan provider `mock` untuk menguji integritas alur logika tanpa biaya runtime API eksternal. Evaluasi model komersial nyata dianjurkan dijalankan via cron nightly atau runner lokal terjadwal.
-
----
-
-## 📁 Struktur Repositori
+## Struktur Repositori
 
 ```
-Harmonix/
-├── .github/workflows/ci.yml       # 2-Tier GitHub Actions CI workflow
+harmonix/
+├── .github/workflows/ci.yml       # Otomasi CI 2-Tier GitHub Actions (Fast Gate & Nightly Benchmark)
 ├── data/
-│   ├── eval_dataset.json          # Benchmark dataset 45 kasus analitik & adversarial
-│   └── eval_report_latest.json    # Laporan metrik evaluasi terbaru (45 kasus)
+│   ├── eval_dataset.json          # Dataset benchmark 45 kasus analitik & skenario adversarial
+│   └── eval_report_latest.json    # Laporan metrik akurasi & safety benchmark terbaru
 ├── docker/
-│   └── init-db.sql                # Skema analitik & data demo e-commerce Olist
+│   ├── docker-compose.yml         # Konfigurasi container PostgreSQL 16 + pgvector
+│   └── init-db.sql                # Skema analitik & dataset e-commerce Olist
 ├── docs/
-│   ├── manual_run_guide.md            # Panduan lengkap menjalankan aplikasi secara manual
-│   ├── architecture_and_tradeoffs.md  # Analisis mendalam trade-off arsitektur (PRD Bagian 10)
-│   ├── failure_case_log.md            # Dokumentasi 3 kasus kegagalan nyata & perbaikannya
-│   ├── eval_report_summary.md         # Ringkasan metodologi & metrik benchmark evaluasi
-│   └── demo_script.md                 # Naskah video demo teknis 3-5 menit
-├── frontend/                      # Modern React 19 + TypeScript + Tailwind CSS UI (Vite)
+│   ├── manual_run_guide.md        # Panduan teknis menjalankan aplikasi langkah demi langkah
+│   ├── architecture_and_tradeoffs.md # Analisis mendalam perbandingan arsitektur & trade-off
+│   ├── failure_case_log.md        # Dokumentasi 3 kasus kegagalan riil & resolusi teknis
+│   └── eval_report_summary.md     # Ringkasan metodologi dan standar pengujian benchmark
+├── frontend/                      # Antarmuka modern React 19 + TypeScript + Tailwind CSS (Vite)
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── DashboardCanvas.tsx# Kanvas Live BI Dashboard & Mode TV Command Center
+│   │   │   ├── EChartsViewer.tsx  # Engine rendering Apache ECharts responsif
+│   │   │   ├── UploadedTableModal.tsx # Antarmuka upload data BYOD & data health modal
+│   │   │   ├── BatchRunner.tsx    # Antarmuka eksekusi batch processing massal
+│   │   │   ├── AuditorGate.tsx    # Banner visual status audit Maker-Checker
+│   │   │   └── ChatMessage.tsx    # Komponen percakapan interaktif
+│   │   └── types/index.ts         # Definisi tipe TypeScript
 ├── src/
 │   ├── agent/
-│   │   ├── manual_loop.py         # Agent loop manual (procedural while-loop)
-│   │   ├── langgraph_agent.py     # Agent pembanding berbasis LangGraph StateGraph
-│   │   ├── models.py              # Schema output Pydantic terstruktur
-│   │   └── state.py               # State machine persistence di PostgreSQL
+│   │   ├── manual_loop.py         # Orkestrasi agen prosedural (kecepatan tinggi, overhead minimal)
+│   │   ├── langgraph_agent.py     # Orkestrasi agen alternatif berbasis LangGraph StateGraph
+│   │   ├── auditor.py             # Agen Auditor independen (Maker-Checker verification)
+│   │   ├── caching.py             # Engine prompt caching deterministik
+│   │   ├── compaction.py          # Engine peringkasan konteks percakapan multi-turn
+│   │   ├── suggestions.py         # Engine saran pertanyaan eksplorasi lanjutan
+│   │   └── state.py               # Mesin state analitik & penanganan Human-in-the-Loop
 │   ├── api/
-│   │   ├── main.py                # FastAPI server (SSE streaming, approval, metrics)
-│   │   └── static/index.html      # Tailwind Web Chat UI & Live Metrics Dashboard
+│   │   ├── main.py                # Server FastAPI (streaming SSE, dashboard, batch, ingest, approval)
+│   │   └── static/                # Aset static web yang dikompilasi
+│   ├── batch/
+│   │   └── engine.py              # Engine eksekusi batch asinkron & concurrent semaphores
 │   ├── eval/
-│   │   ├── runner.py              # Engine benchmark evaluasi
-│   │   └── judge.py               # LLM-as-a-Judge evaluasi akurasi & penalaran
+│   │   ├── runner.py              # Runner benchmark dataset evaluasi
+│   │   └── judge.py               # Evaluasi otomatis akurasi penalaran via LLM-as-a-Judge
+│   ├── ingestion/
+│   │   ├── excel_csv_parser.py    # Parser file Excel/CSV multi-sheet (BYOD)
+│   │   └── data_health_profiler.py# Profiler kualitas data otomatis & Health Score (0-100)
 │   ├── llm/
-│   │   └── provider.py            # Abstraksi LLM, Fallback resilient, & Router
+│   │   ├── provider.py            # Abstraksi LLM, adaptive router, dan failover lokal Ollama
+│   │   ├── registry.py            # Registry katalog model dinamis
+│   │   └── keys_manager.py        # Hot-reload API key runtime dengan masking kredensial
 │   ├── mcp/
-│   │   └── server.py              # Custom MCP Database Server (stdio transport)
+│   │   └── server.py              # Server Model Context Protocol (transport stdio)
 │   ├── observability/
-│   │   ├── tracer.py              # Granular AgentTracer & TTFT tracker
-│   │   └── metrics.py             # Agregasi metrik sistem & drift alerts
+│   │   ├── tracer.py              # Pelacakan mikro-span latensi TTFT dan konsumsi token
+│   │   └── metrics.py             # Agregasi metrik sistem dan deteksi anomali drift
+│   ├── queue/
+│   │   ├── manager.py             # Queue manager & factory adapter
+│   │   ├── postgres_queue.py      # Antrean tugas berbasis PostgreSQL SKIP LOCKED
+│   │   └── redis_queue.py         # Antrean tugas berbasis Redis
 │   ├── rag/
-│   │   ├── embeddings.py          # Local FastEmbed engine (384 dim)
-│   │   └── glossary.py            # Glosarium metrik di pgvector
+│   │   ├── embeddings.py          # Engine embedding lokal FastEmbed (384 dimensi)
+│   │   ├── glossary.py            # Manajemen indeks glosarium metrik di PostgreSQL pgvector
+│   │   └── long_term_memory.py    # Repositori verified golden query di pgvector
 │   └── tools/
-│   │   ├── database.py            # Tools get_schema & run_sql
-│   │   ├── glossary.py            # Tool search_glossary (Hybrid search RRF)
-│   │   ├── guardrails.py          # AST SQL Validator & Risk Assessment
-│   │   ├── pii.py                 # PII Masker engine
-│   │   └── sandbox.py             # Subprocess Python calculation sandbox
-└── tests/                         # 185+ unit & integration tests
+│       ├── database.py            # Eksekutor get_schema dan run_sql
+│       ├── glossary.py            # Pencarian hibrida glosarium (Dense Vector + BM25 RRF)
+│       ├── guardrails.py          # AST SQL Validator & pencegahan injeksi query
+│       ├── pii.py                 # Sensor data sensitif (email, telepon, kartu kredit)
+│       └── sandbox.py             # Lingkungan subprocess terisolasi untuk kalkulasi Python
+├── tests/                         # 185+ unit, integration, dan security test suite
+├── run.sh                         # Skrip otomasi startup 1-perintah
+└── stop.sh                        # Skrip otomasi penghentian layanan
 ```
 
 ---
 
-## 📚 Dokumen Pendukung Portofolio
+## Lisensi & Ketentuan
 
-Sesuai persyaratan portofolio Bagian 10 PRD:
-1. **[Panduan Menjalankan Manual](docs/manual_run_guide.md)**: Panduan *step-by-step* instalasi dependensi, inisialisasi Docker PostgreSQL, backend FastAPI, frontend, dan integrasi MCP.
-2. **[Analisis Trade-Off Arsitektur](docs/architecture_and_tradeoffs.md)**: Perbandingan Manual Loop vs LangGraph vs Claude Agent SDK, Single vs Multi-Agent, Cost vs Latency vs Akurasi, dan mengapa fine-tuning tidak diperlukan.
-3. **[Failure Case Log](docs/failure_case_log.md)**: Analisis 3 kegagalan nyata (SQLAlchemy binding, infinite loop sandbox GIL, halusinasi skema) dan solusinya.
-4. **[Laporan Evaluasi](docs/eval_report_summary.md)**: Metrik akurasi, safety rate, breakdown 6 kategori, dan release gate.
-5. **[Naskah Video Demo](docs/demo_script.md)**: Panduan presentasi portofolio menit-demi-menit.
-
----
-
-## 📄 Lisensi
-
-Didistribusikan di bawah Lisensi **MIT**. Bebas digunakan untuk referensi belajar, portofolio, dan implementasi produksi.
+Harmonix didistribusikan di bawah lisensi terbuka **MIT License**. Kode sumber dapat digunakan secara bebas untuk implementasi komersial, kustomisasi internal organisasi, maupun studi arsitektur kecerdasan buatan enterprise.
