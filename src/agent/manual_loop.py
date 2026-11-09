@@ -185,7 +185,7 @@ class ManualAgentLoop:
                             cols = content_obj.get("columns", [])
                             rows = content_obj.get("rows", [])
                             if cols and rows:
-                                captured_tables.append(TableData(columns=cols, rows=rows, row_count=len(rows)))
+                                captured_tables.append(TableData(columns=cols, rows=rows, row_count=len(rows), sql_query=sq or None))
                     except Exception:
                         pass
                 elif msg.get("role") == "tool" and msg.get("name") == "make_chart":

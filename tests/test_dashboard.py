@@ -1,5 +1,6 @@
 """Unit and integration tests for Live BI Dashboard Canvas (FR-37)."""
 
+import uuid
 import pytest
 from httpx import AsyncClient, ASGITransport
 from src.api.main import app
@@ -25,16 +26,16 @@ async def test_dashboard_crud_and_refresh():
         session_id=test_session_id,
         widget_type="chart",
         title="Penjualan Produk Q4",
-        sql_query="SELECT status, COUNT(*) as count FROM analytics.orders GROUP BY status;",
+        sql_query="SELECT order_status, COUNT(*) as count FROM analytics.orders GROUP BY order_status;",
         chart_spec={
             "chart_type": "bar",
             "title": "Penjualan Produk Q4",
-            "x_axis": "status",
+            "x_axis": "order_status",
             "y_axis": "count",
-            "data": [{"status": "shipped", "count": 10}],
+            "data": [{"order_status": "shipped", "count": 10}],
         },
         table_data={
-            "columns": ["status", "count"],
+            "columns": ["order_status", "count"],
             "rows": [["shipped", 10]],
             "row_count": 1,
         },
@@ -104,11 +105,11 @@ async def test_dashboard_api_endpoints():
                 "session_id": test_session,
                 "widget_type": "chart",
                 "title": "API Pinned Chart",
-                "sql_query": "SELECT status, COUNT(*) as c FROM analytics.orders GROUP BY status;",
+                "sql_query": "SELECT order_status, COUNT(*) as c FROM analytics.orders GROUP BY order_status;",
                 "chart_spec": {
                     "chart_type": "bar",
                     "title": "API Pinned Chart",
-                    "x_axis": "status",
+                    "x_axis": "order_status",
                     "y_axis": "c",
                     "data": [],
                 },
@@ -162,3 +163,36 @@ async def test_dashboard_layout_api_and_tv():
         # Test TV route endpoint
         tv_res = await client.get(f"/tv/{test_session}")
         assert tv_res.status_code in [200, 404]
+
+
+@pytest.mark.asyncio
+async def test_dashboard_refresh_smart_matching_and_aggregation():
+    """Verify case-insensitive axis matching, fallback axis updating, and pie aggregation."""
+    test_session = f"test_smart_refresh_{uuid.uuid4().hex[:8]}"
+
+    # 1. Pin a pie chart with uppercase columns but SQL returning lowercase
+    pie_widget = await pin_widget(
+        PinWidgetInput(
+            session_id=test_session,
+            widget_type="chart",
+            title="Porsi Status Orders",
+            sql_query="SELECT order_status, COUNT(*) AS count FROM analytics.orders GROUP BY order_status;",
+            chart_spec={
+                "chart_type": "pie",
+                "title": "Porsi Status Orders",
+                "x_axis": "ORDER_STATUS",  # uppercase
+                "y_axis": "COUNT",         # uppercase
+                "data": [],
+            },
+        )
+    )
+
+    # 2. Refresh widgets
+    refreshed = await refresh_dashboard_widgets(test_session)
+    assert len(refreshed) == 1
+    w = refreshed[0]
+    assert w.chart_spec["x_axis"] == "order_status"
+    assert w.chart_spec["y_axis"] == "count"
+    assert len(w.chart_spec["data"]) > 0
+    # Clean up
+    await delete_dashboard_widget(pie_widget.widget_id)

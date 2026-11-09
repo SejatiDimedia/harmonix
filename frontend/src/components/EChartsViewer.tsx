@@ -42,11 +42,20 @@ export const EChartsViewer: React.FC<EChartsViewerProps> = ({
     let yCol = spec.y_axis;
 
     if (chartData.length === 0 && tables && tables.length > 0) {
-      const tbl = tables[0];
-      if (tbl.columns && tbl.columns.length >= 2 && tbl.rows && tbl.rows.length > 0) {
-        xCol = tbl.columns[0];
-        yCol = tbl.columns[1];
-        chartData = tbl.rows.map((r) => ({
+      // Find table that best matches xCol or yCol, otherwise default to tables[0]
+      const matchingTbl =
+        tables.find((t) =>
+          (t.columns || []).some(
+            (c) =>
+              (xCol && c.toLowerCase() === xCol.toLowerCase()) ||
+              (yCol && c.toLowerCase() === yCol.toLowerCase())
+          )
+        ) || tables[0];
+
+      if (matchingTbl.columns && matchingTbl.columns.length >= 2 && matchingTbl.rows && matchingTbl.rows.length > 0) {
+        xCol = matchingTbl.columns[0];
+        yCol = matchingTbl.columns[1];
+        chartData = matchingTbl.rows.map((r) => ({
           [xCol]: r[0] ?? '(NULL)',
           [yCol]: r[1] ?? 0,
         }));
@@ -69,22 +78,71 @@ export const EChartsViewer: React.FC<EChartsViewerProps> = ({
 
     const chartInstance = chartInstanceRef.current;
 
-    // 2. Extract Categories and Values
-    const labels = chartData.map((d) => {
-      let val = d[xCol];
-      if (val === undefined) {
-        const keys = Object.keys(d);
-        val = keys.length > 0 ? d[keys[0]] : '';
+    // 2. Intelligent & Type-Aware Column Resolution
+    const sampleRow = chartData[0] || {};
+    const sampleKeys = Object.keys(sampleRow);
+
+    const resolveColumnKey = (
+      preferredCol?: string,
+      preferType: 'string' | 'number' = 'string',
+      excludeKey?: string
+    ): string => {
+      if (!sampleKeys.length) return '';
+
+      // 1. Exact match
+      if (preferredCol && preferredCol in sampleRow && preferredCol !== excludeKey) {
+        return preferredCol;
       }
+
+      // 2. Case-insensitive match
+      if (preferredCol) {
+        const prefLower = preferredCol.toLowerCase();
+        const found = sampleKeys.find(
+          (k) => k !== excludeKey && k.toLowerCase() === prefLower
+        );
+        if (found) return found;
+
+        // 3. Substring match (e.g. "kategori" matches "product_category_name" or "kategori_produk")
+        const subFound = sampleKeys.find(
+          (k) =>
+            k !== excludeKey &&
+            (k.toLowerCase().includes(prefLower) || prefLower.includes(k.toLowerCase()))
+        );
+        if (subFound) return subFound;
+      }
+
+      // 4. Type-based search
+      if (preferType === 'number') {
+        const numKey = sampleKeys.find((k) => {
+          if (k === excludeKey) return false;
+          const v = sampleRow[k];
+          return typeof v === 'number' || (typeof v === 'string' && !isNaN(Number(v)) && v.trim() !== '');
+        });
+        if (numKey) return numKey;
+      } else {
+        const strKey = sampleKeys.find((k) => {
+          if (k === excludeKey) return false;
+          const v = sampleRow[k];
+          return typeof v === 'string' && isNaN(Number(v));
+        });
+        if (strKey) return strKey;
+      }
+
+      // 5. Fallback to any remaining key
+      const remaining = sampleKeys.find((k) => k !== excludeKey);
+      return remaining || sampleKeys[0] || '';
+    };
+
+    const resolvedXKey = resolveColumnKey(xCol, 'string');
+    const resolvedYKey = resolveColumnKey(yCol, 'number', resolvedXKey);
+
+    const labels = chartData.map((d) => {
+      const val = d[resolvedXKey];
       return val === null || val === undefined ? '(NULL)' : String(val);
     });
 
     const rawValues = chartData.map((d) => {
-      let val = d[yCol];
-      if (val === undefined) {
-        const keys = Object.keys(d);
-        val = keys.length > 1 ? d[keys[1]] : 0;
-      }
+      const val = d[resolvedYKey];
       return Number(val) || 0;
     });
 

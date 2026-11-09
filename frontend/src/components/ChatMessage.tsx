@@ -22,6 +22,59 @@ interface ChatMessageProps {
   onCancel?: () => void;
 }
 
+function findBestQueryForChart(spec: ChartSpec, queries?: string[]): string | undefined {
+  if (spec.sql_query) return spec.sql_query;
+  if (!queries || queries.length === 0) return undefined;
+  if (queries.length === 1) return queries[0];
+
+  const x = spec.x_axis?.toLowerCase();
+  const y = spec.y_axis?.toLowerCase();
+  const sampleKeys = spec.data && spec.data.length > 0 ? Object.keys(spec.data[0]).map((k) => k.toLowerCase()) : [];
+
+  let bestQuery = queries[0];
+  let maxScore = -1;
+
+  for (const q of queries) {
+    const qLower = q.toLowerCase();
+    let score = 0;
+    if (x && qLower.includes(x)) score += 4;
+    if (y && qLower.includes(y)) score += 4;
+    for (const k of sampleKeys) {
+      if (qLower.includes(k)) score += 1;
+    }
+    if (score > maxScore) {
+      maxScore = score;
+      bestQuery = q;
+    }
+  }
+
+  return bestQuery;
+}
+
+function findBestQueryForTable(tbl: TableData, queries?: string[]): string | undefined {
+  if (tbl.sql_query) return tbl.sql_query;
+  if (!queries || queries.length === 0) return undefined;
+  if (queries.length === 1) return queries[0];
+
+  const cols = (tbl.columns || []).map((c) => c.toLowerCase());
+  let bestQuery = queries[0];
+  let maxScore = -1;
+
+  for (const q of queries) {
+    const qLower = q.toLowerCase();
+    let score = 0;
+    for (const c of cols) {
+      if (qLower.includes(c)) score += 2;
+    }
+    if (score > maxScore) {
+      maxScore = score;
+      bestQuery = q;
+    }
+  }
+
+  return bestQuery;
+}
+
 const ChatMessageComponent: React.FC<ChatMessageProps> = ({
   turn,
   isStreaming,
@@ -227,9 +280,7 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
                     ? (spec) =>
                         onPinChart(
                           spec,
-                          turn.sql_queries && turn.sql_queries.length > 0
-                            ? turn.sql_queries[0]
-                            : undefined
+                          spec.sql_query || findBestQueryForChart(spec, turn.sql_queries)
                         )
                     : undefined
                 }
@@ -415,9 +466,7 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
                               onPinTable(
                                 tbl,
                                 title,
-                                turn.sql_queries && turn.sql_queries.length > 0
-                                  ? turn.sql_queries[0]
-                                  : undefined
+                                tbl.sql_query || findBestQueryForTable(tbl, turn.sql_queries)
                               )
                           : undefined
                       }

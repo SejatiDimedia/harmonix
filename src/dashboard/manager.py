@@ -297,33 +297,83 @@ async def refresh_dashboard_widgets(session_id: str) -> list[DashboardWidgetMode
             if exec_res.get("status") == "success":
                 columns = exec_res.get("columns", [])
                 rows = exec_res.get("rows", [])
-                new_table_data = {
-                    "columns": columns,
-                    "rows": rows,
-                    "row_count": len(rows),
-                }
-                widget.table_data = new_table_data
+                
+                # Only update table_data if it is a table widget or already had table_data
+                if widget.widget_type == "table" or widget.table_data is not None:
+                    widget.table_data = {
+                        "columns": columns,
+                        "rows": rows,
+                        "row_count": len(rows),
+                    }
 
                 # If this widget has a chart_spec, refresh its data rows based on x_axis and y_axis
                 if widget.chart_spec and isinstance(widget.chart_spec, dict):
-                    x_col = widget.chart_spec.get("x_axis")
-                    y_col = widget.chart_spec.get("y_axis")
-                    if x_col in columns and y_col in columns:
-                        x_idx = columns.index(x_col)
-                        y_idx = columns.index(y_col)
-                        new_data = [
-                            {x_col: row[x_idx], y_col: row[y_idx]}
-                            for row in rows
-                        ]
-                        widget.chart_spec["data"] = new_data
+                    x_col_orig = widget.chart_spec.get("x_axis")
+                    y_col_orig = widget.chart_spec.get("y_axis")
+
+                    col_lookup = {c.lower(): c for c in columns}
+                    matched_x = col_lookup.get(x_col_orig.lower()) if x_col_orig else None
+                    matched_y = col_lookup.get(y_col_orig.lower()) if y_col_orig else None
+
+                    if matched_x and matched_y:
+                        target_x = matched_x
+                        target_y = matched_y
+                    elif matched_x and len(columns) >= 2:
+                        other_cols = [c for c in columns if c != matched_x]
+                        target_x = matched_x
+                        target_y = other_cols[0] if other_cols else matched_x
+                    elif matched_y and len(columns) >= 2:
+                        other_cols = [c for c in columns if c != matched_y]
+                        target_x = other_cols[0] if other_cols else matched_y
+                        target_y = matched_y
                     elif len(columns) >= 2:
-                        # Fallback to first two columns
-                        x_col_fallback = columns[0]
-                        y_col_fallback = columns[1]
-                        widget.chart_spec["data"] = [
-                            {x_col_fallback: row[0], y_col_fallback: row[1]}
-                            for row in rows
-                        ]
+                        target_x = columns[0]
+                        target_y = columns[1]
+                    else:
+                        target_x = columns[0] if columns else (x_col_orig or "x")
+                        target_y = columns[0] if columns else (y_col_orig or "y")
+
+                    widget.chart_spec["x_axis"] = target_x
+                    widget.chart_spec["y_axis"] = target_y
+
+                    chart_type = widget.chart_spec.get("chart_type", "bar")
+                    new_data = [
+                        dict(zip(columns, row))
+                        for row in rows
+                    ]
+
+                    # Defensive aggregation for pie/doughnut if duplicate categories exist
+                    if chart_type in ("pie", "doughnut") and target_x in columns and target_y in columns:
+                        agg_map: dict[Any, float] = {}
+                        first_row_map: dict[Any, dict[str, Any]] = {}
+                        has_duplicates = False
+                        seen_keys = set()
+                        for row_dict in new_data:
+                            k = row_dict.get(target_x)
+                            if k in seen_keys:
+                                has_duplicates = True
+                            seen_keys.add(k)
+
+                        if has_duplicates:
+                            for row_dict in new_data:
+                                k = row_dict.get(target_x)
+                                val = row_dict.get(target_y)
+                                try:
+                                    num_val = float(val) if val is not None else 0.0
+                                except (ValueError, TypeError):
+                                    num_val = 0.0
+                                agg_map[k] = agg_map.get(k, 0.0) + num_val
+                                if k not in first_row_map:
+                                    first_row_map[k] = dict(row_dict)
+
+                            aggregated_data = []
+                            for k, sum_val in agg_map.items():
+                                item = first_row_map[k]
+                                item[target_y] = round(sum_val, 2) if isinstance(sum_val, float) else sum_val
+                                aggregated_data.append(item)
+                            new_data = aggregated_data
+
+                    widget.chart_spec["data"] = new_data
 
                 # Update database record
                 async with get_db_session() as session:

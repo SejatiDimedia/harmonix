@@ -22,6 +22,7 @@ export interface TableData {
   columns: string[];
   rows: (string | number | null)[][];
   row_count?: number;
+  sql_query?: string | null;
 }
 
 export interface ChartSpec {
@@ -30,6 +31,7 @@ export interface ChartSpec {
   x_axis: string;
   y_axis: string;
   data: Record<string, any>[];
+  sql_query?: string | null;
 }
 
 export interface Citation {

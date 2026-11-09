@@ -67,7 +67,7 @@ class ObservationProcessor:
         cols = observation.get("columns", [])
         rows = observation.get("rows", [])
         if cols and rows:
-            captured_tables.append(TableData(columns=cols, rows=rows, row_count=len(rows)))
+            captured_tables.append(TableData(columns=cols, rows=rows, row_count=len(rows), sql_query=sanitized or None))
 
     @staticmethod
     def process_chart_observation(
@@ -83,15 +83,26 @@ class ObservationProcessor:
         c_spec = observation.get("chart", {})
         c_data = c_spec.get("data", [])
 
-        # Auto-fill from captured_tables if c_data is empty
-        if not c_data and captured_tables:
-            last_tbl = captured_tables[-1]
-            if len(last_tbl.columns) >= 2 and last_tbl.rows:
-                t_x = c_spec.get("x_axis") if c_spec.get("x_axis") in last_tbl.columns else last_tbl.columns[0]
-                t_y = c_spec.get("y_axis") if c_spec.get("y_axis") in last_tbl.columns else last_tbl.columns[1]
+        # Match source table and auto-fill from captured_tables if c_data is empty
+        matched_sql = None
+        if captured_tables:
+            matching_tbl = None
+            t_x_candidate = c_spec.get("x_axis")
+            t_y_candidate = c_spec.get("y_axis")
+            for tbl in reversed(captured_tables):
+                if (t_x_candidate and t_x_candidate in tbl.columns) or (t_y_candidate and t_y_candidate in tbl.columns):
+                    matching_tbl = tbl
+                    break
+            if not matching_tbl:
+                matching_tbl = captured_tables[-1]
+
+            matched_sql = matching_tbl.sql_query
+            if not c_data and len(matching_tbl.columns) >= 2 and matching_tbl.rows:
+                t_x = t_x_candidate if t_x_candidate in matching_tbl.columns else matching_tbl.columns[0]
+                t_y = t_y_candidate if t_y_candidate in matching_tbl.columns else matching_tbl.columns[1]
                 c_data = [
                     {t_x: r[0] if r[0] is not None else "(NULL)", t_y: r[1]}
-                    for r in last_tbl.rows
+                    for r in matching_tbl.rows
                 ]
                 c_spec["x_axis"] = t_x
                 c_spec["y_axis"] = t_y
@@ -128,6 +139,7 @@ class ObservationProcessor:
                 x_axis=c_spec.get("x_axis", "x"),
                 y_axis=c_spec.get("y_axis", "y"),
                 data=c_data,
+                sql_query=matched_sql,
             )
         )
 
@@ -150,18 +162,28 @@ class ObservationProcessor:
 
         uq_lower = user_query.lower()
 
-        # 2. Ensure existing charts have data if tables exist
+        # 2. Ensure existing charts have data and sql_query if tables exist
         for ch in final_charts:
-            if not ch.data and captured_tables:
-                last_tbl = captured_tables[-1]
-                if len(last_tbl.columns) >= 2 and last_tbl.rows:
-                    t_x = ch.x_axis if ch.x_axis in last_tbl.columns else last_tbl.columns[0]
-                    t_y = ch.y_axis if ch.y_axis in last_tbl.columns else last_tbl.columns[1]
+            if captured_tables and (not ch.data or not ch.sql_query):
+                matching_tbl = None
+                for tbl in reversed(captured_tables):
+                    if (ch.x_axis and ch.x_axis in tbl.columns) or (ch.y_axis and ch.y_axis in tbl.columns):
+                        matching_tbl = tbl
+                        break
+                if not matching_tbl:
+                    matching_tbl = captured_tables[-1]
+
+                if not ch.sql_query:
+                    ch.sql_query = matching_tbl.sql_query
+
+                if not ch.data and len(matching_tbl.columns) >= 2 and matching_tbl.rows:
+                    t_x = ch.x_axis if ch.x_axis in matching_tbl.columns else matching_tbl.columns[0]
+                    t_y = ch.y_axis if ch.y_axis in matching_tbl.columns else matching_tbl.columns[1]
                     ch.x_axis = t_x
                     ch.y_axis = t_y
                     ch.data = [
                         {t_x: r[0] if r[0] is not None else "(NULL)", t_y: r[1]}
-                        for r in last_tbl.rows
+                        for r in matching_tbl.rows
                     ]
             if any(w in uq_lower for w in ("donat", "donut", "doughnut")):
                 ch.chart_type = "doughnut"
@@ -170,23 +192,76 @@ class ObservationProcessor:
             elif any(w in uq_lower for w in ("garis", "line", "tren", "trend")) and not any(w in uq_lower for w in ("batang", "bar")):
                 ch.chart_type = "line"
 
-        # 3. Auto-synthesize chart if user explicitly requested visual but model didn't call make_chart
-        chart_keywords = ("grafik", "chart", "visualisasi", "diagram", "plot", "tren", "trend")
+        # 3. Auto-synthesize chart if user requested visuals/dashboard or analysis but model didn't call make_chart
+        chart_keywords = (
+            "grafik", "chart", "visualisasi", "visual", "diagram", "plot",
+            "tren", "trend", "dashboard", "persentase", "porsi", "proporsi",
+            "distribusi", "perbandingan", "komparasi", "analisis", "terlaris",
+            "tertinggi", "terendah"
+        )
         if not final_charts and captured_tables and any(kw in uq_lower for kw in chart_keywords):
-            last_tbl = captured_tables[-1]
-            if len(last_tbl.columns) >= 2 and last_tbl.rows:
-                col_x = last_tbl.columns[0]
-                col_y = last_tbl.columns[1]
+            # Find eligible tables (exclude schema queries like column_name or table_name)
+            candidate_tables = []
+            for tbl in captured_tables:
+                if not tbl.columns or not tbl.rows:
+                    continue
+                col_names_lower = [c.lower() for c in tbl.columns]
+                # Skip raw metadata or information_schema tables
+                if any(meta in col_names_lower for meta in ("column_name", "table_name", "table_schema", "original_filename")):
+                    continue
+                if len(tbl.columns) >= 2 and len(tbl.rows) >= 1:
+                    candidate_tables.append(tbl)
+
+            # Synthesize up to 3 charts from the candidate tables
+            selected_tables = candidate_tables[-3:] if len(candidate_tables) > 3 else candidate_tables
+            if not selected_tables and captured_tables:
+                selected_tables = [captured_tables[-1]]
+
+            for tbl in selected_tables:
+                clean_cols = [c for c in tbl.columns if not c.startswith("_") and "unnamed" not in c.lower()]
+                if len(clean_cols) < 2 or not tbl.rows:
+                    continue
+
+                # Find best categorical column for col_x and numeric for col_y
+                first_row = tbl.rows[0]
+                str_cols = []
+                num_cols = []
+                for idx, c in enumerate(clean_cols):
+                    col_orig_idx = tbl.columns.index(c)
+                    val = first_row[col_orig_idx]
+                    if isinstance(val, (int, float)):
+                        num_cols.append(c)
+                    elif isinstance(val, str):
+                        str_cols.append(c)
+
+                if str_cols and num_cols:
+                    col_x = str_cols[0]
+                    col_y = num_cols[0]
+                elif len(clean_cols) >= 2:
+                    col_x = clean_cols[0]
+                    col_y = clean_cols[1]
+                else:
+                    continue
+
+                col_x_lower = col_x.lower()
                 if any(w in uq_lower for w in ("donat", "donut", "doughnut")):
                     c_type = "doughnut"
-                elif any(w in uq_lower for w in ("pie", "lingkaran", "proporsi", "komposisi", "porsi", "share")):
+                elif any(w in uq_lower for w in ("pie", "lingkaran", "proporsi", "komposisi", "porsi", "share")) or (len(tbl.rows) <= 6 and any(p in col_y.lower() for p in ("persen", "share", "porsi"))):
                     c_type = "pie"
-                elif any(w in uq_lower for w in ("tren", "trend", "bulanan", "waktu", "harian")):
+                elif any(w in uq_lower for w in ("tren", "trend", "bulanan", "waktu", "harian")) or any(time_kw in col_x_lower for time_kw in ("bulan", "tanggal", "periode", "tahun", "waktu", "month", "date")):
                     c_type = "line"
                 else:
                     c_type = "bar"
 
-                title_text = f"Visualisasi {col_x.replace('_', ' ').title()} vs {col_y.replace('_', ' ').title()}"
+                x_title = col_x.replace("_", " ").title()
+                y_title = col_y.replace("_", " ").title()
+                if c_type in ("pie", "doughnut"):
+                    title_text = f"Distribusi {y_title} per {x_title}"
+                elif c_type == "line":
+                    title_text = f"Tren {y_title} berdasarkan {x_title}"
+                else:
+                    title_text = f"Perbandingan {y_title} per {x_title}"
+
                 final_charts.append(
                     ChartSpec(
                         chart_type=c_type,
@@ -194,9 +269,10 @@ class ObservationProcessor:
                         x_axis=col_x,
                         y_axis=col_y,
                         data=[
-                            {col_x: r[0] if r[0] is not None else "(NULL)", col_y: r[1]}
-                            for r in last_tbl.rows
+                            dict(zip(tbl.columns, r))
+                            for r in tbl.rows
                         ],
+                        sql_query=tbl.sql_query,
                     )
                 )
 

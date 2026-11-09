@@ -22,6 +22,7 @@ class TableData(BaseModel):
     columns: list[str] = Field(default_factory=list)
     rows: list[list[Any]] = Field(default_factory=list)
     row_count: int = 0
+    sql_query: str | None = None
 
 
 class ChartSpec(BaseModel):
@@ -31,6 +32,7 @@ class ChartSpec(BaseModel):
     x_axis: str
     y_axis: str
     data: list[dict[str, Any]] = Field(default_factory=list)
+    sql_query: str | None = None
 
 
 class Citation(BaseModel):

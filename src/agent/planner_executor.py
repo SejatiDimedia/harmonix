@@ -352,7 +352,7 @@ class PlannerExecutorAgent:
                     cols = obs.get("columns", [])
                     rows = obs.get("rows", [])
                     if cols and rows:
-                        captured_tables.append(TableData(columns=cols, rows=rows, row_count=len(rows)))
+                        captured_tables.append(TableData(columns=cols, rows=rows, row_count=len(rows), sql_query=sq or None))
 
                 formatted_obs = ObservationProcessor.format_observation_for_llm(
                     tool_name=tc.name,
@@ -470,6 +470,7 @@ class PlannerExecutorAgent:
                                     x_axis=cs.get("x_axis", "x"),
                                     y_axis=cs.get("y_axis", "y"),
                                     data=cs.get("data", sample_records),
+                                    sql_query=first_tbl.sql_query if first_tbl else None,
                                 )
                             )
         except Exception as e:
