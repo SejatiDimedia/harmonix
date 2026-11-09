@@ -1,10 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   LayoutDashboard,
   RefreshCw,
   Trash2,
   Code,
-  Calendar,
   MessageSquare,
   ArrowRight,
   Pin,
@@ -20,6 +19,7 @@ import {
   Share2,
   Check,
   SlidersHorizontal,
+  Maximize2,
 } from 'lucide-react';
 import { DashboardWidget, ChartSpec, TableData } from '../types';
 import { DataChart } from './DataChart';
@@ -68,6 +68,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
   const [lastRefreshedAt, setLastRefreshedAt] = useState<Date>(new Date());
   const [copiedTvLink, setCopiedTvLink] = useState(false);
   const [isTvEditLayout, setIsTvEditLayout] = useState(false);
+  const [isTvAutoFit, setIsTvAutoFit] = useState<boolean>(true);
 
   const handleCopyTvLink = () => {
     if (!sessionId) {
@@ -225,6 +226,32 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
     }
   };
 
+  // Dynamically compute the number of rows in the 12-column grid
+  const totalGridRows = useMemo(() => {
+    let currentCols = 0;
+    let rows = 1;
+    for (const w of localWidgets) {
+      const span = parseColSpan(w.layout_span);
+      if (currentCols + span > 12) {
+        rows++;
+        currentCols = span;
+      } else {
+        currentCols += span;
+      }
+    }
+    return Math.max(1, rows);
+  }, [localWidgets]);
+
+  const autoFitHeightStyle = useMemo(() => {
+    if (totalGridRows === 1) {
+      return 'calc(100vh - 104px)';
+    }
+    if (totalGridRows === 2) {
+      return 'calc((100vh - 124px) / 2)';
+    }
+    return 'max(280px, calc((100vh - 144px) / 3))';
+  }, [totalGridRows]);
+
   const handleStartResize = (
     e: React.MouseEvent,
     widgetId: string,
@@ -234,6 +261,10 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
   ) => {
     e.preventDefault();
     e.stopPropagation();
+
+    if (isTv) {
+      setIsTvAutoFit(false);
+    }
 
     const gridEl = isTv ? tvGridRef.current : normalGridRef.current;
     const gridWidth = gridEl ? gridEl.getBoundingClientRect().width : window.innerWidth;
@@ -258,6 +289,9 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
     isTv: boolean
   ) => {
     if (e.touches.length !== 1) return;
+    if (isTv) {
+      setIsTvAutoFit(false);
+    }
     const touch = e.touches[0];
     const gridEl = isTv ? tvGridRef.current : normalGridRef.current;
     const gridWidth = gridEl ? gridEl.getBoundingClientRect().width : window.innerWidth;
@@ -499,6 +533,25 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
               <span className="hidden sm:inline">{isTvEditLayout ? 'Selesai Atur' : 'Atur Layout'}</span>
             </button>
 
+            {/* Auto-Fit Screen Toggle */}
+            <button
+              type="button"
+              onClick={() => setIsTvAutoFit((prev) => !prev)}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-sans transition cursor-pointer border ${
+                isTvAutoFit
+                  ? 'bg-sky-600/90 text-white border-sky-500 shadow-sm'
+                  : 'bg-[#14223b] hover:bg-[#1a2d4e] text-slate-400 hover:text-slate-200 border-white/[0.06]'
+              }`}
+              title={
+                isTvAutoFit
+                  ? 'Auto-Fit Layar Aktif: Tinggi kartu otomatis mengisi penuh layar laptop/monitor tanpa sisa ruang kosong'
+                  : 'Mode Kustom: Klik untuk mengisi penuh tinggi layar laptop/monitor secara otomatis'
+              }
+            >
+              <Maximize2 className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Fit Layar</span>
+            </button>
+
             {/* Shareable Link Button */}
             <button
               type="button"
@@ -541,7 +594,11 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
         </header>
 
         {/* TV Main Grid */}
-        <main className="flex-1 p-5 overflow-y-auto flex flex-col">
+        <main
+          className={`flex-1 p-4 sm:p-5 flex flex-col ${
+            isTvAutoFit && totalGridRows <= 2 ? 'overflow-hidden' : 'overflow-y-auto pb-6'
+          }`}
+        >
           {localWidgets.length === 0 ? (
             <div className="h-full flex-1 flex flex-col items-center justify-center space-y-4 text-center py-20">
               <div className="w-16 h-16 rounded-2xl bg-[#14223b] flex items-center justify-center text-slate-400 shadow-lg">
@@ -557,7 +614,16 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
           ) : (
             <div
               ref={tvGridRef}
-              className="grid grid-cols-12 gap-5 w-full max-w-full"
+              className={`grid grid-cols-12 gap-4 sm:gap-5 w-full max-w-full ${
+                isTvAutoFit && totalGridRows <= 2 ? 'flex-1 h-full min-h-0' : ''
+              }`}
+              style={
+                isTvAutoFit && totalGridRows <= 2
+                  ? {
+                      gridTemplateRows: `repeat(${totalGridRows}, minmax(0, 1fr))`,
+                    }
+                  : undefined
+              }
             >
               {localWidgets.map((w, idx) => {
                 const isChart = w.widget_type === 'chart' && w.chart_spec;
@@ -578,8 +644,29 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                 return (
                   <div
                     key={w.widget_id}
-                    style={{ height: `${effectiveHeight}px`, minHeight: `${effectiveHeight}px` }}
-                    className={`relative rounded-2xl bg-[#0b1424] border border-white/[0.08] p-5 shadow-xl flex flex-col justify-between ${
+                    style={
+                      isBeingResized
+                        ? {
+                            height: `${resizingState.currentHeight}px`,
+                            minHeight: '200px',
+                          }
+                        : isTvAutoFit
+                          ? totalGridRows <= 2
+                            ? {
+                                height: '100%',
+                                minHeight: 0,
+                              }
+                            : {
+                                height: autoFitHeightStyle,
+                                minHeight: '260px',
+                              }
+                          : {
+                              height: `${effectiveHeight}px`,
+                              minHeight: `${Math.min(effectiveHeight, 260)}px`,
+                              maxHeight: 'calc(100vh - 100px)',
+                            }
+                    }
+                    className={`relative rounded-2xl bg-[#0b1424] border border-white/[0.08] p-4 sm:p-5 shadow-xl flex flex-col justify-between ${
                       isBeingResized
                         ? 'transition-none ring-2 ring-sky-500/80 shadow-2xl shadow-sky-950/50 z-30'
                         : 'transition-all duration-150'
@@ -617,8 +704,8 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                           </div>
 
                           {/* Dimension Indicator Badge */}
-                          <span className="text-[11px] font-mono text-slate-300 px-2 py-0.5 rounded bg-[#14223b] border border-white/[0.06]">
-                            {effectiveCols}/12 Kolom • {effectiveHeight}px
+                          <span className="text-[10px] font-mono text-slate-400 px-1.5 py-0.5 rounded bg-[#14223b] border border-white/[0.06]">
+                            {effectiveCols}k • {effectiveHeight}px
                           </span>
                         </div>
                       )}
@@ -931,93 +1018,87 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                 <div
                   key={w.widget_id}
                   style={{ height: `${effectiveHeight}px`, minHeight: `${effectiveHeight}px` }}
-                  className={`print-widget-card relative rounded-2xl bg-[#0f1a2e] print:bg-white border border-white/[0.06] print:border-gray-300 p-5 shadow-md shadow-black/20 flex flex-col justify-between ${
+                  className={`print-widget-card relative rounded-2xl bg-[#0f1a2e] print:bg-white border border-white/[0.06] print:border-gray-300 p-4 sm:p-5 shadow-md shadow-black/20 flex flex-col justify-between ${
                     isBeingResized
                       ? 'transition-none ring-2 ring-sky-500/80 shadow-2xl shadow-sky-950/50 z-30'
                       : 'transition-all duration-150'
-                  } space-y-4 print:space-y-3 print:rounded-xl print:p-0 print:overflow-hidden ${getSpanClass(
+                  } space-y-3 sm:space-y-4 print:space-y-3 print:rounded-xl print:p-0 print:overflow-hidden ${getSpanClass(
                     effectiveCols
                   )}`}
                 >
                   {/* Card Header (Corporate Styled on Print) */}
-                  <div className="flex items-start justify-between gap-3 pb-3 border-b border-white/[0.04] print:bg-gray-50/80 print:p-4 print:pb-3 print:border-b print:border-gray-200 shrink-0">
-                    <div className="space-y-1 min-w-0">
+                  <div className="flex items-start justify-between gap-2.5 pb-2.5 border-b border-white/[0.04] print:bg-gray-50/80 print:p-4 print:pb-3 print:border-b print:border-gray-200 shrink-0">
+                    <div className="space-y-1 min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <span className="print-only hidden inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-900 text-white font-mono text-[10px] font-bold shrink-0">
                           {idx + 1}
                         </span>
-                        <h2 className="text-sm font-semibold text-[#f8fafc] truncate font-sans print:text-sm print:font-bold print:text-gray-900">
+                        <h2
+                          className="text-xs sm:text-sm font-semibold text-[#f8fafc] truncate font-sans print:text-sm print:font-bold print:text-gray-900 tracking-tight"
+                          title={displayTitle}
+                        >
                           {displayTitle}
                         </h2>
                       </div>
-                      <div className="flex items-center gap-2 text-[10px] text-[#94a3b8] font-mono print:text-gray-500">
-                        <span className="uppercase px-2 py-0.5 rounded bg-[#14223b] text-clay-400 print:bg-white print:text-gray-700 print:border-gray-300 print:font-semibold print:text-[9px]">
+                      <div className="flex items-center gap-2 text-[10px] text-[#94a3b8] font-mono print:text-gray-500 truncate">
+                        <span className="uppercase text-[9px] font-semibold tracking-wider px-1.5 py-0.5 rounded bg-[#14223b] text-clay-400 print:bg-white print:text-gray-700 print:border-gray-300 print:font-semibold">
                           {w.widget_type === 'chart'
-                            ? w.chart_spec?.chart_type
-                              ? `Grafik ${w.chart_spec.chart_type.toUpperCase()}`
-                              : 'Grafik Visualisasi'
-                            : 'Tabel Data Analisis'}
+                            ? (w.chart_spec?.chart_type || 'grafik')
+                            : 'tabel'}
                         </span>
                         {w.updated_at && (
-                          <span className="flex items-center gap-1">
-                            <Calendar className="w-3 h-3 text-clay-400 print:text-gray-400" />
-                            <span>
-                              Sinkronisasi:{' '}
-                              {new Date(w.updated_at).toLocaleTimeString('id-ID', {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                                second: '2-digit',
-                              })}
-                            </span>
+                          <span
+                            className="text-slate-500 truncate"
+                            title={`Sinkronisasi: ${new Date(w.updated_at).toLocaleTimeString('id-ID')}`}
+                          >
+                            {new Date(w.updated_at).toLocaleTimeString('id-ID', {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
                           </span>
                         )}
+                        <span className="text-slate-600 font-mono hidden sm:inline" title="Lebar kolom x tinggi pixel">
+                          {effectiveCols}k • {effectiveHeight}px
+                        </span>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-1.5 shrink-0 no-print flex-wrap justify-end">
-                      {/* Urutan Posisi Ke Atas */}
-                      <button
-                        type="button"
-                        onClick={() => handleMoveWidget(w.widget_id, 'up')}
-                        disabled={idx === 0}
-                        className="p-1.5 rounded-lg text-[#94a3b8] hover:text-[#f8fafc] hover:bg-[#14223b] disabled:opacity-25 disabled:cursor-not-allowed transition cursor-pointer"
-                        aria-label="Pindahkan widget ke atas"
-                        title="Pindahkan widget ke posisi sebelumnya"
-                      >
-                        <ArrowUp className="w-3.5 h-3.5" />
-                      </button>
-
-                      {/* Urutkan Posisi Ke Bawah */}
-                      <button
-                        type="button"
-                        onClick={() => handleMoveWidget(w.widget_id, 'down')}
-                        disabled={idx === localWidgets.length - 1}
-                        className="p-1.5 rounded-lg text-[#94a3b8] hover:text-[#f8fafc] hover:bg-[#14223b] disabled:opacity-25 disabled:cursor-not-allowed transition cursor-pointer"
-                        aria-label="Pindahkan widget ke bawah"
-                        title="Pindahkan widget ke posisi selanjutnya"
-                      >
-                        <ArrowDown className="w-3.5 h-3.5" />
-                      </button>
-
-                      {/* Dimension Indicator Badge */}
-                      <span
-                        className="text-[11px] font-mono text-slate-300 px-2 py-1 rounded-lg bg-[#14223b] border border-white/[0.06] shrink-0"
-                        title="Ukuran grid saat ini (kolom x pixel)"
-                      >
-                        {effectiveCols}/12 Kolom • {effectiveHeight}px
-                      </span>
+                    {/* Compact Icon Toolbar */}
+                    <div className="flex items-center gap-1 shrink-0 no-print">
+                      {/* Urutan Posisi Ke Atas & Ke Bawah */}
+                      <div className="flex items-center bg-[#14223b] rounded-lg p-0.5 border border-white/[0.06]">
+                        <button
+                          type="button"
+                          onClick={() => handleMoveWidget(w.widget_id, 'up')}
+                          disabled={idx === 0}
+                          className="p-1 rounded text-slate-400 hover:text-white disabled:opacity-25 disabled:cursor-not-allowed transition cursor-pointer"
+                          aria-label="Pindahkan widget ke atas"
+                          title="Pindah ke atas"
+                        >
+                          <ArrowUp className="w-3 h-3" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleMoveWidget(w.widget_id, 'down')}
+                          disabled={idx === localWidgets.length - 1}
+                          className="p-1 rounded text-slate-400 hover:text-white disabled:opacity-25 disabled:cursor-not-allowed transition cursor-pointer"
+                          aria-label="Pindahkan widget ke bawah"
+                          title="Pindah ke bawah"
+                        >
+                          <ArrowDown className="w-3 h-3" />
+                        </button>
+                      </div>
 
                       {/* Unduh CSV Button for Table Widget */}
                       {isTable && w.table_data && (
                         <button
                           type="button"
                           onClick={() => exportTableToCSV(w.table_data!, displayTitle)}
-                          className="flex items-center gap-1 text-[11px] font-mono px-2 py-1 rounded bg-[#14223b] hover:bg-[#182a47] text-[#94a3b8] hover:text-[#f8fafc] transition cursor-pointer shadow-sm"
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-[#14223b] transition cursor-pointer"
                           aria-label={`Unduh data ${displayTitle} sebagai CSV`}
                           title="Unduh data tabel sebagai CSV"
                         >
-                          <Download className="w-3 h-3 text-clay-400" />
-                          <span>CSV</span>
+                          <Download className="w-3.5 h-3.5 text-sky-400" />
                         </button>
                       )}
 
@@ -1026,23 +1107,22 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                         <button
                           type="button"
                           onClick={() => handleExportChartData(w.chart_spec!, displayTitle)}
-                          className="flex items-center gap-1 text-[11px] font-mono px-2 py-1 rounded bg-[#14223b] hover:bg-[#182a47] text-[#94a3b8] hover:text-[#f8fafc] transition cursor-pointer shadow-sm"
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-[#14223b] transition cursor-pointer"
                           aria-label={`Unduh data ${displayTitle} sebagai CSV`}
                           title="Unduh data grafik sebagai CSV"
                         >
-                          <Download className="w-3 h-3 text-clay-400" />
-                          <span>CSV</span>
+                          <Download className="w-3.5 h-3.5 text-sky-400" />
                         </button>
                       )}
 
                       <button
                         type="button"
                         onClick={() => onDeleteWidget(w.widget_id)}
-                        className="p-1.5 rounded-lg text-[#94a3b8] hover:text-rose-400 hover:bg-rose-950/30 transition shrink-0 cursor-pointer"
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-950/30 transition shrink-0 cursor-pointer"
                         aria-label={`Lepas widget ${displayTitle} dari dashboard`}
                         title="Lepas widget dari dashboard"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </div>

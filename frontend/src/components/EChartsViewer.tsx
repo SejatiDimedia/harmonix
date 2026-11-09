@@ -265,7 +265,7 @@ export const EChartsViewer: React.FC<EChartsViewerProps> = ({
 
       option.legend = {
         orient: 'horizontal',
-        bottom: 8,
+        bottom: 10,
         textStyle: { color: '#94a3b8', fontSize: 11 },
         type: labels.length > 5 ? 'scroll' : 'plain',
         pageTextStyle: { color: '#94a3b8' },
@@ -279,8 +279,8 @@ export const EChartsViewer: React.FC<EChartsViewerProps> = ({
         {
           name: spec.title || spec.y_axis,
           type: 'pie',
-          radius: isDoughnut ? ['45%', '72%'] : ['0%', '72%'],
-          center: ['50%', '46%'],
+          radius: isDoughnut ? ['40%', '65%'] : ['0%', '65%'],
+          center: ['50%', '44%'],
           avoidLabelOverlap: true,
           minShowLabelAngle: 12,
           itemStyle: {
@@ -395,8 +395,8 @@ export const EChartsViewer: React.FC<EChartsViewerProps> = ({
       option.grid = {
         left: '2%',
         right: '3%',
-        bottom: labels.length > 8 ? '16%' : '8%',
-        top: showToolbox && !isKiosk ? '14%' : '8%',
+        bottom: labels.length > 8 ? 44 : 28,
+        top: showToolbox && !isKiosk ? 36 : 24,
         containLabel: true,
       };
 
@@ -568,7 +568,7 @@ export const EChartsViewer: React.FC<EChartsViewerProps> = ({
   return (
     <div
       ref={containerRef}
-      style={{ height, width: '100%', minHeight: typeof height === 'number' ? height : 240 }}
+      style={{ height, width: '100%', minHeight: typeof height === 'number' ? height : (isKiosk ? 0 : 200) }}
       className={`relative select-none ${className}`}
     />
   );
