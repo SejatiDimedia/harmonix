@@ -149,8 +149,8 @@ async def test_dashboard_layout_api_and_tv():
             f"/v1/dashboard/layout/{test_session}",
             json={
                 "layout": [
-                    {"widget_id": "wgt_nonexistent_1", "position": 0, "span": "full"},
-                    {"widget_id": "wgt_nonexistent_2", "position": 1, "span": "half"},
+                    {"widget_id": "wgt_nonexistent_1", "position": 0, "span": "full", "height": "tall"},
+                    {"widget_id": "wgt_nonexistent_2", "position": 1, "span": "half", "height": "compact"},
                 ]
             },
         )

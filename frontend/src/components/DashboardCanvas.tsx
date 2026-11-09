@@ -146,6 +146,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
         widget_id: w.widget_id,
         position: idx,
         span: w.layout_span || 'half',
+        height: w.layout_height || 'normal',
       }));
       await updateDashboardLayout(sessionId, items);
       if (showToast) {
@@ -167,10 +168,32 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
     return 'lg:col-span-6';
   };
 
+  const getHeightClass = (height?: string, isKiosk: boolean = false) => {
+    if (isKiosk) {
+      if (height === 'compact') return 'min-h-[340px]';
+      if (height === 'tall') return 'min-h-[580px]';
+      return 'min-h-[460px]';
+    }
+    if (height === 'compact') return 'min-h-[320px]';
+    if (height === 'tall') return 'min-h-[560px]';
+    return 'min-h-[440px]';
+  };
+
   const handleSetSpan = (widgetId: string, span: 'half' | 'full' | 'third') => {
     const updated = localWidgets.map((w) => {
       if (w.widget_id === widgetId) {
         return { ...w, layout_span: span };
+      }
+      return w;
+    });
+    setLocalWidgets(updated);
+    persistLayout(updated);
+  };
+
+  const handleSetHeight = (widgetId: string, height: 'compact' | 'normal' | 'tall') => {
+    const updated = localWidgets.map((w) => {
+      if (w.widget_id === widgetId) {
+        return { ...w, layout_height: height };
       }
       return w;
     });
@@ -390,7 +413,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                   <div
                     key={w.widget_id}
                     className={`rounded-2xl bg-[#0b1424] border border-white/[0.08] p-5 shadow-xl flex flex-col justify-between transition-all duration-300 ${
-                      localWidgets.length <= 2 ? 'min-h-[calc(100vh-100px)]' : 'min-h-[440px]'
+                      localWidgets.length <= 2 ? 'min-h-[calc(100vh-100px)]' : getHeightClass(w.layout_height, true)
                     } ${getSpanClass(w.layout_span)}`}
                   >
                     {/* Header */}
@@ -428,6 +451,18 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                           <div className="inline-flex rounded-lg bg-[#14223b] p-0.5 border border-white/[0.06]">
                             <button
                               type="button"
+                              onClick={() => handleSetSpan(w.widget_id, 'third')}
+                              className={`px-2 py-0.5 text-[10px] font-mono rounded transition cursor-pointer ${
+                                w.layout_span === 'third'
+                                  ? 'bg-sky-600 text-white font-medium shadow-sm'
+                                  : 'text-slate-400 hover:text-white'
+                              }`}
+                              title="3 Kolom per baris (33% lebar)"
+                            >
+                              1/3
+                            </button>
+                            <button
+                              type="button"
                               onClick={() => handleSetSpan(w.widget_id, 'half')}
                               className={`px-2 py-0.5 text-[10px] font-mono rounded transition cursor-pointer ${
                                 w.layout_span === 'half' || !w.layout_span
@@ -436,7 +471,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                               }`}
                               title="2 Kolom per baris (50% lebar)"
                             >
-                              2 Kolom
+                              1/2
                             </button>
                             <button
                               type="button"
@@ -448,7 +483,47 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                               }`}
                               title="1 Kolom per baris (100% penuh)"
                             >
-                              1 Kolom
+                              Penuh
+                            </button>
+                          </div>
+
+                          {/* Segmented Height Selector */}
+                          <div className="inline-flex rounded-lg bg-[#14223b] p-0.5 border border-white/[0.06]">
+                            <button
+                              type="button"
+                              onClick={() => handleSetHeight(w.widget_id, 'compact')}
+                              className={`px-2 py-0.5 text-[10px] font-mono rounded transition cursor-pointer ${
+                                w.layout_height === 'compact'
+                                  ? 'bg-sky-600 text-white font-medium shadow-sm'
+                                  : 'text-slate-400 hover:text-white'
+                              }`}
+                              title="Tinggi ringkas (340px)"
+                            >
+                              T: S
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleSetHeight(w.widget_id, 'normal')}
+                              className={`px-2 py-0.5 text-[10px] font-mono rounded transition cursor-pointer ${
+                                w.layout_height === 'normal' || !w.layout_height
+                                  ? 'bg-sky-600 text-white font-medium shadow-sm'
+                                  : 'text-slate-400 hover:text-white'
+                              }`}
+                              title="Tinggi standar (460px)"
+                            >
+                              T: M
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleSetHeight(w.widget_id, 'tall')}
+                              className={`px-2 py-0.5 text-[10px] font-mono rounded transition cursor-pointer ${
+                                w.layout_height === 'tall'
+                                  ? 'bg-sky-600 text-white font-medium shadow-sm'
+                                  : 'text-slate-400 hover:text-white'
+                              }`}
+                              title="Tinggi maksimal (580px)"
+                            >
+                              T: L
                             </button>
                           </div>
                         </div>
@@ -731,7 +806,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                   key={w.widget_id}
                   className={`print-widget-card rounded-2xl bg-[#0f1a2e] print:bg-white border border-white/[0.06] print:border-gray-300 p-5 shadow-md shadow-black/20 flex flex-col justify-between transition-all duration-200 space-y-4 print:space-y-3 print:rounded-xl print:p-0 print:overflow-hidden ${getSpanClass(
                     w.layout_span
-                  )}`}
+                  )} ${getHeightClass(w.layout_height, false)}`}
                 >
                   {/* Card Header (Corporate Styled on Print) */}
                   <div className="flex items-start justify-between gap-3 pb-3 border-b border-white/[0.04] print:bg-gray-50/80 print:p-4 print:pb-3 print:border-b print:border-gray-200">
@@ -793,8 +868,21 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                         <ArrowDown className="w-3.5 h-3.5" />
                       </button>
 
-                      {/* Segmented Width Selector: 2 Kolom vs 1 Kolom */}
+                      {/* Segmented Width Selector: 1/3, 1/2, Penuh */}
                       <div className="inline-flex rounded-lg bg-[#14223b] p-0.5 border border-white/[0.06] shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => handleSetSpan(w.widget_id, 'third')}
+                          className={`px-2 py-1 text-[11px] font-mono rounded transition cursor-pointer ${
+                            w.layout_span === 'third'
+                              ? 'bg-sky-600 text-white font-medium shadow-sm'
+                              : 'text-[#94a3b8] hover:text-[#f8fafc]'
+                          }`}
+                          aria-label="Atur tampilan 3 kolom per baris (33%)"
+                          title="3 Kolom per baris (33% lebar baris)"
+                        >
+                          1/3
+                        </button>
                         <button
                           type="button"
                           onClick={() => handleSetSpan(w.widget_id, 'half')}
@@ -806,7 +894,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                           aria-label="Atur tampilan 2 kolom per baris (50%)"
                           title="2 Kolom per baris (50% lebar baris)"
                         >
-                          2 Kolom
+                          1/2
                         </button>
                         <button
                           type="button"
@@ -819,7 +907,50 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                           aria-label="Atur tampilan 1 kolom per baris (100% penuh)"
                           title="1 Kolom per baris (100% lebar penuh)"
                         >
-                          1 Kolom
+                          Penuh
+                        </button>
+                      </div>
+
+                      {/* Segmented Height Selector: S (320px), M (440px), L (560px) */}
+                      <div className="inline-flex rounded-lg bg-[#14223b] p-0.5 border border-white/[0.06] shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => handleSetHeight(w.widget_id, 'compact')}
+                          className={`px-2 py-1 text-[11px] font-mono rounded transition cursor-pointer ${
+                            w.layout_height === 'compact'
+                              ? 'bg-sky-600 text-white font-medium shadow-sm'
+                              : 'text-[#94a3b8] hover:text-[#f8fafc]'
+                          }`}
+                          aria-label="Atur tinggi ringkas (320px)"
+                          title="Tinggi ringkas (320px)"
+                        >
+                          T: S
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleSetHeight(w.widget_id, 'normal')}
+                          className={`px-2 py-1 text-[11px] font-mono rounded transition cursor-pointer ${
+                            w.layout_height === 'normal' || !w.layout_height
+                              ? 'bg-sky-600 text-white font-medium shadow-sm'
+                              : 'text-[#94a3b8] hover:text-[#f8fafc]'
+                          }`}
+                          aria-label="Atur tinggi standar (440px)"
+                          title="Tinggi standar (440px)"
+                        >
+                          T: M
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleSetHeight(w.widget_id, 'tall')}
+                          className={`px-2 py-1 text-[11px] font-mono rounded transition cursor-pointer ${
+                            w.layout_height === 'tall'
+                              ? 'bg-sky-600 text-white font-medium shadow-sm'
+                              : 'text-[#94a3b8] hover:text-[#f8fafc]'
+                          }`}
+                          aria-label="Atur tinggi maksimal (560px)"
+                          title="Tinggi maksimal (560px)"
+                        >
+                          T: L
                         </button>
                       </div>
 

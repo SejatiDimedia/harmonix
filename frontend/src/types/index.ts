@@ -261,6 +261,7 @@ export interface QueueJob {
 
 export type WidgetType = 'chart' | 'table' | 'kpi';
 export type LayoutSpan = 'half' | 'full' | 'third';
+export type LayoutHeight = 'compact' | 'normal' | 'tall';
 
 export interface DashboardWidget {
   widget_id: string;
@@ -273,6 +274,7 @@ export interface DashboardWidget {
   metric_summary?: string | null;
   layout_position?: number;
   layout_span?: LayoutSpan;
+  layout_height?: LayoutHeight;
   created_at: string;
   updated_at?: string;
 }
@@ -281,6 +283,7 @@ export interface WidgetLayoutItem {
   widget_id: string;
   position: number;
   span: LayoutSpan;
+  height?: LayoutHeight;
 }
 
 export interface UpdateDashboardLayoutPayload {
@@ -297,6 +300,7 @@ export interface PinWidgetPayload {
   metric_summary?: string | null;
   layout_position?: number;
   layout_span?: LayoutSpan;
+  layout_height?: LayoutHeight;
 }
 
 export interface DashboardListResponse {

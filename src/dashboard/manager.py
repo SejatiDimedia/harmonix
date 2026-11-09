@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 
 WidgetType = Literal["chart", "table", "kpi"]
 LayoutSpan = Literal["half", "full", "third"]
+LayoutHeight = Literal["compact", "normal", "tall"]
 
 
 class DashboardWidgetModel(BaseModel):
@@ -32,6 +33,7 @@ class DashboardWidgetModel(BaseModel):
     metric_summary: str | None = None
     layout_position: int = 0
     layout_span: LayoutSpan = "half"
+    layout_height: LayoutHeight = "normal"
     created_at: datetime | None = None
     updated_at: datetime | None = None
 
@@ -46,12 +48,14 @@ class PinWidgetInput(BaseModel):
     metric_summary: str | None = None
     layout_position: int = 0
     layout_span: LayoutSpan = "half"
+    layout_height: LayoutHeight = "normal"
 
 
 class WidgetLayoutItem(BaseModel):
     widget_id: str
     position: int
     span: LayoutSpan = "half"
+    height: LayoutHeight = "normal"
 
 
 async def init_dashboard_table() -> None:
@@ -69,6 +73,7 @@ async def init_dashboard_table() -> None:
                 metric_summary TEXT,
                 layout_position INT DEFAULT 0,
                 layout_span VARCHAR(20) DEFAULT 'half',
+                layout_height VARCHAR(20) DEFAULT 'normal',
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
             );
@@ -82,6 +87,10 @@ async def init_dashboard_table() -> None:
         await session.execute(text("""
             ALTER TABLE analytics.dashboard_widgets
             ADD COLUMN IF NOT EXISTS layout_span VARCHAR(20) DEFAULT 'half';
+        """))
+        await session.execute(text("""
+            ALTER TABLE analytics.dashboard_widgets
+            ADD COLUMN IF NOT EXISTS layout_height VARCHAR(20) DEFAULT 'normal';
         """))
 
         await session.execute(text("""
@@ -121,6 +130,7 @@ async def pin_widget(payload: PinWidgetInput) -> DashboardWidgetModel:
                     metric_summary,
                     layout_position,
                     layout_span,
+                    layout_height,
                     created_at,
                     updated_at
                 ) VALUES (
@@ -134,6 +144,7 @@ async def pin_widget(payload: PinWidgetInput) -> DashboardWidgetModel:
                     :metric_summary,
                     :layout_position,
                     :layout_span,
+                    :layout_height,
                     :created_at,
                     :updated_at
                 );
@@ -149,6 +160,7 @@ async def pin_widget(payload: PinWidgetInput) -> DashboardWidgetModel:
                 "metric_summary": payload.metric_summary,
                 "layout_position": assigned_pos,
                 "layout_span": payload.layout_span,
+                "layout_height": payload.layout_height,
                 "created_at": now,
                 "updated_at": now,
             },
@@ -166,6 +178,7 @@ async def pin_widget(payload: PinWidgetInput) -> DashboardWidgetModel:
         metric_summary=payload.metric_summary,
         layout_position=assigned_pos,
         layout_span=payload.layout_span,
+        layout_height=payload.layout_height,
         created_at=now,
         updated_at=now,
     )
@@ -187,6 +200,7 @@ async def get_dashboard_widgets(session_id: str) -> list[DashboardWidgetModel]:
                     metric_summary,
                     COALESCE(layout_position, 0) as layout_position,
                     COALESCE(layout_span, 'half') as layout_span,
+                    COALESCE(layout_height, 'normal') as layout_height,
                     created_at,
                     updated_at
                 FROM analytics.dashboard_widgets
@@ -225,8 +239,9 @@ async def get_dashboard_widgets(session_id: str) -> list[DashboardWidgetModel]:
                 metric_summary=r[7],
                 layout_position=int(r[8]),
                 layout_span=r[9] if r[9] in ("half", "full", "third") else "half",
-                created_at=r[10],
-                updated_at=r[11],
+                layout_height=r[10] if r[10] in ("compact", "normal", "tall") else "normal",
+                created_at=r[11],
+                updated_at=r[12],
             )
         )
     return widgets
@@ -236,7 +251,7 @@ async def update_dashboard_layout(
     session_id: str,
     items: list[WidgetLayoutItem],
 ) -> int:
-    """Update layout position and grid span for multiple widgets in a dashboard session (FR-47)."""
+    """Update layout position, grid span, and height for multiple widgets in a dashboard session (FR-47)."""
     if not items:
         return 0
 
@@ -251,12 +266,14 @@ async def update_dashboard_layout(
                     SET
                         layout_position = :position,
                         layout_span = :span,
+                        layout_height = :height,
                         updated_at = :updated_at
                     WHERE widget_id = :widget_id AND session_id = :session_id;
                 """),
                 {
                     "position": item.position,
                     "span": item.span,
+                    "height": item.height,
                     "updated_at": now,
                     "widget_id": item.widget_id,
                     "session_id": session_id,
