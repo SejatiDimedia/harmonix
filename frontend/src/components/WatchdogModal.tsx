@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   X,
   ShieldAlert,
@@ -11,7 +11,7 @@ import {
   AlertTriangle,
   AlertOctagon,
   Clock,
-  Sparkles,
+  BrainCircuit,
   Send,
   Sliders,
   ChevronDown,
@@ -42,6 +42,7 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingRuleId, setEditingRuleId] = useState<number | null>(null);
   const [expandedLogId, setExpandedLogId] = useState<number | null>(null);
+  const [ruleToDelete, setRuleToDelete] = useState<WatchdogRule | null>(null);
 
   // Form State
   const [ruleName, setRuleName] = useState('');
@@ -64,12 +65,29 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
   const deleteMutation = useDeleteWatchdogRuleMutation();
   const runMutation = useRunWatchdogRuleMutation();
 
+  // Escape key closes modal & form (Antislop R-32 Keyboard Accessibility)
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (ruleToDelete) {
+          setRuleToDelete(null);
+        } else if (isFormOpen) {
+          setIsFormOpen(false);
+        } else {
+          onClose();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose, isFormOpen, ruleToDelete]);
+
   if (!isOpen) return null;
 
   const rules = rulesData?.rules || [];
   const logs = logsData?.logs || [];
   const triggeredCount = rules.filter((r) => r.last_status === 'triggered').length;
-  const activeCount = rules.filter((r) => r.enabled).length;
 
   const handleOpenCreate = () => {
     setEditingRuleId(null);
@@ -165,11 +183,13 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
     }
   };
 
-  const handleDeleteRule = async (ruleId: number) => {
-    if (!window.confirm(`Hapus aturan watchdog #${ruleId} beserta riwayat lognya?`)) return;
+  const handleConfirmDelete = async () => {
+    if (!ruleToDelete) return;
+    const id = ruleToDelete.id;
+    setRuleToDelete(null);
     try {
-      await deleteMutation.mutateAsync(ruleId);
-      showToast?.(`Aturan #${ruleId} berhasil dihapus`);
+      await deleteMutation.mutateAsync(id);
+      showToast?.(`Aturan #${id} berhasil dihapus`);
     } catch (err: any) {
       showToast?.(`Gagal menghapus aturan: ${err.message}`);
     }
@@ -179,28 +199,28 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
     switch (status) {
       case 'healthy':
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono">
             <CheckCircle2 className="w-3 h-3" />
             Normal
           </span>
         );
       case 'triggered':
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-rose-500/10 text-rose-400 border border-rose-500/20 animate-pulse">
-            <AlertOctagon className="w-3 h-3" />
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-rose-500/15 text-rose-300 border border-rose-500/30 font-mono">
+            <AlertOctagon className="w-3 h-3 text-rose-400" />
             Terpicu
           </span>
         );
       case 'error':
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-700 text-slate-300">
-            <AlertTriangle className="w-3 h-3" />
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-700/80 text-slate-300 border border-slate-600 font-mono">
+            <AlertTriangle className="w-3 h-3 text-amber-400" />
             Error
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20 font-mono">
             <Clock className="w-3 h-3" />
             Menunggu
           </span>
@@ -220,83 +240,81 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 overflow-y-auto">
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 overflow-y-auto animate-in fade-in duration-150"
+    >
       <div className="relative w-full max-w-4xl max-h-[90vh] flex flex-col rounded-2xl bg-[#0c1424] border border-white/[0.08] shadow-2xl overflow-hidden font-sans">
         {/* Modal Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.06] bg-[#0f1a2e]">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-rose-500/15 border border-rose-500/25 text-rose-400">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.06] bg-[#0f1a2e] gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-rose-500/15 border border-rose-500/25 text-rose-400 shrink-0">
               <ShieldAlert className="w-5 h-5" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2.5 flex-wrap">
                 <h2 className="text-base font-semibold text-white tracking-tight">
                   Metric Watchdog & Anomaly Alerting
                 </h2>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30">
-                  FR-49
-                </span>
+                {triggeredCount > 0 ? (
+                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-mono font-medium bg-rose-500/15 text-rose-300 border border-rose-500/30">
+                    {triggeredCount} Anomali Terpicu
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-mono font-medium bg-emerald-500/15 text-emerald-300 border border-emerald-500/25">
+                    Semua Normal
+                  </span>
+                )}
               </div>
-              <p className="text-xs text-slate-400">
-                Pemantau otomatis metrik gudang data dengan diagnosis akar masalah AI & webhook integrasi
+              <p className="text-xs text-slate-400 truncate mt-0.5">
+                Evaluasi otomatis ambang batas SQL analitik & integrasi webhook eksternal
               </p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.06] transition cursor-pointer"
+            aria-label="Tutup jendela watchdog"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.06] transition cursor-pointer shrink-0"
+            title="Tutup (Esc)"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Metric Summary Cards */}
-        <div className="grid grid-cols-4 gap-3 px-6 py-3 bg-[#0a101d] border-b border-white/[0.04]">
-          <div className="p-3 rounded-xl bg-[#0f1a2e]/60 border border-white/[0.04]">
-            <span className="text-[11px] text-slate-400">Total Aturan</span>
-            <div className="text-lg font-bold text-white mt-0.5">{rules.length}</div>
-          </div>
-          <div className="p-3 rounded-xl bg-[#0f1a2e]/60 border border-white/[0.04]">
-            <span className="text-[11px] text-slate-400">Aturan Aktif</span>
-            <div className="text-lg font-bold text-sky-400 mt-0.5">{activeCount}</div>
-          </div>
-          <div className="p-3 rounded-xl bg-[#0f1a2e]/60 border border-white/[0.04]">
-            <span className="text-[11px] text-slate-400">Anomali Terpicu</span>
-            <div className={`text-lg font-bold mt-0.5 ${triggeredCount > 0 ? 'text-rose-400' : 'text-slate-400'}`}>
-              {triggeredCount}
-            </div>
-          </div>
-          <div className="p-3 rounded-xl bg-[#0f1a2e]/60 border border-white/[0.04]">
-            <span className="text-[11px] text-slate-400">Total Log Eksekusi</span>
-            <div className="text-lg font-bold text-emerald-400 mt-0.5">{logs.length}</div>
-          </div>
-        </div>
-
-        {/* Tab Switcher & Actions */}
-        <div className="flex items-center justify-between px-6 py-2.5 border-b border-white/[0.04] bg-[#0c1424]">
-          <div className="flex items-center gap-2">
+        {/* Tab Switcher & Actions Bar */}
+        <div className="flex items-center justify-between px-6 py-2.5 border-b border-white/[0.06] bg-[#0b1424]">
+          <div className="flex items-center bg-[#14223b]/90 border border-white/[0.08] rounded-lg p-0.5 text-xs">
             <button
               type="button"
               onClick={() => { setActiveTab('rules'); setIsFormOpen(false); }}
-              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition cursor-pointer ${
-                activeTab === 'rules'
-                  ? 'bg-sky-500/15 text-sky-300 border border-sky-500/30'
-                  : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
-              }`}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-sans transition cursor-pointer ${activeTab === 'rules'
+                ? 'bg-sky-500/20 text-sky-300 border border-sky-400/30 font-medium'
+                : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
+                }`}
             >
-              Aturan Pemantauan ({rules.length})
+              <span>Aturan Pemantauan</span>
+              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-black/30 text-slate-300 font-semibold">
+                {rules.length}
+              </span>
             </button>
+            <div className="h-3 w-px bg-white/[0.08]" />
             <button
               type="button"
               onClick={() => { setActiveTab('logs'); setIsFormOpen(false); }}
-              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition cursor-pointer ${
-                activeTab === 'logs'
-                  ? 'bg-sky-500/15 text-sky-300 border border-sky-500/30'
-                  : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
-              }`}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-sans transition cursor-pointer ${activeTab === 'logs'
+                ? 'bg-sky-500/20 text-sky-300 border border-sky-400/30 font-medium'
+                : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
+                }`}
             >
-              Riwayat Log & Alert ({logs.length})
+              <span>Riwayat Log & Alert</span>
+              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-black/30 text-slate-300 font-semibold">
+                {logs.length}
+              </span>
             </button>
           </div>
 
@@ -313,7 +331,7 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
               <button
                 type="button"
                 onClick={handleOpenCreate}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-xs font-medium transition cursor-pointer shadow-sm"
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-clay-600 hover:bg-clay-500 text-white text-xs font-medium transition cursor-pointer shadow-sm active:scale-95"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Tambah Aturan</span>
@@ -326,7 +344,7 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
           {/* Form Drawer: Tambah / Edit Rule */}
           {isFormOpen && (
-            <form onSubmit={handleSaveRule} className="p-5 rounded-xl border border-sky-500/25 bg-[#0f1d36] space-y-4 shadow-lg mb-4">
+            <form onSubmit={handleSaveRule} className="p-5 rounded-2xl border border-white/[0.08] bg-[#14223b]/90 space-y-4 shadow-lg mb-4">
               <div className="flex items-center justify-between pb-3 border-b border-white/[0.06]">
                 <div className="flex items-center gap-2">
                   <Sliders className="w-4 h-4 text-sky-400" />
@@ -337,13 +355,13 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsFormOpen(false)}
-                  className="text-xs text-slate-400 hover:text-white cursor-pointer"
+                  className="text-xs text-slate-400 hover:text-white cursor-pointer px-2 py-1 rounded hover:bg-white/[0.06] transition"
                 >
                   Batal
                 </button>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[11px] font-medium text-slate-300 mb-1">
                     Nama Aturan
@@ -353,7 +371,7 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
                     value={ruleName}
                     onChange={(e) => setRuleName(e.target.value)}
                     placeholder="Contoh: Tingkat Pembatalan Pesanan Tinggi"
-                    className="w-full px-3 py-2 rounded-lg bg-[#0b1322] border border-white/[0.08] text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500"
+                    className="w-full px-3 py-2 rounded-xl bg-[#080f1d] border border-white/[0.08] text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-sky-400 transition"
                     required
                   />
                 </div>
@@ -364,7 +382,7 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
                   <select
                     value={severity}
                     onChange={(e) => setSeverity(e.target.value as any)}
-                    className="w-full px-3 py-2 rounded-lg bg-[#0b1322] border border-white/[0.08] text-xs text-white focus:outline-none focus:border-sky-500"
+                    className="w-full px-3 py-2 rounded-xl bg-[#080f1d] border border-white/[0.08] text-xs text-white focus:outline-none focus:ring-1 focus:ring-sky-400 transition cursor-pointer"
                   >
                     <option value="info">Informasi (Info)</option>
                     <option value="warning">Peringatan (Warning)</option>
@@ -382,7 +400,7 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Penjelasan latar belakang atau target operasional yang dipantau"
-                  className="w-full px-3 py-2 rounded-lg bg-[#0b1322] border border-white/[0.08] text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500"
+                  className="w-full px-3 py-2 rounded-xl bg-[#080f1d] border border-white/[0.08] text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-sky-400 transition"
                 />
               </div>
 
@@ -395,12 +413,12 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
                   onChange={(e) => setSqlQuery(e.target.value)}
                   rows={3}
                   placeholder="SELECT ... AS target_column FROM analytics.orders..."
-                  className="w-full px-3 py-2 rounded-lg bg-[#080d17] border border-white/[0.08] text-xs font-mono text-slate-200 placeholder-slate-600 focus:outline-none focus:border-sky-500"
+                  className="w-full px-3 py-2 rounded-xl bg-[#080f1d] border border-white/[0.08] text-xs font-mono text-slate-200 placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-sky-400 transition"
                   required
                 />
               </div>
 
-              <div className="grid grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div>
                   <label className="block text-[11px] font-medium text-slate-300 mb-1">
                     Kolom Target
@@ -410,7 +428,7 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
                     value={targetColumn}
                     onChange={(e) => setTargetColumn(e.target.value)}
                     placeholder="Contoh: late_pct"
-                    className="w-full px-3 py-2 rounded-lg bg-[#0b1322] border border-white/[0.08] text-xs font-mono text-white placeholder-slate-500 focus:outline-none focus:border-sky-500"
+                    className="w-full px-3 py-2 rounded-xl bg-[#080f1d] border border-white/[0.08] text-xs font-mono text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-sky-400 transition"
                     required
                   />
                 </div>
@@ -421,7 +439,7 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
                   <select
                     value={operator}
                     onChange={(e) => setOperator(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg bg-[#0b1322] border border-white/[0.08] text-xs font-mono text-white focus:outline-none focus:border-sky-500"
+                    className="w-full px-3 py-2 rounded-xl bg-[#080f1d] border border-white/[0.08] text-xs font-mono text-white focus:outline-none focus:ring-1 focus:ring-sky-400 transition cursor-pointer"
                   >
                     <option value=">">&gt; (Lebih Dari)</option>
                     <option value=">=">&gt;= (Lebih Dari / Sama)</option>
@@ -440,18 +458,18 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
                     step="any"
                     value={thresholdValue}
                     onChange={(e) => setThresholdValue(parseFloat(e.target.value) || 0)}
-                    className="w-full px-3 py-2 rounded-lg bg-[#0b1322] border border-white/[0.08] text-xs font-mono text-white focus:outline-none focus:border-sky-500"
+                    className="w-full px-3 py-2 rounded-xl bg-[#080f1d] border border-white/[0.08] text-xs font-mono text-white focus:outline-none focus:ring-1 focus:ring-sky-400 transition"
                     required
                   />
                 </div>
                 <div>
                   <label className="block text-[11px] font-medium text-slate-300 mb-1">
-                    Interval Pengecekan
+                    Interval Evaluasi
                   </label>
                   <select
                     value={intervalMinutes}
                     onChange={(e) => setIntervalMinutes(parseInt(e.target.value, 10))}
-                    className="w-full px-3 py-2 rounded-lg bg-[#0b1322] border border-white/[0.08] text-xs text-white focus:outline-none focus:border-sky-500"
+                    className="w-full px-3 py-2 rounded-xl bg-[#080f1d] border border-white/[0.08] text-xs text-white focus:outline-none focus:ring-1 focus:ring-sky-400 transition cursor-pointer"
                   >
                     <option value="15">Setiap 15 Menit</option>
                     <option value="30">Setiap 30 Menit</option>
@@ -463,7 +481,7 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 pt-2 border-t border-white/[0.04]">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-white/[0.04]">
                 <div>
                   <label className="block text-[11px] font-medium text-slate-300 mb-1">
                     Webhook Alert URL (Opsional)
@@ -473,7 +491,7 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
                     value={webhookUrl}
                     onChange={(e) => setWebhookUrl(e.target.value)}
                     placeholder="https://hooks.slack.com/services/... atau Discord Webhook"
-                    className="w-full px-3 py-2 rounded-lg bg-[#0b1322] border border-white/[0.08] text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500"
+                    className="w-full px-3 py-2 rounded-xl bg-[#080f1d] border border-white/[0.08] text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-sky-400 transition"
                   />
                 </div>
                 <div>
@@ -483,7 +501,7 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
                   <select
                     value={channelType}
                     onChange={(e) => setChannelType(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg bg-[#0b1322] border border-white/[0.08] text-xs text-white focus:outline-none focus:border-sky-500"
+                    className="w-full px-3 py-2 rounded-xl bg-[#080f1d] border border-white/[0.08] text-xs text-white focus:outline-none focus:ring-1 focus:ring-sky-400 transition cursor-pointer"
                   >
                     <option value="slack">Slack Blocks Format</option>
                     <option value="discord">Discord Embeds Format</option>
@@ -492,32 +510,32 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
                 </div>
               </div>
 
-              <div className="flex items-center justify-between pt-2">
-                <label className="flex items-center gap-2 cursor-pointer">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
                   <input
                     type="checkbox"
                     checked={aiDiagnosisEnabled}
                     onChange={(e) => setAiDiagnosisEnabled(e.target.checked)}
-                    className="w-4 h-4 rounded text-sky-500 bg-[#0b1322] border-white/[0.2] focus:ring-sky-500"
+                    className="w-4 h-4 rounded text-sky-500 bg-[#080f1d] border-white/[0.2] focus:ring-sky-500 cursor-pointer"
                   />
-                  <span className="text-xs text-slate-300 flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-sky-400" />
-                    Aktifkan diagnosis otomatis akar penyebab masalah oleh Model AI saat anomali terpicu
+                  <span className="text-xs text-slate-300 flex items-center gap-1.5 font-sans">
+                    <BrainCircuit className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+                    <span>Aktifkan diagnosis otomatis akar penyebab masalah saat anomali terpicu</span>
                   </span>
                 </label>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center justify-end gap-2 shrink-0">
                   <button
                     type="button"
                     onClick={() => setIsFormOpen(false)}
-                    className="px-3.5 py-1.5 rounded-lg text-xs text-slate-400 hover:text-white hover:bg-white/[0.06] transition cursor-pointer"
+                    className="px-3.5 py-1.5 rounded-xl text-xs text-slate-400 hover:text-white hover:bg-white/[0.06] transition cursor-pointer"
                   >
                     Batal
                   </button>
                   <button
                     type="submit"
                     disabled={createMutation.isPending || updateMutation.isPending}
-                    className="px-4 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-xs font-medium transition cursor-pointer shadow-sm disabled:opacity-50"
+                    className="px-4 py-1.5 rounded-xl bg-clay-600 hover:bg-clay-500 text-white text-xs font-medium transition cursor-pointer shadow-sm disabled:opacity-50"
                   >
                     {editingRuleId ? 'Perbarui Aturan' : 'Simpan Aturan'}
                   </button>
@@ -544,9 +562,9 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
                     className="p-4 rounded-xl border border-white/[0.06] bg-[#0f1a2e] hover:border-white/[0.12] transition space-y-3 shadow-sm"
                   >
                     <div className="flex items-start justify-between gap-4">
-                      <div className="space-y-1">
+                      <div className="space-y-1 min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-sm font-semibold text-white">
+                          <span className="text-sm font-semibold text-white truncate">
                             {rule.rule_name}
                           </span>
                           {getSeverityBadge(rule.severity)}
@@ -558,7 +576,7 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
                           )}
                         </div>
                         {rule.description && (
-                          <p className="text-xs text-slate-400">{rule.description}</p>
+                          <p className="text-xs text-slate-400 leading-relaxed">{rule.description}</p>
                         )}
                       </div>
 
@@ -576,11 +594,10 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
                         <button
                           type="button"
                           onClick={() => handleToggleEnable(rule)}
-                          className={`px-2.5 py-1 text-xs rounded-lg border transition cursor-pointer ${
-                            rule.enabled
-                              ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20 hover:bg-emerald-500/20'
-                              : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-white'
-                          }`}
+                          className={`px-2.5 py-1 text-xs rounded-lg border transition cursor-pointer ${rule.enabled
+                            ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20 hover:bg-emerald-500/20'
+                            : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-white'
+                            }`}
                           title={rule.enabled ? 'Nonaktifkan aturan' : 'Aktifkan aturan'}
                         >
                           {rule.enabled ? 'Aktif' : 'Mati'}
@@ -595,7 +612,7 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
                         </button>
                         <button
                           type="button"
-                          onClick={() => handleDeleteRule(rule.id)}
+                          onClick={() => setRuleToDelete(rule)}
                           className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition cursor-pointer"
                           title="Hapus aturan"
                         >
@@ -605,7 +622,7 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
                     </div>
 
                     {/* Rule Condition & Metadata Bar */}
-                    <div className="flex items-center gap-4 text-xs bg-[#0b1322] px-3 py-2 rounded-lg border border-white/[0.04] text-slate-300 flex-wrap">
+                    <div className="flex items-center gap-4 text-xs bg-[#080f1d] px-3 py-2 rounded-lg border border-white/[0.04] text-slate-300 flex-wrap">
                       <div className="flex items-center gap-1.5">
                         <span className="text-slate-500">Kondisi:</span>
                         <code className="font-mono text-sky-300 font-medium">
@@ -629,8 +646,8 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
                         </div>
                       )}
                       {rule.ai_diagnosis_enabled && (
-                        <div className="flex items-center gap-1 text-sky-400 text-[11px]" title="AI Diagnosis Otomatis Aktif">
-                          <Sparkles className="w-3 h-3" />
+                        <div className="flex items-center gap-1 text-sky-400 text-[11px]" title="Diagnosis Otomatis AI Aktif">
+                          <BrainCircuit className="w-3 h-3" />
                           <span>AI Diagnosis</span>
                         </div>
                       )}
@@ -698,12 +715,12 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
 
                       {/* Expandable Details: AI Diagnosis & Errors */}
                       {isExpanded && (
-                        <div className="px-4 pb-4 pt-1 border-t border-white/[0.04] bg-[#0a101d] space-y-3 text-xs">
+                        <div className="px-4 pb-4 pt-2 border-t border-white/[0.04] bg-[#080f1d] space-y-3 text-xs">
                           {log.ai_diagnosis_summary && (
-                            <div className="p-3 rounded-lg bg-sky-500/10 border border-sky-500/20 text-slate-200 space-y-1.5">
+                            <div className="p-3 rounded-xl bg-sky-500/10 border border-sky-500/20 text-slate-200 space-y-1.5">
                               <div className="flex items-center gap-1.5 text-sky-300 font-medium text-[11px]">
-                                <Sparkles className="w-3.5 h-3.5 text-sky-400" />
-                                <span>Diagnosis & Rekomendasi AI Harmonix</span>
+                                <BrainCircuit className="w-3.5 h-3.5 text-sky-400" />
+                                <span>Diagnosis & Analisis Akar Masalah Harmonix</span>
                               </div>
                               <p className="whitespace-pre-line text-xs text-slate-300 leading-relaxed font-sans">
                                 {log.ai_diagnosis_summary}
@@ -712,7 +729,7 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
                           )}
 
                           {log.error_message && (
-                            <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs">
+                            <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs">
                               <strong>Error:</strong> {log.error_message}
                             </div>
                           )}
@@ -732,12 +749,45 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-1.5 rounded-lg bg-[#14223b] hover:bg-slate-700 text-white font-medium transition cursor-pointer"
+            className="px-4 py-1.5 rounded-xl bg-[#14223b] hover:bg-slate-700 text-white font-medium transition cursor-pointer"
           >
             Tutup
           </button>
         </div>
       </div>
+
+      {/* Custom Destructive Confirmation Dialog for Deleting Rule */}
+      {ruleToDelete && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-100">
+          <div className="w-full max-w-sm bg-[#0f1b2d] border border-rose-900/40 rounded-2xl shadow-2xl p-5 space-y-3">
+            <div className="flex items-center gap-2.5 text-rose-400">
+              <AlertTriangle className="w-5 h-5 shrink-0" />
+              <h3 className="text-sm font-semibold text-slate-100 font-sans">
+                Hapus Aturan Watchdog?
+              </h3>
+            </div>
+            <p className="text-xs text-slate-300 leading-relaxed font-sans">
+              Aturan <strong>&quot;{ruleToDelete.rule_name}&quot;</strong> (ID #{ruleToDelete.id}) beserta seluruh riwayat log eksekusinya akan dihapus permanen dari sistem.
+            </p>
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/[0.06]">
+              <button
+                type="button"
+                onClick={() => setRuleToDelete(null)}
+                className="px-3 py-1.5 rounded-xl bg-slate-800 text-slate-300 hover:text-white text-xs transition cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                className="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-medium transition cursor-pointer shadow-sm"
+              >
+                Ya, Hapus Aturan
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

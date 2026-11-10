@@ -192,7 +192,7 @@ export const useDeleteUploadedTableMutation = (sessionId: string | null) => {
 };
 
 // =============================================================================
-// Watchdog Query & Mutation Hooks (FR-49)
+// Watchdog Query & Mutation Hooks
 // =============================================================================
 
 export const useWatchdogRulesQuery = () => {
