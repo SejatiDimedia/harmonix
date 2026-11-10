@@ -20,6 +20,7 @@ import {
   Check,
   SlidersHorizontal,
   Maximize2,
+  ChevronDown,
 } from 'lucide-react';
 import { DashboardWidget, ChartSpec, TableData } from '../types';
 import { DataChart } from './DataChart';
@@ -69,6 +70,20 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
   const [copiedTvLink, setCopiedTvLink] = useState(false);
   const [isTvEditLayout, setIsTvEditLayout] = useState(false);
   const [isTvAutoFit, setIsTvAutoFit] = useState<boolean>(true);
+  const [isRefreshMenuOpen, setIsRefreshMenuOpen] = useState(false);
+  const refreshMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close refresh dropdown on click outside
+  useEffect(() => {
+    if (!isRefreshMenuOpen) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      if (refreshMenuRef.current && !refreshMenuRef.current.contains(event.target as Node)) {
+        setIsRefreshMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isRefreshMenuOpen]);
 
   const handleCopyTvLink = () => {
     if (!sessionId) {
@@ -126,10 +141,10 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(() => {});
+      document.documentElement.requestFullscreen().catch(() => { });
     } else {
       if (document.exitFullscreen) {
-        document.exitFullscreen().catch(() => {});
+        document.exitFullscreen().catch(() => { });
       }
     }
   };
@@ -323,10 +338,10 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
       setResizingState((prev) =>
         prev
           ? {
-              ...prev,
-              currentCols: newCols,
-              currentHeight: newHeight,
-            }
+            ...prev,
+            currentCols: newCols,
+            currentHeight: newHeight,
+          }
           : null
       );
     };
@@ -345,10 +360,10 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
       setResizingState((prev) =>
         prev
           ? {
-              ...prev,
-              currentCols: newCols,
-              currentHeight: newHeight,
-            }
+            ...prev,
+            currentCols: newCols,
+            currentHeight: newHeight,
+          }
           : null
       );
     };
@@ -447,15 +462,11 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
               <span className="font-semibold text-sm sm:text-base text-slate-100 font-sans tracking-tight truncate max-w-xs md:max-w-md">
                 {sessionTitle || 'Harmonix Dashboard'}
               </span>
-              <span
-                className="w-2 h-2 rounded-full bg-emerald-400 shrink-0"
-                title={`PostgreSQL Terhubung • Terakhir sinkronisasi: ${lastRefreshedAt.toLocaleTimeString('id-ID')}`}
-              />
             </div>
           </div>
 
-          {/* Center: Realtime Digital Clock (Single-line executive display) */}
-          <div className="hidden md:flex items-center gap-2 font-mono text-xs text-slate-300 select-none">
+          {/* Center: Realtime Digital Clock */}
+          <div className="hidden md:flex items-center gap-2 font-mono text-xs text-slate-300 select-none bg-[#14223b]/50 px-3 py-1 rounded-full border border-white/[0.04]">
             <Clock className="w-3.5 h-3.5 text-sky-400" />
             <span className="font-semibold text-slate-100 tracking-wider">
               {currentTime.toLocaleTimeString('id-ID', {
@@ -475,129 +486,160 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
           </div>
 
           {/* Right: Consolidated Minimalist Actions */}
-          <div className="flex items-center gap-2 shrink-0">
-            {/* Compact Refresh Pill */}
-            <div className="flex items-center bg-[#14223b] rounded-lg p-0.5 border border-white/[0.06] text-xs">
-              <button
-                type="button"
-                onClick={() => {
-                  onRefresh();
-                  setLastRefreshedAt(new Date());
-                  setCountdownSec(refreshIntervalSec);
-                }}
-                disabled={isRefreshing}
-                className="p-1.5 text-slate-300 hover:text-white transition cursor-pointer flex items-center gap-1"
-                title={`Segarkan data sekarang ${refreshIntervalSec > 0 ? `(Auto: ${countdownSec}s)` : ''}`}
-              >
-                <RefreshCw className={`w-3.5 h-3.5 text-sky-400 ${isRefreshing ? 'animate-spin' : ''}`} />
-                {refreshIntervalSec > 0 && (
-                  <span className="text-[10px] font-mono text-sky-400 font-semibold">{countdownSec}s</span>
-                )}
-              </button>
-              <div className="h-3 w-px bg-white/[0.08]" />
-              <div className="flex items-center px-1">
-                {[
-                  { label: 'Off', val: 0 },
-                  { label: '30s', val: 30 },
-                  { label: '60s', val: 60 },
-                  { label: '5m', val: 300 },
-                ].map((item) => (
-                  <button
-                    key={item.val}
-                    type="button"
-                    onClick={() => setRefreshIntervalSec(item.val)}
-                    className={`px-2 py-0.5 rounded text-[11px] font-mono transition cursor-pointer ${
-                      refreshIntervalSec === item.val
-                        ? 'bg-sky-600 text-white font-medium shadow-sm'
-                        : 'text-slate-400 hover:text-slate-200'
-                    }`}
-                  >
-                    {item.label}
-                  </button>
-                ))}
+          <div className="flex items-center gap-2.5 shrink-0">
+            {/* 1. Refresh & Interval Control (Compact Capsule + Dropdown) */}
+            <div className="relative" ref={refreshMenuRef}>
+              <div className="flex items-center bg-[#14223b]/90 border border-white/[0.08] rounded-lg p-0.5 text-xs shadow-sm">
+                <button
+                  type="button"
+                  onClick={() => {
+                    onRefresh();
+                    setLastRefreshedAt(new Date());
+                    setCountdownSec(refreshIntervalSec);
+                  }}
+                  disabled={isRefreshing}
+                  className="flex items-center gap-1.5 px-2.5 py-1 text-slate-300 hover:text-white hover:bg-white/[0.05] rounded-md transition cursor-pointer"
+                  title={`Segarkan data sekarang ${refreshIntervalSec > 0 ? `(Auto: ${countdownSec}s)` : ''}`}
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 text-sky-400 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  <span className="font-mono text-[11px] font-medium text-slate-200">
+                    {refreshIntervalSec > 0 ? `${countdownSec}s` : 'Segarkan'}
+                  </span>
+                </button>
+                <div className="h-3 w-px bg-white/[0.08]" />
+                <button
+                  type="button"
+                  onClick={() => setIsRefreshMenuOpen((prev) => !prev)}
+                  className="flex items-center gap-1 px-2 py-1 text-slate-400 hover:text-slate-200 hover:bg-white/[0.05] rounded-md transition cursor-pointer text-[11px] font-mono"
+                  title="Pilih interval auto-refresh"
+                >
+                  <span>
+                    {refreshIntervalSec === 0
+                      ? 'Off'
+                      : refreshIntervalSec >= 60
+                        ? `${refreshIntervalSec / 60}m`
+                        : `${refreshIntervalSec}s`}
+                  </span>
+                  <ChevronDown className="w-3 h-3 text-slate-400" />
+                </button>
               </div>
+
+              {/* Interval Popover Dropdown */}
+              {isRefreshMenuOpen && (
+                <div className="absolute right-0 mt-1.5 w-40 bg-[#0f1b2d] border border-white/[0.1] rounded-lg shadow-2xl py-1 z-50 text-xs backdrop-blur-md">
+                  <div className="px-2.5 py-1 text-[10px] uppercase tracking-wider text-slate-400 font-semibold border-b border-white/[0.06]">
+                    Interval Segarkan
+                  </div>
+                  {[
+                    { label: 'Nonaktif (Off)', val: 0 },
+                    { label: 'Setiap 30 detik', val: 30 },
+                    { label: 'Setiap 60 detik', val: 60 },
+                    { label: 'Setiap 5 menit', val: 300 },
+                  ].map((item) => (
+                    <button
+                      key={item.val}
+                      type="button"
+                      onClick={() => {
+                        setRefreshIntervalSec(item.val);
+                        setCountdownSec(item.val);
+                        setIsRefreshMenuOpen(false);
+                      }}
+                      className={`w-full px-2.5 py-1.5 text-left flex items-center justify-between text-xs transition cursor-pointer hover:bg-sky-500/10 ${refreshIntervalSec === item.val
+                        ? 'text-sky-400 font-medium bg-sky-500/5'
+                        : 'text-slate-300'
+                        }`}
+                    >
+                      <span>{item.label}</span>
+                      {refreshIntervalSec === item.val && <Check className="w-3.5 h-3.5 text-sky-400" />}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
-            {/* Atur Layout Toggle */}
-            <button
-              type="button"
-              onClick={() => setIsTvEditLayout((prev) => !prev)}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-sans transition cursor-pointer border ${
-                isTvEditLayout
-                  ? 'bg-sky-600 text-white border-sky-500 shadow-sm'
-                  : 'bg-[#14223b] hover:bg-[#1a2d4e] text-slate-300 border-white/[0.06]'
-              }`}
-              title="Atur ukuran dan tata letak widget langsung di layar TV"
-            >
-              <SlidersHorizontal className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">{isTvEditLayout ? 'Selesai Atur' : 'Atur Layout'}</span>
-            </button>
-
-            {/* Auto-Fit Screen Toggle */}
-            <button
-              type="button"
-              onClick={() => setIsTvAutoFit((prev) => !prev)}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-sans transition cursor-pointer border ${
-                isTvAutoFit
-                  ? 'bg-sky-600/90 text-white border-sky-500 shadow-sm'
-                  : 'bg-[#14223b] hover:bg-[#1a2d4e] text-slate-400 hover:text-slate-200 border-white/[0.06]'
-              }`}
-              title={
-                isTvAutoFit
-                  ? 'Auto-Fit Layar Aktif: Tinggi kartu otomatis mengisi penuh layar laptop/monitor tanpa sisa ruang kosong'
-                  : 'Mode Kustom: Klik untuk mengisi penuh tinggi layar laptop/monitor secara otomatis'
-              }
-            >
-              <Maximize2 className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Fit Layar</span>
-            </button>
-
-            {/* Shareable Link Button */}
-            <button
-              type="button"
-              onClick={handleCopyTvLink}
-              className="p-1.5 rounded-lg bg-[#14223b] hover:bg-[#1a2d4e] text-slate-300 border border-white/[0.06] transition cursor-pointer shadow-sm"
-              title="Salin tautan TV Command Center untuk dibagikan"
-            >
-              {copiedTvLink ? (
-                <Check className="w-3.5 h-3.5 text-emerald-400" />
-              ) : (
-                <Share2 className="w-3.5 h-3.5" />
-              )}
-            </button>
-
-            {/* Fullscreen Button */}
-            <button
-              type="button"
-              onClick={toggleFullscreen}
-              className="p-1.5 rounded-lg bg-[#14223b] hover:bg-[#1a2d4e] text-slate-300 border border-white/[0.06] transition cursor-pointer"
-              title="Toggle Fullscreen Layar Penuh"
-            >
-              <Maximize className="w-3.5 h-3.5 text-slate-300" />
-            </button>
-
-            {/* Exit Button */}
-            {!isStandaloneTv && (
+            {/* 2. View & Layout Controls (Unified Capsule) */}
+            <div className="flex items-center bg-[#14223b]/90 border border-white/[0.08] rounded-lg p-0.5 text-xs shadow-sm">
               <button
                 type="button"
-                onClick={() => {
-                  setIsTvMode(false);
-                  if (onExitTv) onExitTv();
-                }}
-                className="p-1.5 rounded-lg bg-[#14223b] hover:bg-rose-950/40 text-slate-400 hover:text-rose-300 border border-white/[0.06] transition cursor-pointer"
-                title="Keluar dari mode TV (Esc)"
+                onClick={() => setIsTvEditLayout((prev) => !prev)}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-sans transition cursor-pointer ${isTvEditLayout
+                  ? 'bg-sky-500/20 text-sky-300 border border-sky-400/30 font-medium'
+                  : 'text-slate-300 hover:text-white hover:bg-white/[0.05]'
+                  }`}
+                title="Atur tata letak dan posisi widget"
               >
-                <X className="w-3.5 h-3.5" />
+                <SlidersHorizontal className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">{isTvEditLayout ? 'Selesai' : 'Layout'}</span>
               </button>
-            )}
+
+              <div className="h-3 w-px bg-white/[0.08]" />
+
+              <button
+                type="button"
+                onClick={() => setIsTvAutoFit((prev) => !prev)}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-sans transition cursor-pointer ${isTvAutoFit
+                  ? 'bg-sky-500/20 text-sky-300 border border-sky-400/30 font-medium'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.05]'
+                  }`}
+                title={
+                  isTvAutoFit
+                    ? 'Auto-Fit Layar Aktif: Tinggi kartu otomatis mengisi layar'
+                    : 'Mode Kustom: Klik untuk mengisi tinggi layar secara otomatis'
+                }
+              >
+                <Maximize2 className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Fit Layar</span>
+              </button>
+            </div>
+
+            {/* 3. Utility Actions (Share, Fullscreen, Exit) */}
+            <div className="flex items-center bg-[#14223b]/90 border border-white/[0.08] rounded-lg p-0.5 text-xs shadow-sm">
+              <button
+                type="button"
+                onClick={handleCopyTvLink}
+                className="p-1.5 rounded-md text-slate-300 hover:text-white hover:bg-white/[0.05] transition cursor-pointer"
+                title="Salin tautan TV Command Center untuk dibagikan"
+              >
+                {copiedTvLink ? (
+                  <Check className="w-3.5 h-3.5 text-emerald-400" />
+                ) : (
+                  <Share2 className="w-3.5 h-3.5" />
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={toggleFullscreen}
+                className="p-1.5 rounded-md text-slate-300 hover:text-white hover:bg-white/[0.05] transition cursor-pointer"
+                title="Toggle Fullscreen Layar Penuh"
+              >
+                <Maximize className="w-3.5 h-3.5" />
+              </button>
+
+              {!isStandaloneTv && (
+                <>
+                  <div className="h-3 w-px bg-white/[0.08]" />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsTvMode(false);
+                      if (onExitTv) onExitTv();
+                    }}
+                    className="p-1.5 rounded-md text-slate-400 hover:text-rose-300 hover:bg-rose-500/10 transition cursor-pointer"
+                    title="Keluar dari mode TV (Esc)"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         </header>
 
         {/* TV Main Grid */}
         <main
-          className={`flex-1 p-4 sm:p-5 flex flex-col ${
-            isTvAutoFit && totalGridRows <= 2 ? 'overflow-hidden' : 'overflow-y-auto pb-6'
-          }`}
+          className={`flex-1 p-4 sm:p-5 flex flex-col ${isTvAutoFit && totalGridRows <= 2 ? 'overflow-hidden' : 'overflow-y-auto pb-6'
+            }`}
         >
           {localWidgets.length === 0 ? (
             <div className="h-full flex-1 flex flex-col items-center justify-center space-y-4 text-center py-20">
@@ -614,14 +656,13 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
           ) : (
             <div
               ref={tvGridRef}
-              className={`grid grid-cols-12 gap-4 sm:gap-5 w-full max-w-full ${
-                isTvAutoFit && totalGridRows <= 2 ? 'flex-1 h-full min-h-0' : ''
-              }`}
+              className={`grid grid-cols-12 gap-4 sm:gap-5 w-full max-w-full ${isTvAutoFit && totalGridRows <= 2 ? 'flex-1 h-full min-h-0' : ''
+                }`}
               style={
                 isTvAutoFit && totalGridRows <= 2
                   ? {
-                      gridTemplateRows: `repeat(${totalGridRows}, minmax(0, 1fr))`,
-                    }
+                    gridTemplateRows: `repeat(${totalGridRows}, minmax(0, 1fr))`,
+                  }
                   : undefined
               }
             >
@@ -647,30 +688,29 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                     style={
                       isBeingResized
                         ? {
-                            height: `${resizingState.currentHeight}px`,
-                            minHeight: '200px',
-                          }
+                          height: `${resizingState.currentHeight}px`,
+                          minHeight: '200px',
+                        }
                         : isTvAutoFit
                           ? totalGridRows <= 2
                             ? {
-                                height: '100%',
-                                minHeight: 0,
-                              }
-                            : {
-                                height: autoFitHeightStyle,
-                                minHeight: '260px',
-                              }
-                          : {
-                              height: `${effectiveHeight}px`,
-                              minHeight: `${Math.min(effectiveHeight, 260)}px`,
-                              maxHeight: 'calc(100vh - 100px)',
+                              height: '100%',
+                              minHeight: 0,
                             }
+                            : {
+                              height: autoFitHeightStyle,
+                              minHeight: '260px',
+                            }
+                          : {
+                            height: `${effectiveHeight}px`,
+                            minHeight: `${Math.min(effectiveHeight, 260)}px`,
+                            maxHeight: 'calc(100vh - 100px)',
+                          }
                     }
-                    className={`relative rounded-2xl bg-[#0b1424] border border-white/[0.08] p-4 sm:p-5 shadow-xl flex flex-col justify-between ${
-                      isBeingResized
-                        ? 'transition-none ring-2 ring-sky-500/80 shadow-2xl shadow-sky-950/50 z-30'
-                        : 'transition-all duration-150'
-                    } ${getSpanClass(effectiveCols)}`}
+                    className={`relative rounded-2xl bg-[#0b1424] border border-white/[0.08] p-4 sm:p-5 shadow-xl flex flex-col justify-between ${isBeingResized
+                      ? 'transition-none ring-2 ring-sky-500/80 shadow-2xl shadow-sky-950/50 z-30'
+                      : 'transition-all duration-150'
+                      } ${getSpanClass(effectiveCols)}`}
                   >
                     {/* Header */}
                     <div className="flex items-center justify-between pb-3 border-b border-white/[0.06] gap-3 shrink-0">
@@ -743,9 +783,8 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                                     return (
                                       <td
                                         key={cellIdx}
-                                        className={`p-3 text-xs font-mono ${
-                                          isNumeric ? 'text-[#38bdf8] font-medium' : 'text-slate-300 font-sans'
-                                        }`}
+                                        className={`p-3 text-xs font-mono ${isNumeric ? 'text-[#38bdf8] font-medium' : 'text-slate-300 font-sans'
+                                          }`}
                                       >
                                         {formatted}
                                       </td>
@@ -1018,13 +1057,12 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                 <div
                   key={w.widget_id}
                   style={{ height: `${effectiveHeight}px`, minHeight: `${effectiveHeight}px` }}
-                  className={`print-widget-card relative rounded-2xl bg-[#0f1a2e] print:bg-white border border-white/[0.06] print:border-gray-300 p-4 sm:p-5 shadow-md shadow-black/20 flex flex-col justify-between ${
-                    isBeingResized
-                      ? 'transition-none ring-2 ring-sky-500/80 shadow-2xl shadow-sky-950/50 z-30'
-                      : 'transition-all duration-150'
-                  } space-y-3 sm:space-y-4 print:space-y-3 print:rounded-xl print:p-0 print:overflow-hidden ${getSpanClass(
-                    effectiveCols
-                  )}`}
+                  className={`print-widget-card relative rounded-2xl bg-[#0f1a2e] print:bg-white border border-white/[0.06] print:border-gray-300 p-4 sm:p-5 shadow-md shadow-black/20 flex flex-col justify-between ${isBeingResized
+                    ? 'transition-none ring-2 ring-sky-500/80 shadow-2xl shadow-sky-950/50 z-30'
+                    : 'transition-all duration-150'
+                    } space-y-3 sm:space-y-4 print:space-y-3 print:rounded-xl print:p-0 print:overflow-hidden ${getSpanClass(
+                      effectiveCols
+                    )}`}
                 >
                   {/* Card Header (Corporate Styled on Print) */}
                   <div className="flex items-start justify-between gap-2.5 pb-2.5 border-b border-white/[0.04] print:bg-gray-50/80 print:p-4 print:pb-3 print:border-b print:border-gray-200 shrink-0">
@@ -1169,9 +1207,8 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                                   return (
                                     <td
                                       key={cellIdx}
-                                      className={`p-2.5 border-b border-white/[0.03] print:border-gray-200 text-[#f8fafc] print:text-gray-800 font-mono text-[11px] print:bg-transparent ${
-                                        isNumeric ? 'text-[#38bdf8] font-medium' : ''
-                                      }`}
+                                      className={`p-2.5 border-b border-white/[0.03] print:border-gray-200 text-[#f8fafc] print:text-gray-800 font-mono text-[11px] print:bg-transparent ${isNumeric ? 'text-[#38bdf8] font-medium' : ''
+                                        }`}
                                     >
                                       {val !== null && val !== undefined ? formatted : '-'}
                                     </td>

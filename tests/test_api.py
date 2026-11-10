@@ -303,7 +303,7 @@ async def test_web_ui_endpoint():
         body = resp.text
         assert "Harmonix" in body
         assert "root" in body
-        assert "Newsreader" in body
+        assert "Jakarta" in body
 
 
 @pytest.mark.asyncio
