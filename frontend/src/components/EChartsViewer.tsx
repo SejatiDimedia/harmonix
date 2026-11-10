@@ -1,6 +1,15 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import * as echarts from 'echarts';
+import { Search, MapPin, CreditCard, Table, X, Sparkles, ExternalLink } from 'lucide-react';
 import { ChartSpec, TableData } from '../types';
+
+export interface DrillDownPoint {
+  dimension: string;
+  metricName: string;
+  metricValue: number | string;
+  x: number;
+  y: number;
+}
 
 export interface EChartsViewerProps {
   spec: ChartSpec;
@@ -9,6 +18,7 @@ export interface EChartsViewerProps {
   showToolbox?: boolean;
   className?: string;
   isKiosk?: boolean;
+  onDrillDown?: (prompt: string) => void;
 }
 
 const PALETTE = [
@@ -29,9 +39,16 @@ export const EChartsViewer: React.FC<EChartsViewerProps> = ({
   showToolbox = true,
   className = '',
   isKiosk = false,
+  onDrillDown,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartInstanceRef = useRef<echarts.ECharts | null>(null);
+  const [drilldownState, setDrilldownState] = useState<DrillDownPoint | null>(null);
+  const [rawRowsModal, setRawRowsModal] = useState<{
+    dimension: string;
+    rows: any[];
+    columns: string[];
+  } | null>(null);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -195,6 +212,9 @@ export const EChartsViewer: React.FC<EChartsViewerProps> = ({
                   <span class="font-bold text-slate-100">${Number(params.value).toLocaleString('id-ID')}</span>
                   <span class="text-slate-400 text-xs">(${params.percent}%)</span>
                 </div>
+                <div class="text-[9.5px] text-sky-400 mt-1.5 border-t border-white/10 pt-1 font-sans flex items-center gap-1">
+                  <span>Klik untuk drill-down ↗</span>
+                </div>
               </div>
             `;
           }
@@ -210,6 +230,9 @@ export const EChartsViewer: React.FC<EChartsViewerProps> = ({
                   <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background-color:${p.color};"></span>
                   <span class="text-slate-300 text-xs">${spec.y_axis || 'Nilai'}:</span>
                   <span class="font-bold text-slate-100 font-mono">${formatted}</span>
+                </div>
+                <div class="text-[9.5px] text-sky-400 mt-1.5 border-t border-white/10 pt-1 font-sans flex items-center gap-1">
+                  <span>Klik untuk drill-down ↗</span>
                 </div>
               </div>
             `;
@@ -279,6 +302,7 @@ export const EChartsViewer: React.FC<EChartsViewerProps> = ({
         {
           name: spec.title || spec.y_axis,
           type: 'pie',
+          cursor: 'pointer',
           radius: isDoughnut ? ['40%', '65%'] : ['0%', '65%'],
           center: ['50%', '44%'],
           avoidLabelOverlap: true,
@@ -470,6 +494,7 @@ export const EChartsViewer: React.FC<EChartsViewerProps> = ({
           {
             name: spec.y_axis,
             type: 'scatter',
+            cursor: 'pointer',
             symbolSize: isKiosk ? 14 : 10,
             data: rawValues.map((v, i) => [i, v]),
             itemStyle: {
@@ -484,6 +509,7 @@ export const EChartsViewer: React.FC<EChartsViewerProps> = ({
           {
             name: spec.y_axis,
             type: 'line',
+            cursor: 'pointer',
             data: rawValues,
             smooth: true,
             showSymbol: rawValues.length <= 25,
@@ -514,6 +540,7 @@ export const EChartsViewer: React.FC<EChartsViewerProps> = ({
           {
             name: spec.y_axis,
             type: 'bar',
+            cursor: 'pointer',
             data: rawValues,
             barMaxWidth: isKiosk ? 48 : 36,
             itemStyle: {
@@ -538,7 +565,30 @@ export const EChartsViewer: React.FC<EChartsViewerProps> = ({
 
     chartInstance.setOption(option, true);
 
-    // 4. Auto-Resize on element resize
+    // 4. Click event listener for interactive Drill-Down (FR-48)
+    const handleChartClick = (params: any) => {
+      if (!params) return;
+      const dimName = params.name || (Array.isArray(params.value) ? String(params.value[0]) : '');
+      const rawVal = Array.isArray(params.value) ? params.value[1] ?? params.value[0] : params.value;
+      const sName = params.seriesName || spec.y_axis || 'Nilai';
+
+      if (!dimName && rawVal === undefined) return;
+
+      const mouseX = params.event?.event?.clientX || window.innerWidth / 2;
+      const mouseY = params.event?.event?.clientY || window.innerHeight / 2;
+
+      setDrilldownState({
+        dimension: String(dimName),
+        metricName: String(sName),
+        metricValue: rawVal,
+        x: mouseX,
+        y: mouseY,
+      });
+    };
+
+    chartInstance.on('click', handleChartClick);
+
+    // 5. Auto-Resize on element resize
     const resizeObserver = new ResizeObserver(() => {
       chartInstance.resize();
     });
@@ -552,6 +602,9 @@ export const EChartsViewer: React.FC<EChartsViewerProps> = ({
     return () => {
       resizeObserver.disconnect();
       window.removeEventListener('resize', handleWindowResize);
+      if (chartInstanceRef.current) {
+        chartInstanceRef.current.off('click');
+      }
     };
   }, [spec, tables, showToolbox, isKiosk]);
 
@@ -565,11 +618,228 @@ export const EChartsViewer: React.FC<EChartsViewerProps> = ({
     };
   }, []);
 
+  const handleTriggerDrillDown = (templateType: 'root_cause' | 'geo' | 'payment') => {
+    if (!drilldownState) return;
+    const { dimension, metricName, metricValue } = drilldownState;
+    const formattedVal =
+      typeof metricValue === 'number'
+        ? metricValue.toLocaleString('id-ID')
+        : String(metricValue);
+
+    let prompt = '';
+    if (templateType === 'root_cause') {
+      prompt = `Analisis mendalam mengapa ${metricName} pada '${dimension}' bernilai ${formattedVal}. Apa faktor pendorong utama dan anomali pendukungnya?`;
+    } else if (templateType === 'geo') {
+      prompt = `Bedah transaksi pada '${dimension}' berdasarkan kota dan provinsi pelanggan (geografi) untuk melihat konsentrasi pasar utamanya.`;
+    } else if (templateType === 'payment') {
+      prompt = `Bedah transaksi pada '${dimension}' berdasarkan metode pembayaran (kredit, boleto, voucher) dan nilai cicilannya.`;
+    }
+
+    setDrilldownState(null);
+    if (onDrillDown) {
+      onDrillDown(prompt);
+    }
+  };
+
+  const handleOpenRawRows = () => {
+    if (!drilldownState) return;
+    const dim = drilldownState.dimension;
+
+    let matchingRows: any[] = [];
+    let cols: string[] = [];
+
+    if (spec.data && spec.data.length > 0) {
+      cols = Object.keys(spec.data[0]);
+      matchingRows = spec.data.filter((row) =>
+        Object.values(row).some((val) => String(val).toLowerCase() === dim.toLowerCase())
+      );
+      if (matchingRows.length === 0) {
+        matchingRows = spec.data.slice(0, 25);
+      }
+    } else if (tables && tables.length > 0 && tables[0].rows) {
+      cols = tables[0].columns || [];
+      matchingRows = tables[0].rows.filter((r) =>
+        r.some((val) => String(val).toLowerCase() === dim.toLowerCase())
+      );
+      if (matchingRows.length === 0) {
+        matchingRows = tables[0].rows.slice(0, 25);
+      }
+    }
+
+    setRawRowsModal({
+      dimension: dim,
+      rows: matchingRows,
+      columns: cols,
+    });
+    setDrilldownState(null);
+  };
+
   return (
-    <div
-      ref={containerRef}
-      style={{ height, width: '100%', minHeight: typeof height === 'number' ? height : (isKiosk ? 0 : 200) }}
-      className={`relative select-none ${className}`}
-    />
+    <>
+      <div
+        ref={containerRef}
+        style={{ height, width: '100%', minHeight: typeof height === 'number' ? height : (isKiosk ? 0 : 200) }}
+        className={`relative select-none ${className}`}
+      />
+
+      {/* Interactive Drill-Down Popover Menu (FR-48) */}
+      {drilldownState && (
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-black/35 backdrop-blur-[1px]"
+            onClick={() => setDrilldownState(null)}
+          />
+          <div
+            style={{
+              position: 'fixed',
+              left: `${Math.min(window.innerWidth - 330, Math.max(16, drilldownState.x - 150))}px`,
+              top: `${Math.min(window.innerHeight - 340, Math.max(60, drilldownState.y - 20))}px`,
+            }}
+            className="z-50 w-80 max-w-[calc(100vw-32px)] rounded-xl bg-[#0b1424] border border-sky-500/40 p-3.5 shadow-2xl shadow-black/80 font-sans text-slate-100 animate-in fade-in zoom-in-95 duration-150"
+          >
+            <div className="flex items-start justify-between gap-2 pb-2.5 border-b border-white/[0.08]">
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5 text-[10px] font-mono uppercase text-sky-400 font-semibold tracking-wider">
+                  <Sparkles className="w-3 h-3 text-sky-400" />
+                  <span>Eksplorasi Drill-Down</span>
+                </div>
+                <h4 className="text-sm font-semibold text-white truncate mt-0.5" title={drilldownState.dimension}>
+                  {drilldownState.dimension}
+                </h4>
+                <p className="text-xs text-slate-400 font-mono mt-0.5">
+                  {drilldownState.metricName}:{' '}
+                  <span className="text-sky-300 font-semibold">
+                    {typeof drilldownState.metricValue === 'number'
+                      ? drilldownState.metricValue.toLocaleString('id-ID')
+                      : String(drilldownState.metricValue)}
+                  </span>
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDrilldownState(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition cursor-pointer"
+                title="Tutup"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="mt-2.5 space-y-1.5 text-xs">
+              <button
+                type="button"
+                onClick={() => handleTriggerDrillDown('root_cause')}
+                className="w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg bg-[#14223b]/80 hover:bg-sky-600/30 hover:border-sky-500/50 text-slate-200 hover:text-white border border-white/[0.06] transition text-left group cursor-pointer"
+              >
+                <div className="flex items-center gap-2 truncate">
+                  <Search className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+                  <span className="truncate">Selidiki Penyebab & Anomali</span>
+                </div>
+                <ExternalLink className="w-3 h-3 text-slate-500 group-hover:text-sky-300 shrink-0" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleTriggerDrillDown('geo')}
+                className="w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg bg-[#14223b]/80 hover:bg-emerald-600/30 hover:border-emerald-500/50 text-slate-200 hover:text-white border border-white/[0.06] transition text-left group cursor-pointer"
+              >
+                <div className="flex items-center gap-2 truncate">
+                  <MapPin className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  <span className="truncate">Bedah Berdasarkan Wilayah</span>
+                </div>
+                <ExternalLink className="w-3 h-3 text-slate-500 group-hover:text-emerald-300 shrink-0" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleTriggerDrillDown('payment')}
+                className="w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg bg-[#14223b]/80 hover:bg-amber-600/30 hover:border-amber-500/50 text-slate-200 hover:text-white border border-white/[0.06] transition text-left group cursor-pointer"
+              >
+                <div className="flex items-center gap-2 truncate">
+                  <CreditCard className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                  <span className="truncate">Bedah Metode Pembayaran</span>
+                </div>
+                <ExternalLink className="w-3 h-3 text-slate-500 group-hover:text-amber-300 shrink-0" />
+              </button>
+
+              <button
+                type="button"
+                onClick={handleOpenRawRows}
+                className="w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg bg-[#14223b]/80 hover:bg-purple-600/30 hover:border-purple-500/50 text-slate-200 hover:text-white border border-white/[0.06] transition text-left group cursor-pointer"
+              >
+                <div className="flex items-center gap-2 truncate">
+                  <Table className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                  <span className="truncate">Lihat Baris Data Mentah</span>
+                </div>
+                <ExternalLink className="w-3 h-3 text-slate-500 group-hover:text-purple-300 shrink-0" />
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Raw Data Modal */}
+      {rawRowsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="relative w-full max-w-2xl max-h-[80vh] rounded-2xl bg-[#0b1424] border border-white/[0.1] shadow-2xl flex flex-col overflow-hidden font-sans">
+            <div className="flex items-center justify-between p-4 border-b border-white/[0.08] bg-[#0f1c33]">
+              <div>
+                <h3 className="text-sm font-semibold text-white">
+                  Baris Data Mentah: {rawRowsModal.dimension}
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Menampilkan {rawRowsModal.rows.length} baris data terkait
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setRawRowsModal(null)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="flex-1 p-4 overflow-auto">
+              <table className="w-full text-xs text-left border-collapse">
+                <thead className="sticky top-0 bg-[#14223b] text-slate-300 font-mono text-[11px] uppercase">
+                  <tr>
+                    {rawRowsModal.columns.map((col, cIdx) => (
+                      <th key={cIdx} className="p-2.5 border-b border-white/[0.08]">
+                        {col}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/[0.04]">
+                  {rawRowsModal.rows.map((row, rIdx) => {
+                    const cells = Array.isArray(row) ? row : Object.values(row);
+                    return (
+                      <tr key={rIdx} className="hover:bg-white/[0.02] transition">
+                        {cells.map((val, cellIdx) => (
+                          <td key={cellIdx} className="p-2.5 text-slate-300 font-mono text-[11px]">
+                            {typeof val === 'number' ? val.toLocaleString('id-ID') : String(val ?? '')}
+                          </td>
+                        ))}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex items-center justify-end p-3 border-t border-white/[0.08] bg-[#0f1c33]">
+              <button
+                type="button"
+                onClick={() => setRawRowsModal(null)}
+                className="px-3.5 py-1.5 rounded-lg bg-[#14223b] hover:bg-[#1a2d4e] text-xs font-semibold text-slate-200 transition cursor-pointer"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 };

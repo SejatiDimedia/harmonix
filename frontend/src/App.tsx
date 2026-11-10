@@ -13,6 +13,7 @@ import {
   usePinWidgetMutation,
   useDeleteWidgetMutation,
   useRefreshDashboardMutation,
+  useWatchdogRulesQuery,
 } from './hooks/useQueries';
 import {
   sendChatMessage,
@@ -30,6 +31,7 @@ import { WelcomeHero } from './components/WelcomeHero';
 import { ApprovalBanner } from './components/ApprovalBanner';
 import { MetricsModal } from './components/MetricsModal';
 import { ModelSettingsModal } from './components/ModelSettingsModal';
+import { WatchdogModal } from './components/WatchdogModal';
 import { DashboardCanvas } from './components/DashboardCanvas';
 import { BatchRunner } from './components/BatchRunner';
 import { ConfirmDeleteModal } from './components/ConfirmDeleteModal';
@@ -71,6 +73,8 @@ export const App: React.FC = () => {
     showToast,
   } = useAppStore();
 
+  const [isWatchdogOpen, setIsWatchdogOpen] = useState(false);
+
   // Server Queries via TanStack Query
   const { data: healthData } = useHealthQuery();
   const { data: catalogData } = useCatalogQuery();
@@ -78,6 +82,11 @@ export const App: React.FC = () => {
   const { data: sessionDetailsData } = useSessionDetailsQuery(currentSessionId);
   const { data: metricsData, refetch: refetchMetrics } = useMetricsQuery();
   const { data: dashboardData, isLoading: isDashboardLoading } = useDashboardQuery(currentSessionId);
+  const { data: watchdogRulesData } = useWatchdogRulesQuery();
+
+  const triggeredWatchdogCount = (watchdogRulesData?.rules || []).filter(
+    (r) => r.last_status === 'triggered'
+  ).length;
 
   // Mutations via TanStack Query
   const deleteSessionMutation = useDeleteSessionMutation();
@@ -286,7 +295,7 @@ export const App: React.FC = () => {
   const handleEditQuery = useCallback(
     (queryText: string) => {
       setInputPrefill(queryText);
-      showToast('Pertanyaan dimuat ke kolom pesan ✏️');
+      showToast('Pertanyaan dimuat ke kolom pesan');
     },
     [showToast]
   );
@@ -434,6 +443,21 @@ export const App: React.FC = () => {
       appendTurn,
       refetchSessions,
     ]
+  );
+
+  const handleDrillDown = useCallback(
+    (promptText: string) => {
+      if (isStandaloneTv) {
+        setIsStandaloneTv(false);
+        window.history.pushState({}, '', '/');
+      }
+      if (activeTab !== 'chat') {
+        setActiveTab('chat');
+        showToast('Beralih ke sesi percakapan untuk investigasi mendalam');
+      }
+      handleSendMessage(promptText);
+    },
+    [isStandaloneTv, activeTab, setActiveTab, showToast, handleSendMessage]
   );
 
   const handleApprove = useCallback(async () => {
@@ -711,7 +735,7 @@ export const App: React.FC = () => {
         },
         {
           onSuccess: () => {
-            showToast(`Grafik "${resolvedTitle}" disematkan ke Live Dashboard! 📌`);
+            showToast(`Grafik "${resolvedTitle}" disematkan ke Live Dashboard!`);
           },
           onError: (err: any) => {
             showToast(`Gagal menyematkan: ${err.message}`);
@@ -735,7 +759,7 @@ export const App: React.FC = () => {
         },
         {
           onSuccess: () => {
-            showToast(`Tabel disematkan ke Live Dashboard! 📌`);
+            showToast(`Tabel disematkan ke Live Dashboard!`);
           },
           onError: (err: any) => {
             showToast(`Gagal menyematkan: ${err.message}`);
@@ -780,6 +804,7 @@ export const App: React.FC = () => {
           isRefreshing={refreshDashboardMutation.isPending}
           onRefresh={handleRefreshDashboard}
           onDeleteWidget={handleDeleteWidget}
+          onDrillDown={handleDrillDown}
           onSwitchToChat={() => {
             setIsStandaloneTv(false);
             window.history.pushState({}, '', '/');
@@ -829,7 +854,9 @@ export const App: React.FC = () => {
           activeTab={activeTab}
           isSidebarOpen={isSidebarOpen}
           isMetricsOpen={isMetricsOpen}
+          triggeredWatchdogCount={triggeredWatchdogCount}
           onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
+          onOpenWatchdog={() => setIsWatchdogOpen(true)}
           onOpenMetrics={() => {
             if (isMetricsOpen) {
               setIsMetricsOpen(false);
@@ -881,6 +908,7 @@ export const App: React.FC = () => {
                         onEditQuery={handleEditQuery}
                         onPinChart={handlePinChart}
                         onPinTable={handlePinTable}
+                        onDrillDown={handleDrillDown}
                       />
                     ))}
 
@@ -893,6 +921,7 @@ export const App: React.FC = () => {
                         onEditQuery={handleEditQuery}
                         onPinChart={handlePinChart}
                         onPinTable={handlePinTable}
+                        onDrillDown={handleDrillDown}
                         onCancel={handleCancelStream}
                       />
                     )}
@@ -930,6 +959,7 @@ export const App: React.FC = () => {
             isRefreshing={refreshDashboardMutation.isPending}
             onRefresh={handleRefreshDashboard}
             onDeleteWidget={handleDeleteWidget}
+            onDrillDown={handleDrillDown}
             onSwitchToChat={() => setActiveTab('chat')}
             sessionTitle={sessionDetailsData?.title}
             sessionId={currentSessionId || undefined}
@@ -954,6 +984,13 @@ export const App: React.FC = () => {
         sessionId={currentSessionId || undefined}
         turns={turns}
         onClose={() => setIsMetricsOpen(false)}
+      />
+
+      {/* Metric Watchdog & Alerting Modal (FR-49) */}
+      <WatchdogModal
+        isOpen={isWatchdogOpen}
+        onClose={() => setIsWatchdogOpen(false)}
+        showToast={showToast}
       />
 
       {/* Model Hot-Switching Settings Modal */}

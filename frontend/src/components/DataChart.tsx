@@ -8,6 +8,7 @@ interface DataChartProps {
   tables?: TableData[];
   hideHeader?: boolean;
   onPinChart?: (spec: ChartSpec) => void;
+  onDrillDown?: (prompt: string) => void;
   isKiosk?: boolean;
 }
 
@@ -17,6 +18,7 @@ interface SingleChartProps {
   index: number;
   hideHeader?: boolean;
   onPinChart?: (spec: ChartSpec) => void;
+  onDrillDown?: (prompt: string) => void;
   isKiosk?: boolean;
 }
 
@@ -25,6 +27,7 @@ const SingleChartCanvas: React.FC<SingleChartProps> = ({
   tables,
   hideHeader = false,
   onPinChart,
+  onDrillDown,
   isKiosk = false,
 }) => {
   return (
@@ -73,6 +76,7 @@ const SingleChartCanvas: React.FC<SingleChartProps> = ({
           tables={tables}
           showToolbox={true}
           isKiosk={isKiosk}
+          onDrillDown={onDrillDown}
         />
       </div>
     </div>
@@ -84,6 +88,7 @@ export const DataChart: React.FC<DataChartProps> = ({
   tables,
   hideHeader = false,
   onPinChart,
+  onDrillDown,
   isKiosk = false,
 }) => {
   if (!charts || charts.length === 0) return null;
@@ -98,6 +103,7 @@ export const DataChart: React.FC<DataChartProps> = ({
           index={idx}
           hideHeader={hideHeader}
           onPinChart={onPinChart}
+          onDrillDown={onDrillDown}
           isKiosk={isKiosk}
         />
       ))}

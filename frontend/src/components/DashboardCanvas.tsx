@@ -42,6 +42,7 @@ interface DashboardCanvasProps {
   initialTvMode?: boolean;
   isStandaloneTv?: boolean;
   onExitTv?: () => void;
+  onDrillDown?: (prompt: string) => void;
 }
 
 export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
@@ -58,6 +59,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
   initialTvMode = false,
   isStandaloneTv = false,
   onExitTv,
+  onDrillDown,
 }) => {
   const [expandedSqlIds, setExpandedSqlIds] = useState<Record<string, boolean>>({});
   const [localWidgets, setLocalWidgets] = useState<DashboardWidget[]>(widgets);
@@ -499,7 +501,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                   }}
                   disabled={isRefreshing}
                   className="flex items-center gap-1.5 px-2.5 py-1 text-slate-300 hover:text-white hover:bg-white/[0.05] rounded-md transition cursor-pointer"
-                  title={`Segarkan data sekarang ${refreshIntervalSec > 0 ? `(Auto: ${countdownSec}s)` : ''}`}
+                  title={`Segarkan data sekarang (Pukul ${lastRefreshedAt.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })})${refreshIntervalSec > 0 ? ` (Auto: ${countdownSec}s)` : ''}`}
                 >
                   <RefreshCw className={`w-3.5 h-3.5 text-sky-400 ${isRefreshing ? 'animate-spin' : ''}`} />
                   <span className="font-mono text-[11px] font-medium text-slate-200">
@@ -755,7 +757,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                     <div className="flex-1 w-full min-h-0 flex flex-col items-center justify-center pt-2 overflow-hidden">
                       {isChart && (
                         <div className="w-full h-full flex-1 flex flex-col items-center justify-center min-h-0">
-                          <DataChart charts={[w.chart_spec as ChartSpec]} hideHeader={true} isKiosk={true} />
+                          <DataChart charts={[w.chart_spec as ChartSpec]} hideHeader={true} isKiosk={true} onDrillDown={onDrillDown} />
                         </div>
                       )}
                       {isTable && (
@@ -1170,7 +1172,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                     {isChart && (
                       <div className="w-full h-full flex-1 min-h-0 flex flex-col items-center justify-center print:bg-white">
                         <div className="chart-wrapper w-full h-full flex-1 min-h-0 flex items-center justify-center print:h-[250px] print:max-w-xl print:mx-auto">
-                          <DataChart charts={[w.chart_spec as ChartSpec]} hideHeader={true} />
+                          <DataChart charts={[w.chart_spec as ChartSpec]} hideHeader={true} onDrillDown={onDrillDown} />
                         </div>
                         <div className="print-only hidden text-center text-[8.5pt] text-gray-500 font-sans mt-3 italic">
                           * Gambar {idx + 1}: {displayTitle} (Sumber: PostgreSQL warehouse).

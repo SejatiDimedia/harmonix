@@ -1,5 +1,5 @@
 import React from 'react';
-import { PanelLeft, Activity } from 'lucide-react';
+import { PanelLeft, Activity, ShieldAlert } from 'lucide-react';
 import { HealthStatus, ActiveTab } from '../types';
 
 interface NavbarProps {
@@ -7,8 +7,10 @@ interface NavbarProps {
   activeTab: ActiveTab;
   isSidebarOpen?: boolean;
   isMetricsOpen?: boolean;
+  triggeredWatchdogCount?: number;
   onToggleSidebar: () => void;
   onOpenMetrics: () => void;
+  onOpenWatchdog?: () => void;
 }
 
 const NavbarComponent: React.FC<NavbarProps> = ({
@@ -16,8 +18,10 @@ const NavbarComponent: React.FC<NavbarProps> = ({
   activeTab,
   isSidebarOpen = true,
   isMetricsOpen = false,
+  triggeredWatchdogCount = 0,
   onToggleSidebar,
   onOpenMetrics,
+  onOpenWatchdog,
 }) => {
   const getTabTitle = () => {
     switch (activeTab) {
@@ -58,6 +62,35 @@ const NavbarComponent: React.FC<NavbarProps> = ({
 
       {/* Right: Health Badge & Observability Trigger */}
       <div className="flex items-center gap-2">
+        {/* Watchdog / Metric Alert Trigger (FR-49) */}
+        {onOpenWatchdog && (
+          <button
+            type="button"
+            onClick={onOpenWatchdog}
+            aria-label="Buka Metric Watchdog & Alerting"
+            className={`group flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-mono transition cursor-pointer border ${
+              triggeredWatchdogCount > 0
+                ? 'bg-rose-500/15 text-rose-300 border-rose-500/30 hover:bg-rose-500/25'
+                : 'bg-transparent text-slate-400 hover:text-slate-100 hover:bg-[#14223b] border-transparent hover:border-slate-800/80 active:bg-[#101c31]'
+            }`}
+            title="Metric Watchdog & Anomaly Alerting (FR-49)"
+          >
+            <ShieldAlert
+              className={`w-3.5 h-3.5 transition-colors ${
+                triggeredWatchdogCount > 0
+                  ? 'text-rose-400 animate-pulse'
+                  : 'text-slate-400 group-hover:text-slate-200'
+              }`}
+            />
+            <span className="hidden sm:inline font-mono">Watchdog</span>
+            {triggeredWatchdogCount > 0 && (
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-rose-500 text-white">
+                {triggeredWatchdogCount}
+              </span>
+            )}
+          </button>
+        )}
+
         {/* Observability / Metrics Trigger */}
         <button
           type="button"

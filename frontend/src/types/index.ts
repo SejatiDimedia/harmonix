@@ -401,4 +401,41 @@ export interface TableHealthProfile {
   scanned_at: string;
 }
 
+export interface WatchdogRule {
+  id: number;
+  rule_name: string;
+  description?: string | null;
+  sql_query: string;
+  target_column: string;
+  operator: string;
+  threshold_value: number;
+  cron_interval_minutes: number;
+  enabled: boolean;
+  severity: 'info' | 'warning' | 'critical';
+  webhook_url?: string | null;
+  channel_type: string;
+  ai_diagnosis_enabled: boolean;
+  last_run_at?: string | null;
+  last_status: 'pending' | 'healthy' | 'triggered' | 'error';
+  last_metric_value?: number | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+}
+
+export interface WatchdogLog {
+  id: number;
+  rule_id: number;
+  rule_name?: string | null;
+  metric_value?: number | null;
+  threshold_value?: number | null;
+  operator?: string | null;
+  is_triggered: boolean;
+  status: string;
+  ai_diagnosis_summary?: string | null;
+  webhook_sent: boolean;
+  webhook_response_code?: number | null;
+  error_message?: string | null;
+  created_at?: string | null;
+}
+
 

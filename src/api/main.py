@@ -68,7 +68,7 @@ from src.dashboard.manager import (
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Lifecycle events: seed metric glossary, init state tables, traces table, and dashboard table on startup."""
+    """Lifecycle events: seed metric glossary, init state tables, traces table, dashboard table, and watchdog on startup."""
     try:
         if await check_db_health():
             await seed_glossary_if_empty()
@@ -79,10 +79,18 @@ async def lifespan(app: FastAPI):
             await init_uploaded_tables_registry()
             from src.rag.long_term_memory import seed_golden_memories_if_empty
             await seed_golden_memories_if_empty()
-            logger.info("Auto-seeded metric glossary, long-term memories, and initialized state/trace/dashboard/upload tables at startup.")
+            from src.watchdog.manager import init_watchdog_tables, start_watchdog_scheduler
+            await init_watchdog_tables()
+            asyncio.create_task(start_watchdog_scheduler())
+            logger.info("Auto-seeded metric glossary, long-term memories, and initialized state/trace/dashboard/upload/watchdog tables at startup.")
     except Exception as e:
         logger.warning("Startup initialization error: %s", e)
     yield
+    try:
+        from src.watchdog.manager import stop_watchdog_scheduler
+        stop_watchdog_scheduler()
+    except Exception:
+        pass
 
 
 app = FastAPI(
@@ -1080,6 +1088,101 @@ async def delete_memory_endpoint(memory_id: int):
     return {
         "status": "success",
         "message": f"Memori #{memory_id} berhasil dihapus.",
+    }
+
+
+# ==============================================================================
+# Watchdog & Anomaly Alerting Endpoints (FR-49)
+# ==============================================================================
+
+@app.get("/v1/watchdog/rules", tags=["Watchdog"])
+async def list_watchdog_rules_endpoint():
+    """List all configured watchdog monitoring rules."""
+    from src.watchdog.manager import list_rules
+    rules = await list_rules()
+    return {
+        "status": "success",
+        "total": len(rules),
+        "rules": [r.model_dump() for r in rules],
+    }
+
+
+@app.post("/v1/watchdog/rules", tags=["Watchdog"])
+async def create_watchdog_rule_endpoint(payload: dict):
+    """Create a new metric monitoring watchdog rule."""
+    from src.watchdog.manager import WatchdogRuleCreate, create_rule
+    try:
+        rule_input = WatchdogRuleCreate(**payload)
+        rule = await create_rule(rule_input)
+        return {
+            "status": "success",
+            "message": f"Aturan watchdog '{rule.rule_name}' berhasil dibuat.",
+            "rule": rule.model_dump(),
+        }
+    except Exception as e:
+        logger.error("Failed to create watchdog rule: %s", e)
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.put("/v1/watchdog/rules/{rule_id}", tags=["Watchdog"])
+async def update_watchdog_rule_endpoint(rule_id: int, payload: dict):
+    """Update an existing watchdog rule."""
+    from src.watchdog.manager import WatchdogRuleUpdate, update_rule
+    try:
+        rule_update = WatchdogRuleUpdate(**payload)
+        rule = await update_rule(rule_id, rule_update)
+        return {
+            "status": "success",
+            "message": f"Aturan watchdog #{rule_id} berhasil diperbarui.",
+            "rule": rule.model_dump(),
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error("Failed to update watchdog rule: %s", e)
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.delete("/v1/watchdog/rules/{rule_id}", tags=["Watchdog"])
+async def delete_watchdog_rule_endpoint(rule_id: int):
+    """Delete a watchdog rule and its associated execution logs."""
+    from src.watchdog.manager import delete_rule
+    deleted = await delete_rule(rule_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail=f"Aturan #{rule_id} tidak ditemukan.")
+    return {
+        "status": "success",
+        "message": f"Aturan watchdog #{rule_id} berhasil dihapus.",
+    }
+
+
+@app.post("/v1/watchdog/rules/{rule_id}/run", tags=["Watchdog"])
+async def run_watchdog_rule_endpoint(rule_id: int):
+    """Trigger manual immediate evaluation of a watchdog rule."""
+    from src.watchdog.manager import evaluate_rule
+    try:
+        log_entry = await evaluate_rule(rule_id)
+        return {
+            "status": "success",
+            "message": f"Aturan watchdog #{rule_id} selesai dievaluasi.",
+            "result": log_entry.model_dump(),
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error("Failed to run watchdog rule #{rule_id}: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/v1/watchdog/logs", tags=["Watchdog"])
+async def list_watchdog_logs_endpoint(limit: int = 50, rule_id: int | None = None):
+    """Retrieve recent watchdog execution logs and trigger history."""
+    from src.watchdog.manager import get_logs
+    logs = await get_logs(limit=limit, rule_id=rule_id)
+    return {
+        "status": "success",
+        "total": len(logs),
+        "logs": [l.model_dump() for l in logs],
     }
 
 

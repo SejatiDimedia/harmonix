@@ -15,6 +15,8 @@ import {
   FileUploadResponse,
   UploadSessionTablesResponse,
   TableHealthProfile,
+  WatchdogRule,
+  WatchdogLog,
 } from '../types';
 
 export async function getHealth(): Promise<HealthStatus> {
@@ -381,5 +383,71 @@ export async function retryQueueJob(jobId: string): Promise<any> {
   }
   return res.json();
 }
+
+// =============================================================================
+// Watchdog & Metric Alerting API (FR-49)
+// =============================================================================
+
+export async function fetchWatchdogRules(): Promise<{ total: number; rules: WatchdogRule[] }> {
+  const res = await fetch('/v1/watchdog/rules');
+  if (!res.ok) throw new Error('Gagal memuat aturan watchdog');
+  return res.json();
+}
+
+export async function createWatchdogRule(rule: Partial<WatchdogRule>): Promise<{ status: string; message: string; rule: WatchdogRule }> {
+  const res = await fetch('/v1/watchdog/rules', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(rule),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: 'Gagal membuat aturan watchdog' }));
+    throw new Error(err.detail || 'Gagal membuat aturan watchdog');
+  }
+  return res.json();
+}
+
+export async function updateWatchdogRule(ruleId: number, rule: Partial<WatchdogRule>): Promise<{ status: string; message: string; rule: WatchdogRule }> {
+  const res = await fetch(`/v1/watchdog/rules/${ruleId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(rule),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: 'Gagal memperbarui aturan watchdog' }));
+    throw new Error(err.detail || 'Gagal memperbarui aturan watchdog');
+  }
+  return res.json();
+}
+
+export async function deleteWatchdogRule(ruleId: number): Promise<{ status: string; message: string }> {
+  const res = await fetch(`/v1/watchdog/rules/${ruleId}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: 'Gagal menghapus aturan watchdog' }));
+    throw new Error(err.detail || 'Gagal menghapus aturan watchdog');
+  }
+  return res.json();
+}
+
+export async function runWatchdogRule(ruleId: number): Promise<{ status: string; message: string; result: WatchdogLog }> {
+  const res = await fetch(`/v1/watchdog/rules/${ruleId}/run`, {
+    method: 'POST',
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: 'Gagal menjalankan evaluasi watchdog' }));
+    throw new Error(err.detail || 'Gagal menjalankan evaluasi watchdog');
+  }
+  return res.json();
+}
+
+export async function fetchWatchdogLogs(limit = 50, ruleId?: number): Promise<{ total: number; logs: WatchdogLog[] }> {
+  const url = ruleId ? `/v1/watchdog/logs?rule_id=${ruleId}&limit=${limit}` : `/v1/watchdog/logs?limit=${limit}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('Gagal memuat log watchdog');
+  return res.json();
+}
+
 
 

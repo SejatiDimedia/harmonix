@@ -133,7 +133,7 @@ flowchart TD
 
 ---
 
-## Pilar Kemampuan Utama (12 Modul Enterprise)
+## Pilar Kemampuan Utama (13 Modul Enterprise)
 
 ### 1. Analitik Percakapan & Subprocess Python Terisolasi
 - **Penerjemahan Bahasa Alami ke SQL Presisi:** Menghasilkan query PostgreSQL yang efisien berdasarkan skema aktif dan kamus metrik resmi.
@@ -168,6 +168,7 @@ flowchart TD
     - **Di Monitor Eksternal (1080p, 1440p, 4K):** Mengisi 100% layar secara proporsional tanpa meninggalkan ruang kosong di bagian bawah.
   - Opsi toggle instan **`[ ⤢ Fit Layar ]`** untuk beralih antara auto-fit adaptif dan ukuran kustom manual.
 - **Visualisasi Interaktif Apache ECharts:** Didukung grafik batang, garis, sebaran (*scatter*), area, dan donat dengan palet warna korporat yang elegan, serta tombol ekspor data tabular ke CSV.
+- **Interaktivitas Drill-Down Grafik ke Percakapan (FR-48):** Setiap titik data pada grafik Apache ECharts dapat diklik secara interaktif untuk memunculkan popover investigasi kontekstual (analisis anomali dan akar penyebab, pemecahan distribusi wilayah, analisis metode pembayaran, serta inspeksi baris data mentah) yang langsung mengonversikan aksi kanvas menjadi sesi percakapan mendalam dengan pelestarian lineage query induk.
 
 ### 6. Ingesti Data Mandiri (BYOD) & Profiling Kesehatan Data Otomatis
 - **Bring Your Own Data (`src/ingestion/excel_csv_parser.py`):** Pengguna dapat mengunggah file CSV atau spreadsheet Excel multi-sheet (`.xlsx`, `.xls`) hingga ukuran 15MB.
@@ -203,6 +204,11 @@ flowchart TD
 ### 12. Server Model Context Protocol (MCP) untuk IDE & Klien Eksternal
 - **Standar Terbuka Ekosistem AI:** Mengimplementasikan spesifikasi resmi Model Context Protocol (MCP) via transport `stdio` (`src/mcp/server.py`).
 - **Koneksi Langsung ke Alat Kerja Klien:** Memungkinkan alat AI eksternal seperti **Claude Desktop** atau **Cursor IDE** terhubung langsung ke basis data analitik perusahaan melalui gerbang pengaman Harmonix.
+
+### 13. Autonomous Metric Watchdog & Alerting (FR-49)
+- **Pemantau Metrik Berkala Mandiri (`src/watchdog/manager.py`):** Mesin watchdog terjadwal memeriksa metrik operasional dan kesehatan bisnis secara otonom di latar belakang server (seperti rasio pembatalan pesanan atau kepuasan konsumen).
+- **Diagnosis Akar Masalah Otomatis via AI:** Saat kondisi ambang batas (*threshold*) terpicu, model AI secara otomatis menganalisis baris data penyebab anomali, mengidentifikasi faktor risiko, dan menyusun rekomendasi tindakan mitigasi langsung.
+- **Integrasi Webhook Multi-Kanal:** Pengiriman notifikasi insiden secara otomatis ke Slack, Discord, atau webhook kustom enterprise dengan payload terstruktur.
 
 ---
 

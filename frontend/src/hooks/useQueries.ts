@@ -17,8 +17,14 @@ import {
   getSessionUploadedTables,
   getTableHealth,
   deleteUploadedTable,
+  fetchWatchdogRules,
+  createWatchdogRule,
+  updateWatchdogRule,
+  deleteWatchdogRule,
+  runWatchdogRule,
+  fetchWatchdogLogs,
 } from '../services/api';
-import { PinWidgetPayload, UpdateAPIKeysPayload } from '../types';
+import { PinWidgetPayload, UpdateAPIKeysPayload, WatchdogRule } from '../types';
 
 export const useHealthQuery = () => {
   return useQuery({
@@ -184,3 +190,67 @@ export const useDeleteUploadedTableMutation = (sessionId: string | null) => {
     },
   });
 };
+
+// =============================================================================
+// Watchdog Query & Mutation Hooks (FR-49)
+// =============================================================================
+
+export const useWatchdogRulesQuery = () => {
+  return useQuery({
+    queryKey: ['watchdog-rules'],
+    queryFn: fetchWatchdogRules,
+    refetchInterval: 30000,
+  });
+};
+
+export const useWatchdogLogsQuery = (limit = 50, ruleId?: number) => {
+  return useQuery({
+    queryKey: ['watchdog-logs', limit, ruleId],
+    queryFn: () => fetchWatchdogLogs(limit, ruleId),
+    refetchInterval: 15000,
+  });
+};
+
+export const useCreateWatchdogRuleMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (rule: Partial<WatchdogRule>) => createWatchdogRule(rule),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['watchdog-rules'] });
+    },
+  });
+};
+
+export const useUpdateWatchdogRuleMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ ruleId, rule }: { ruleId: number; rule: Partial<WatchdogRule> }) =>
+      updateWatchdogRule(ruleId, rule),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['watchdog-rules'] });
+    },
+  });
+};
+
+export const useDeleteWatchdogRuleMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (ruleId: number) => deleteWatchdogRule(ruleId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['watchdog-rules'] });
+      queryClient.invalidateQueries({ queryKey: ['watchdog-logs'] });
+    },
+  });
+};
+
+export const useRunWatchdogRuleMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (ruleId: number) => runWatchdogRule(ruleId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['watchdog-rules'] });
+      queryClient.invalidateQueries({ queryKey: ['watchdog-logs'] });
+    },
+  });
+};
+
