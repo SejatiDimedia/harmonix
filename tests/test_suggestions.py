@@ -112,3 +112,50 @@ Rekomendasi Analisis Lanjutan:
     assert suggestions[2] == "Apa produk spesifik dalam kategori tersebut yang paling populer?"
     assert '{"name": "run_sql"' not in clean_answer
     assert '{"name": "run_sql"' not in suggestions[2]
+
+
+def test_is_english_query():
+    from src.agent.suggestions import is_english_query
+    assert is_english_query("What are the top 5 selling products this month?") is True
+    assert is_english_query("Show me sales trend by category") is True
+    assert is_english_query("Berapa total penjualan bulan ini?") is False
+    assert is_english_query("Tampilkan 5 produk terlaris") is False
+
+
+def test_extract_suggestions_from_text_english():
+    sample_text = """
+Based on transaction data, the Electronics category achieved the highest revenue of $12,500.
+
+### Recommended Follow-Up Analysis:
+- What is the monthly sales trend for Electronics in a line chart?
+- Which specific products contributed the most to this category?
+- What are the top customer cities purchasing Electronics?
+"""
+    clean_answer, suggestions = extract_suggestions_from_text(sample_text)
+    assert len(suggestions) == 3
+    assert suggestions[0] == "What is the monthly sales trend for Electronics in a line chart?"
+    assert suggestions[1] == "Which specific products contributed the most to this category?"
+    assert suggestions[2] == "What are the top customer cities purchasing Electronics?"
+    assert "### Recommended Follow-Up Analysis:" not in clean_answer
+    assert "highest revenue of $12,500" in clean_answer
+
+
+def test_generate_heuristic_suggestions_english():
+    tables = [
+        TableData(
+            columns=["product_category_name", "total_orders"],
+            rows=[["Electronics", 42], ["Fashion", 30]],
+            row_count=2,
+        )
+    ]
+    suggestions = generate_heuristic_suggestions(
+        user_query="What are the top categories by order count?",
+        tables=tables,
+        charts=[],
+        sql_queries=["SELECT product_category_name, count(*) FROM analytics.products;"],
+    )
+    assert len(suggestions) == 3
+    # Check that questions are in English
+    assert any("donut" in s.lower() or "category" in s.lower() for s in suggestions)
+    assert not any("kategori" in s.lower() for s in suggestions)
+

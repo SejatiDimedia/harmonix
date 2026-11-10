@@ -208,9 +208,9 @@ def extract_suggestions_from_text(answer_text: str) -> tuple[str, list[str]]:
     if not answer_text:
         return "", []
 
-    # Patterns matching headers for suggestions
+    # Patterns matching headers for suggestions (supports both Indonesian and English)
     header_pattern = re.compile(
-        r"(?:^|\n)(?:#{1,4}\s*)?(?:Rekomendasi\s+Analisis\s+Lanjutan|Rekomendasi\s+Pertanyaan\s+Lanjutan|Pertanyaan\s+Lanjutan(?:\s+yang\s+Disarankan)?|Saran\s+Eksplorasi\s+Lanjutan|Next\s+Questions?|Follow-?up\s+Questions?)\s*:?\s*\n",
+        r"(?:^|\n)(?:#{1,4}\s*)?(?:Rekomendasi\s+Analisis\s+Lanjutan|Rekomendasi\s+Pertanyaan\s+Lanjutan|Pertanyaan\s+Lanjutan(?:\s+yang\s+Disarankan)?|Saran\s+Eksplorasi\s+Lanjutan|Recommended\s+(?:Follow-?up|Next)\s+Analysis|Recommended\s+(?:Follow-?up|Next)\s+Questions?|Suggested\s+(?:Follow-?up|Next)\s+Questions?|Suggested\s+Exploration|Next\s+Questions?|Follow-?up\s+Questions?)\s*:?\s*\n",
         re.IGNORECASE,
     )
 
@@ -256,6 +256,41 @@ def extract_suggestions_from_text(answer_text: str) -> tuple[str, list[str]]:
     return clean_answer, suggestions
 
 
+def is_english_query(text: str) -> bool:
+    """Detect whether a query is primarily in English rather than Indonesian."""
+    if not text:
+        return False
+    t_lower = text.lower()
+    english_keywords = {
+        "what", "which", "how", "show", "who", "when", "where", "why",
+        "list", "find", "get", "display", "tell", "give", "breakdown",
+        "trend", "sales", "revenue", "orders", "customers", "products",
+        "highest", "lowest", "top", "bottom", "average", "total", "count",
+        "month", "monthly", "year", "yearly", "daily", "between", "from",
+        "with", "without", "category", "categories", "status", "delivered",
+        "cancelled", "payment", "city", "state", "please", "can", "could",
+        "is", "are", "were", "was", "the", "in", "of", "for", "and", "by",
+        "chart", "bar", "line", "pie", "donut", "doughnut", "items", "spend",
+        "spenders", "rate", "percentage", "compare", "summary", "analyze", "explain"
+    }
+    id_keywords = {
+        "apa", "siapa", "bagaimana", "berapa", "kapan", "dimana", "di", "mana",
+        "tampilkan", "lihat", "daftar", "sebutkan", "berikan", "rincian", "tren",
+        "penjualan", "pendapatan", "pesanan", "pelanggan", "produk", "tertinggi",
+        "terendah", "terlaris", "rata-rata", "total", "jumlah", "bulan", "bulanan",
+        "tahun", "tahunan", "antara", "dari", "dengan", "tanpa", "kategori",
+        "status", "terkirim", "batal", "pembayaran", "kota", "provinsi", "tolong",
+        "bisa", "yang", "dan", "untuk", "pada", "ke", "ini", "itu", "ada", "donat",
+        "grafik", "batang", "garis", "lingkaran"
+    }
+    words = re.findall(r"\b[a-zA-Z]+\b", t_lower)
+    if not words:
+        return False
+    en_count = sum(1 for w in words if w in english_keywords)
+    id_count = sum(1 for w in words if w in id_keywords)
+    return en_count > id_count
+
+
 def generate_heuristic_suggestions(
     user_query: str,
     tables: list[TableData] | list[dict[str, Any]] | None = None,
@@ -267,11 +302,13 @@ def generate_heuristic_suggestions(
     """
     Generate domain-specific analytical suggestions based on SQL tables,
     columns returned, and user intent when LLM suggestions are absent.
+    Automatically matches the language of the user query (Indonesian or English).
     """
     sqls = sql_queries if sql_queries is not None else (executed_sqls or [])
     tables = tables or []
     charts = charts or []
     uq_lower = user_query.lower()
+    is_en = is_english_query(user_query)
     pool: list[str] = []
 
     # Extract all column names across all tables
@@ -291,42 +328,80 @@ def generate_heuristic_suggestions(
     has_payment = any(c in columns for c in ("payment_type", "payment_value"))
     has_customer = any(c in columns for c in ("customer_name", "customer_id", "email"))
 
-    if has_category and not any(w in uq_lower for w in ("donat", "donut", "doughnut", "pie")):
-        pool.append("Tampilkan proporsi persentase kategori produk dalam bentuk chart donat")
-        pool.append("Kategori produk apa yang memiliki nilai transaksi rata-rata tertinggi?")
+    if is_en:
+        if has_category and not any(w in uq_lower for w in ("donut", "doughnut", "pie")):
+            pool.append("Show product category breakdown in a donut chart")
+            pool.append("Which product category has the highest average order value?")
 
-    if has_status:
-        pool.append("Berapa persentase pesanan yang berhasil terkirim (delivered rate)?")
-        pool.append("Tampilkan rincian status pesanan dalam grafik diagram lingkaran (pie chart)")
+        if has_status:
+            pool.append("What is the order delivery success rate (delivered rate)?")
+            pool.append("Show order status distribution in a pie chart")
 
-    if has_city_state:
-        pool.append("Kota mana yang memiliki jumlah pelanggan dan pesanan tertinggi?")
+        if has_city_state:
+            pool.append("Which cities have the highest volume of orders and customers?")
 
-    if has_payment:
-        pool.append("Metode pembayaran apa yang paling sering digunakan oleh pelanggan?")
+        if has_payment:
+            pool.append("What payment methods are most frequently used by customers?")
 
-    if has_customer:
-        pool.append("Siapa 5 pelanggan dengan total akumulasi belanja terbesar (top spenders)?")
+        if has_customer:
+            pool.append("Who are the top 5 customers by total spending (top spenders)?")
 
-    # 2. General Analytical Drilldowns
-    if any(w in uq_lower for w in ("gmv", "penjualan", "revenue", "omset", "omzet", "total")):
-        if "tren" not in uq_lower and "trend" not in uq_lower:
-            pool.append("Bagaimana tren penjualan bulanan selama 6 bulan terakhir?")
-        pool.append("Berapa rata-rata nilai transaksi per pesanan (Average Order Value / AOV)?")
-        pool.append("Kategori produk apa yang paling berkontribusi terhadap total pendapatan?")
+        # 2. General Analytical Drilldowns
+        if any(w in uq_lower for w in ("gmv", "sales", "revenue", "turnover", "total")):
+            if "trend" not in uq_lower:
+                pool.append("What is the monthly sales trend over the past 6 months?")
+            pool.append("What is the Average Order Value (AOV) across all orders?")
+            pool.append("Which product category contributes the most to total revenue?")
 
-    if any(w in uq_lower for w in ("produk", "product")):
-        pool.append("Tampilkan 5 produk terlaris berdasarkan kuantitas pesanan")
-        pool.append("Bagaimana perbandingan total pesanan per kategori dalam grafik batang?")
+        if any(w in uq_lower for w in ("product", "products", "item", "items")):
+            pool.append("Show the top 5 best-selling products by order quantity")
+            pool.append("Compare total orders per category in a bar chart")
 
-    # 3. Fallback General Business Questions
-    general_fallbacks = [
-        "Bagaimana tren volume transaksi bulanan dalam bentuk grafik garis?",
-        "Tampilkan proporsi status pesanan dalam bentuk chart donat",
-        "Kategori produk apa yang memiliki pesanan terbanyak?",
-        "Berapa rata-rata nilai belanja per pesanan (AOV)?",
-        "Tampilkan 5 pelanggan dengan total transaksi tertinggi",
-    ]
+        # 3. Fallback General Business Questions
+        general_fallbacks = [
+            "How is the monthly transaction volume trending in a line chart?",
+            "Show order status breakdown in a donut chart",
+            "Which product categories have the highest order volume?",
+            "What is the Average Order Value (AOV)?",
+            "Show the top 5 customers by total transaction amount",
+        ]
+    else:
+        if has_category and not any(w in uq_lower for w in ("donat", "donut", "doughnut", "pie")):
+            pool.append("Tampilkan proporsi persentase kategori produk dalam bentuk chart donat")
+            pool.append("Kategori produk apa yang memiliki nilai transaksi rata-rata tertinggi?")
+
+        if has_status:
+            pool.append("Berapa persentase pesanan yang berhasil terkirim (delivered rate)?")
+            pool.append("Tampilkan rincian status pesanan dalam grafik diagram lingkaran (pie chart)")
+
+        if has_city_state:
+            pool.append("Kota mana yang memiliki jumlah pelanggan dan pesanan tertinggi?")
+
+        if has_payment:
+            pool.append("Metode pembayaran apa yang paling sering digunakan oleh pelanggan?")
+
+        if has_customer:
+            pool.append("Siapa 5 pelanggan dengan total akumulasi belanja terbesar (top spenders)?")
+
+        # 2. General Analytical Drilldowns
+        if any(w in uq_lower for w in ("gmv", "penjualan", "revenue", "omset", "omzet", "total")):
+            if "tren" not in uq_lower and "trend" not in uq_lower:
+                pool.append("Bagaimana tren penjualan bulanan selama 6 bulan terakhir?")
+            pool.append("Berapa rata-rata nilai transaksi per pesanan (Average Order Value / AOV)?")
+            pool.append("Kategori produk apa yang paling berkontribusi terhadap total pendapatan?")
+
+        if any(w in uq_lower for w in ("produk", "product")):
+            pool.append("Tampilkan 5 produk terlaris berdasarkan kuantitas pesanan")
+            pool.append("Bagaimana perbandingan total pesanan per kategori dalam grafik batang?")
+
+        # 3. Fallback General Business Questions
+        general_fallbacks = [
+            "Bagaimana tren volume transaksi bulanan dalam bentuk grafik garis?",
+            "Tampilkan proporsi status pesanan dalam bentuk chart donat",
+            "Kategori produk apa yang memiliki pesanan terbanyak?",
+            "Berapa rata-rata nilai belanja per pesanan (AOV)?",
+            "Tampilkan 5 pelanggan dengan total transaksi tertinggi",
+        ]
     for gf in general_fallbacks:
         pool.append(gf)
 

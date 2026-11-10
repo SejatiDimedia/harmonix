@@ -144,13 +144,16 @@ class DataAuditorAgent:
         ]
         has_business_kw = any(w in q_lower for w in business_keywords)
 
+        from src.agent.suggestions import is_english_query
+        is_en = is_english_query(user_query)
+
         # 1. Non-analytical greetings without SQL are automatically verified
         if is_greeting and not has_business_kw and not executed_sqls:
             return AuditVerdict(
                 status=AuditStatus.PASSED,
                 confidence_score=1.0,
                 badge="Verified by Data Auditor",
-                critique="Pertanyaan percakapan umum terkonfirmasi tidak membutuhkan eksekusi database.",
+                critique="General conversational greeting confirmed, no database query required." if is_en else "Pertanyaan percakapan umum terkonfirmasi tidak membutuhkan eksekusi database.",
                 issues=[],
                 model_used="heuristic",
             )
@@ -161,13 +164,13 @@ class DataAuditorAgent:
                 status=AuditStatus.FLAGGED,
                 confidence_score=0.95,
                 badge="Auditor Flagged: Missing SQL",
-                critique="Pertanyaan analitik tidak disertai eksekusi query SQL pada database analitik.",
+                critique="Analytical question was not accompanied by SQL query execution on the analytical database." if is_en else "Pertanyaan analitik tidak disertai eksekusi query SQL pada database analitik.",
                 issues=[
                     AuditIssue(
                         category="completeness",
                         severity="high",
-                        description="Analisis analitik disajikan tanpa eksekusi query PostgreSQL.",
-                        suggested_fix="Jalankan tool run_sql untuk mengambil data faktual dari database.",
+                        description="Analytical analysis presented without executing PostgreSQL queries." if is_en else "Analisis analitik disajikan tanpa eksekusi query PostgreSQL.",
+                        suggested_fix="Execute the run_sql tool to retrieve factual data from the database." if is_en else "Jalankan tool run_sql untuk mengambil data faktual dari database.",
                     )
                 ],
                 model_used="heuristic",

@@ -31,8 +31,8 @@ export function Tabs<T extends string = string>({
             onClick={() => onChange(tab.id)}
             className={`flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg transition select-none cursor-pointer ${
               isActive
-                ? 'bg-sky-500/15 text-sky-300 border border-sky-500/30 shadow-sm'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] border border-transparent'
+                ? 'bg-sky-500/15 text-sky-300 shadow-sm'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'
             }`}
           >
             {tab.icon && <span className="shrink-0">{tab.icon}</span>}
@@ -40,7 +40,7 @@ export function Tabs<T extends string = string>({
             {tab.count !== undefined && (
               <span
                 className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
-                  isActive ? 'bg-sky-500/25 text-sky-200' : 'bg-slate-800 text-slate-400'
+                  isActive ? 'bg-sky-500/20 text-sky-200' : 'bg-[#14223b] text-slate-400'
                 }`}
               >
                 {tab.count}

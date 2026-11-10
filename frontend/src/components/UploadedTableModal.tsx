@@ -129,7 +129,7 @@ export const UploadedTableModal: React.FC<UploadedTableModalProps> = ({
   const modalFooter = (
     <div className="flex flex-wrap items-center justify-between gap-3 w-full">
       {confirmDelete ? (
-        <div className="flex items-center gap-2 bg-rose-500/15 px-3 py-1.5 rounded-xl border border-rose-500/20">
+        <div className="flex items-center gap-2 bg-rose-500/20 px-3 py-1.5 rounded-xl">
           <span className="text-xs text-rose-300 font-sans font-medium">Hapus dataset ini dari sesi?</span>
           <Button
             variant="danger"

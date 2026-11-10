@@ -225,7 +225,6 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
         icon={<ShieldAlert className="w-5 h-5 text-rose-400" />}
         title="Metric Watchdog & Anomaly Alerting"
         subtitle="Pemantau otomatis metrik gudang data dengan diagnosis akar masalah AI & webhook integrasi"
-        badge={<Badge variant="danger">FR-49</Badge>}
         footer={
           <>
             <span>Harmonix Autonomous Background Scheduler berjalan aktif di latar belakang server.</span>
@@ -294,7 +293,7 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
 
         {/* Form Drawer: Tambah / Edit Rule */}
         {isFormOpen && (
-          <form onSubmit={handleSaveRule} className="p-5 rounded-xl border border-sky-500/25 bg-[#0f1d36] space-y-4 shadow-lg">
+          <form onSubmit={handleSaveRule} className="p-5 rounded-xl border border-white/[0.08] bg-[#0f1d36] space-y-4 shadow-lg">
             <div className="flex items-center justify-between pb-3 border-b border-white/[0.06]">
               <div className="flex items-center gap-2">
                 <Sliders className="w-4 h-4 text-sky-400" />
@@ -537,7 +536,7 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
                       </div>
                     )}
                     {rule.ai_diagnosis_enabled && (
-                      <div className="flex items-center gap-1 text-sky-400 text-[11px]" title="AI Diagnosis Otomatis Aktif">
+                      <div className="flex items-center gap-1 text-sky-300 text-[11px] bg-sky-500/15 px-2 py-0.5 rounded-full" title="AI Diagnosis Otomatis Aktif">
                         <BrainCircuit className="w-3.5 h-3.5" />
                         <span>AI Diagnosis</span>
                       </div>
@@ -609,7 +608,7 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
                     {isExpanded && (
                       <div className="px-4 pb-4 pt-1 border-t border-white/[0.04] bg-[#0a101d] space-y-3 text-xs">
                         {log.ai_diagnosis_summary && (
-                          <div className="p-3 rounded-lg bg-sky-500/10 border border-sky-500/20 text-slate-200 space-y-1.5">
+                          <div className="p-3 rounded-lg bg-sky-500/15 text-slate-200 space-y-1.5">
                             <div className="flex items-center gap-1.5 text-sky-300 font-medium text-[11px]">
                               <BrainCircuit className="w-3.5 h-3.5 text-sky-400" />
                               <span>Diagnosis & Rekomendasi AI Harmonix</span>
@@ -621,7 +620,7 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
                         )}
 
                         {log.error_message && (
-                          <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs">
+                          <div className="p-3 rounded-lg bg-rose-500/20 text-rose-300 text-xs">
                             <strong>Error:</strong> {log.error_message}
                           </div>
                         )}

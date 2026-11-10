@@ -82,7 +82,7 @@ const NavbarComponent: React.FC<NavbarProps> = ({
             leftIcon={<ShieldAlert className={`w-4 h-4 ${triggeredWatchdogCount > 0 ? 'text-rose-400' : 'text-slate-400'}`} />}
           >
             {triggeredWatchdogCount > 0 && (
-              <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-rose-500 text-white font-mono leading-none">
+              <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/25 text-rose-200 font-mono leading-none">
                 {triggeredWatchdogCount}
               </span>
             )}

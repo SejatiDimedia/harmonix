@@ -11,47 +11,41 @@ export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
   icon?: React.ReactNode;
 }
 
-const variantStyles: Record<BadgeVariant, { bg: string; text: string; border: string; dotColor: string }> = {
+const variantStyles: Record<BadgeVariant, { bg: string; text: string; dotColor: string }> = {
   success: {
-    bg: 'bg-emerald-500/10',
-    text: 'text-emerald-400',
-    border: 'border-emerald-500/20',
+    bg: 'bg-emerald-500/15',
+    text: 'text-emerald-300',
     dotColor: 'bg-emerald-400',
   },
   danger: {
-    bg: 'bg-rose-500/10',
-    text: 'text-rose-400',
-    border: 'border-rose-500/20',
+    bg: 'bg-rose-500/20',
+    text: 'text-rose-300',
     dotColor: 'bg-rose-400',
   },
   warning: {
-    bg: 'bg-amber-500/10',
-    text: 'text-amber-400',
-    border: 'border-amber-500/20',
+    bg: 'bg-amber-500/15',
+    text: 'text-amber-300',
     dotColor: 'bg-amber-400',
   },
   info: {
-    bg: 'bg-sky-500/10',
-    text: 'text-sky-400',
-    border: 'border-sky-500/20',
+    bg: 'bg-sky-500/15',
+    text: 'text-sky-300',
     dotColor: 'bg-sky-400',
   },
   neutral: {
-    bg: 'bg-slate-800/80',
+    bg: 'bg-[#14223b]',
     text: 'text-slate-300',
-    border: 'border-slate-700/60',
     dotColor: 'bg-slate-400',
   },
   purple: {
-    bg: 'bg-purple-500/10',
+    bg: 'bg-purple-500/15',
     text: 'text-purple-300',
-    border: 'border-purple-500/20',
     dotColor: 'bg-purple-400',
   },
 };
 
 const sizeStyles: Record<BadgeSize, string> = {
-  xs: 'text-[10px] px-1.5 py-0.5 gap-1',
+  xs: 'text-[10px] px-2 py-0.5 gap-1',
   sm: 'text-xs px-2.5 py-0.5 gap-1.5',
 };
 
@@ -68,7 +62,7 @@ export const Badge: React.FC<BadgeProps> = ({
   const config = variantStyles[variant];
   return (
     <span
-      className={`inline-flex items-center font-mono font-medium rounded-full border transition ${config.bg} ${config.text} ${config.border} ${sizeStyles[size]} ${className}`}
+      className={`inline-flex items-center font-mono font-medium rounded-full transition ${config.bg} ${config.text} ${sizeStyles[size]} ${className}`}
       {...rest}
     >
       {dot && (

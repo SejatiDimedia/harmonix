@@ -54,9 +54,9 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({
   const avgTurnLatencyMs =
     validTurns.length > 0
       ? Math.round(
-          validTurns.reduce((acc, t) => acc + (t.metrics?.total_latency_ms || 0), 0) /
-            validTurns.length
-        )
+        validTurns.reduce((acc, t) => acc + (t.metrics?.total_latency_ms || 0), 0) /
+        validTurns.length
+      )
       : 0;
 
   const formatMs = (ms?: number): string => {
@@ -75,7 +75,6 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({
       icon={<Activity className="w-5 h-5 text-sky-400" />}
       title="Observabilitas & Penggunaan Token"
       subtitle="Transparansi token input/output, latensi TTFT, dan status SLA sistem"
-      badge={<Badge variant="info">OB-02</Badge>}
       footer={
         <div className="flex items-center justify-between w-full">
           <span className="text-[11px] text-slate-400 font-mono">
@@ -205,14 +204,7 @@ export const MetricsModal: React.FC<MetricsModalProps> = ({
                     <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400">
                       STATUS KEBERHASILAN SLA
                     </span>
-                    <Badge variant={errorCount > 0 ? 'warning' : 'success'}>
-                      {errorCount > 0 ? (
-                        <AlertTriangle className="w-3 h-3 text-amber-400 mr-1" />
-                      ) : (
-                        <CheckCircle2 className="w-3 h-3 text-emerald-400 mr-1" />
-                      )}
-                      {errorCount > 0 ? 'Perlu Perhatian' : 'Optimal'}
-                    </Badge>
+                    <Badge variant={errorCount > 0 ? 'warning' : 'success'} icon={errorCount > 0 ? <AlertTriangle className="w-3 h-3" /> : <CheckCircle2 className="w-3 h-3" />}>{errorCount > 0 ? 'Perlu Perhatian' : 'Optimal'}</Badge>
                   </div>
                   <div className="text-xl font-bold font-mono tabular-nums text-emerald-400 mt-1">
                     {metrics ? `${successRate.toFixed(1)}%` : '—'}

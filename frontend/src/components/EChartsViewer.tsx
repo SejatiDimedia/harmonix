@@ -631,13 +631,24 @@ export const EChartsViewer: React.FC<EChartsViewerProps> = ({
         ? metricValue.toLocaleString('id-ID')
         : String(metricValue);
 
+    const isEn = Boolean(
+      (spec.title && /\b(sales|revenue|orders|trend|top|monthly|average|breakdown|category|product|customer|distribution|count|total)\b/i.test(spec.title)) ||
+      (metricName && /\b(sales|revenue|orders|trend|top|monthly|average|breakdown|category|product|customer|distribution|count|total|value|price)\b/i.test(metricName))
+    );
+
     let prompt = '';
     if (templateType === 'root_cause') {
-      prompt = `Analisis mendalam mengapa ${metricName} pada '${dimension}' bernilai ${formattedVal}. Apa faktor pendorong utama dan anomali pendukungnya?`;
+      prompt = isEn
+        ? `Deep dive into why ${metricName} for '${dimension}' is ${formattedVal}. What are the primary driving factors and supporting anomalies?`
+        : `Analisis mendalam mengapa ${metricName} pada '${dimension}' bernilai ${formattedVal}. Apa faktor pendorong utama dan anomali pendukungnya?`;
     } else if (templateType === 'geo') {
-      prompt = `Bedah transaksi pada '${dimension}' berdasarkan kota dan provinsi pelanggan (geografi) untuk melihat konsentrasi pasar utamanya.`;
+      prompt = isEn
+        ? `Analyze transactions for '${dimension}' by customer city and state (geography) to identify primary market concentration.`
+        : `Bedah transaksi pada '${dimension}' berdasarkan kota dan provinsi pelanggan (geografi) untuk melihat konsentrasi pasar utamanya.`;
     } else if (templateType === 'payment') {
-      prompt = `Bedah transaksi pada '${dimension}' berdasarkan metode pembayaran (kredit, boleto, voucher) dan nilai cicilannya.`;
+      prompt = isEn
+        ? `Break down transactions for '${dimension}' by payment method (credit card, voucher, boleto) and installment values.`
+        : `Bedah transaksi pada '${dimension}' berdasarkan metode pembayaran (kredit, boleto, voucher) dan nilai cicilannya.`;
     }
 
     setDrilldownState(null);
@@ -655,7 +666,15 @@ export const EChartsViewer: React.FC<EChartsViewerProps> = ({
         ? metricValue.toLocaleString('id-ID')
         : String(metricValue);
 
-    const prompt = `Mengenai data ${metricName} pada '${dimension}' (Nilai: ${formattedVal}): ${customQuestion.trim()}`;
+    const isEn = Boolean(
+      (spec.title && /\b(sales|revenue|orders|trend|top|monthly|average|breakdown|category|product|customer|distribution|count|total)\b/i.test(spec.title)) ||
+      (metricName && /\b(sales|revenue|orders|trend|top|monthly|average|breakdown|category|product|customer|distribution|count|total|value|price)\b/i.test(metricName)) ||
+      /\b(what|how|why|which|can|could|show|is|are|the)\b/i.test(customQuestion)
+    );
+
+    const prompt = isEn
+      ? `Regarding ${metricName} for '${dimension}' (Value: ${formattedVal}): ${customQuestion.trim()}`
+      : `Mengenai data ${metricName} pada '${dimension}' (Nilai: ${formattedVal}): ${customQuestion.trim()}`;
     setDrilldownState(null);
     setCustomQuestion('');
     if (onDrillDown) {
@@ -671,9 +690,19 @@ export const EChartsViewer: React.FC<EChartsViewerProps> = ({
         ? metricValue.toLocaleString('id-ID')
         : String(metricValue);
 
+    const isEn = Boolean(
+      (spec.title && /\b(sales|revenue|orders|trend|top|monthly|average|breakdown|category|product|customer|distribution|count|total)\b/i.test(spec.title)) ||
+      (metricName && /\b(sales|revenue|orders|trend|top|monthly|average|breakdown|category|product|customer|distribution|count|total|value|price)\b/i.test(metricName)) ||
+      /\b(what|how|why|which|can|could|show|is|are|the)\b/i.test(customQuestion)
+    );
+
     const basePrompt = customQuestion.trim()
-      ? `Mengenai data ${metricName} pada '${dimension}' (Nilai: ${formattedVal}): ${customQuestion.trim()}`
-      : `Mengenai data ${metricName} pada '${dimension}' (Nilai: ${formattedVal}), tolong analisis `;
+      ? (isEn
+          ? `Regarding ${metricName} for '${dimension}' (Value: ${formattedVal}): ${customQuestion.trim()}`
+          : `Mengenai data ${metricName} pada '${dimension}' (Nilai: ${formattedVal}): ${customQuestion.trim()}`)
+      : (isEn
+          ? `Regarding ${metricName} for '${dimension}' (Value: ${formattedVal}), please analyze `
+          : `Mengenai data ${metricName} pada '${dimension}' (Nilai: ${formattedVal}), tolong analisis `);
 
     setDrilldownState(null);
     setCustomQuestion('');

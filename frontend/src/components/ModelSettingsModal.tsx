@@ -246,7 +246,7 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
                     key={p.provider}
                     variant="surface"
                     padding="sm"
-                    className={p.is_ready ? 'border-sky-500/20' : 'opacity-60'}
+                    className={p.is_ready ? 'border-white/[0.12]' : 'opacity-60'}
                   >
                     <div className="flex items-center justify-between mb-1.5">
                       <span className="font-semibold text-[#f8fafc] text-xs font-sans tracking-wide">
