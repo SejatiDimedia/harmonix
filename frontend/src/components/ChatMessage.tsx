@@ -147,7 +147,7 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
       {/* User Bubble */}
       {turn.user_query && (
         <div className="flex flex-col items-end group">
-          <div className="relative max-w-[85%] rounded-2xl bg-[#14223b] px-4 py-3 text-sm text-[#f8fafc] leading-relaxed shadow-sm font-sans border border-white/[0.04]">
+          <div className="relative max-w-[85%] rounded-2xl bg-gradient-to-r from-[#0074b7] via-[#0082c4] to-[#008cd0] px-4 py-3 text-sm text-white font-medium leading-relaxed shadow-md shadow-sky-950/30 font-sans border border-[#38bdf8]/35">
             <div className="select-text whitespace-pre-wrap break-words">
               {turn.user_query}
             </div>
