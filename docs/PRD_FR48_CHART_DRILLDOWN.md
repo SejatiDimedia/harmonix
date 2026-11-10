@@ -68,16 +68,18 @@ Membangun **Interactive Chart-to-Chat Drill-Down Engine (FR-48)** yang mewujudka
   - `chart_type`: Tipe visualisasi (`bar`, `line`, `pie`, `scatter`).
 
 ### 3.2 Contextual Drill-Down Action Menu (Popover UI)
-Saat segmen grafik diklik, muncul popover melayang dengan posisi cerdas (*viewport-aware*) yang menyediakan 3 pilihan aksi:
+Saat segmen grafik diklik, muncul popover melayang dengan posisi cerdas (*viewport-aware*) yang menyediakan opsi aksi:
 1. **Investigasi Kausalitas (Root-Cause Prompt):**
    - Template prompt otomatis: *"Analisis mendalam mengapa [series_name] pada [dimension_name] bernilai [metric_value]. Berikan rincian faktor pendorong utama dan anomali pendukung."*
 2. **Eksplorasi Dimensi Silang (Cross-Dimension Breakdown):**
    - Menawarkan opsi bedah dimensi yang relevan berdasarkan skema tabel:
      - Berdasarkan Geografi (Kota / Provinsi).
      - Berdasarkan Metode Pembayaran.
-     - Berdasarkan Reputasi / Ulasan Penjual (*Seller Rating*).
 3. **Inspeksi Baris Data Mentah (Raw Rows Inspector):**
-   - Membuka modal/drawer ringkas yang menampilkan 20 baris data pertama dari database yang membentuk titik agregat tersebut tanpa perlu memicu inferensi LLM baru.
+   - Membuka modal/drawer ringkas yang menampilkan baris data pertama dari database yang membentuk titik agregat tersebut tanpa perlu memicu inferensi LLM baru.
+4. **Pertanyaan Kustom Pengguna (Custom Question & Chat Prefill):**
+   - **Input Langsung:** Pengguna dapat mengetikkan pertanyaan bebas apapun langsung di kolom teks popover terkait titik data yang diklik.
+   - **Mode Prefill Chat:** Opsi pengalihan konteks ke kolom input percakapan utama (*prefilled input*) sehingga pengguna dapat menyusun dan menyunting pertanyaan lanjutan secara leluasa dengan konteks data point yang telah tersuntik rapi.
 
 ### 3.3 Penanganan Konteks Kueri Bertingkat (Query Lineage Preservation)
 - Agar LLM tidak menganalisis dari nol, sistem menyuntikkan metadata lineage ke dalam prompt tersembunyi:

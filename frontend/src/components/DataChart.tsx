@@ -9,6 +9,7 @@ interface DataChartProps {
   hideHeader?: boolean;
   onPinChart?: (spec: ChartSpec) => void;
   onDrillDown?: (prompt: string) => void;
+  onPrefillChat?: (text: string) => void;
   isKiosk?: boolean;
 }
 
@@ -19,6 +20,7 @@ interface SingleChartProps {
   hideHeader?: boolean;
   onPinChart?: (spec: ChartSpec) => void;
   onDrillDown?: (prompt: string) => void;
+  onPrefillChat?: (text: string) => void;
   isKiosk?: boolean;
 }
 
@@ -28,6 +30,7 @@ const SingleChartCanvas: React.FC<SingleChartProps> = ({
   hideHeader = false,
   onPinChart,
   onDrillDown,
+  onPrefillChat,
   isKiosk = false,
 }) => {
   return (
@@ -77,6 +80,7 @@ const SingleChartCanvas: React.FC<SingleChartProps> = ({
           showToolbox={true}
           isKiosk={isKiosk}
           onDrillDown={onDrillDown}
+          onPrefillChat={onPrefillChat}
         />
       </div>
     </div>
@@ -89,6 +93,7 @@ export const DataChart: React.FC<DataChartProps> = ({
   hideHeader = false,
   onPinChart,
   onDrillDown,
+  onPrefillChat,
   isKiosk = false,
 }) => {
   if (!charts || charts.length === 0) return null;
@@ -104,6 +109,7 @@ export const DataChart: React.FC<DataChartProps> = ({
           hideHeader={hideHeader}
           onPinChart={onPinChart}
           onDrillDown={onDrillDown}
+          onPrefillChat={onPrefillChat}
           isKiosk={isKiosk}
         />
       ))}

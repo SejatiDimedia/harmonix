@@ -460,6 +460,21 @@ export const App: React.FC = () => {
     [isStandaloneTv, activeTab, setActiveTab, showToast, handleSendMessage]
   );
 
+  const handlePrefillDrillDown = useCallback(
+    (promptText: string) => {
+      if (isStandaloneTv) {
+        setIsStandaloneTv(false);
+        window.history.pushState({}, '', '/');
+      }
+      if (activeTab !== 'chat') {
+        setActiveTab('chat');
+      }
+      setInputPrefill(promptText);
+      showToast('Konteks titik data dimuat ke kolom pesan');
+    },
+    [isStandaloneTv, activeTab, setActiveTab, setInputPrefill, showToast]
+  );
+
   const handleApprove = useCallback(async () => {
     if (!pendingApproval) return;
     const { approval_id, task_id, user_query: apprUserQuery } = pendingApproval;
@@ -805,6 +820,7 @@ export const App: React.FC = () => {
           onRefresh={handleRefreshDashboard}
           onDeleteWidget={handleDeleteWidget}
           onDrillDown={handleDrillDown}
+          onPrefillChat={handlePrefillDrillDown}
           onSwitchToChat={() => {
             setIsStandaloneTv(false);
             window.history.pushState({}, '', '/');
@@ -887,7 +903,6 @@ export const App: React.FC = () => {
                       <div className="bg-[#0f172a]/90 border border-sky-900/40 rounded-xl p-3.5 text-xs text-slate-300 shadow-sm backdrop-blur-sm animate-fade-in">
                         <div className="flex items-center justify-between font-medium text-sky-400 mb-2">
                           <div className="flex items-center gap-2">
-                            <span className="text-sm">🧠</span>
                             <span className="font-semibold tracking-wide">Ringkasan Konteks Percakapan Sesi</span>
                             <span className="px-2 py-0.5 rounded-full text-[10px] bg-sky-950 text-sky-300 border border-sky-800/50">
                               {sessionDetailsData.compacted_turn_count || 0} turn dirangkum
@@ -909,6 +924,7 @@ export const App: React.FC = () => {
                         onPinChart={handlePinChart}
                         onPinTable={handlePinTable}
                         onDrillDown={handleDrillDown}
+                        onPrefillChat={handlePrefillDrillDown}
                       />
                     ))}
 
@@ -922,6 +938,7 @@ export const App: React.FC = () => {
                         onPinChart={handlePinChart}
                         onPinTable={handlePinTable}
                         onDrillDown={handleDrillDown}
+                        onPrefillChat={handlePrefillDrillDown}
                         onCancel={handleCancelStream}
                       />
                     )}
@@ -960,6 +977,7 @@ export const App: React.FC = () => {
             onRefresh={handleRefreshDashboard}
             onDeleteWidget={handleDeleteWidget}
             onDrillDown={handleDrillDown}
+            onPrefillChat={handlePrefillDrillDown}
             onSwitchToChat={() => setActiveTab('chat')}
             sessionTitle={sessionDetailsData?.title}
             sessionId={currentSessionId || undefined}

@@ -20,6 +20,7 @@ interface ChatMessageProps {
   onPinChart?: (spec: ChartSpec, sqlQuery?: string) => void;
   onPinTable?: (table: TableData, title: string, sqlQuery?: string) => void;
   onDrillDown?: (prompt: string) => void;
+  onPrefillChat?: (text: string) => void;
   onCancel?: () => void;
 }
 
@@ -85,6 +86,7 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
   onPinChart,
   onPinTable,
   onDrillDown,
+  onPrefillChat,
   onCancel,
 }) => {
   const [showDataFlow, setShowDataFlow] = useState(false);
@@ -278,6 +280,7 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
                 charts={turn.charts}
                 tables={turn.tables}
                 onDrillDown={onDrillDown || onSelectSuggestion}
+                onPrefillChat={onPrefillChat || onEditQuery}
                 onPinChart={
                   onPinChart
                     ? (spec) =>

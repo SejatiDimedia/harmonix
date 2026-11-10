@@ -43,6 +43,7 @@ interface DashboardCanvasProps {
   isStandaloneTv?: boolean;
   onExitTv?: () => void;
   onDrillDown?: (prompt: string) => void;
+  onPrefillChat?: (text: string) => void;
 }
 
 export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
@@ -60,6 +61,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
   isStandaloneTv = false,
   onExitTv,
   onDrillDown,
+  onPrefillChat,
 }) => {
   const [expandedSqlIds, setExpandedSqlIds] = useState<Record<string, boolean>>({});
   const [localWidgets, setLocalWidgets] = useState<DashboardWidget[]>(widgets);
@@ -757,7 +759,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                     <div className="flex-1 w-full min-h-0 flex flex-col items-center justify-center pt-2 overflow-hidden">
                       {isChart && (
                         <div className="w-full h-full flex-1 flex flex-col items-center justify-center min-h-0">
-                          <DataChart charts={[w.chart_spec as ChartSpec]} hideHeader={true} isKiosk={true} onDrillDown={onDrillDown} />
+                          <DataChart charts={[w.chart_spec as ChartSpec]} hideHeader={true} isKiosk={true} onDrillDown={onDrillDown} onPrefillChat={onPrefillChat} />
                         </div>
                       )}
                       {isTable && (
@@ -1172,7 +1174,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                     {isChart && (
                       <div className="w-full h-full flex-1 min-h-0 flex flex-col items-center justify-center print:bg-white">
                         <div className="chart-wrapper w-full h-full flex-1 min-h-0 flex items-center justify-center print:h-[250px] print:max-w-xl print:mx-auto">
-                          <DataChart charts={[w.chart_spec as ChartSpec]} hideHeader={true} onDrillDown={onDrillDown} />
+                          <DataChart charts={[w.chart_spec as ChartSpec]} hideHeader={true} onDrillDown={onDrillDown} onPrefillChat={onPrefillChat} />
                         </div>
                         <div className="print-only hidden text-center text-[8.5pt] text-gray-500 font-sans mt-3 italic">
                           * Gambar {idx + 1}: {displayTitle} (Sumber: PostgreSQL warehouse).

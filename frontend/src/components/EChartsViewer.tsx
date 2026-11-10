@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as echarts from 'echarts';
-import { Search, MapPin, CreditCard, Table, X, Sparkles, ExternalLink } from 'lucide-react';
+import { Search, MapPin, CreditCard, Table, X, Sparkles, ExternalLink, Send, MessageSquare } from 'lucide-react';
 import { ChartSpec, TableData } from '../types';
 
 export interface DrillDownPoint {
@@ -19,6 +19,7 @@ export interface EChartsViewerProps {
   className?: string;
   isKiosk?: boolean;
   onDrillDown?: (prompt: string) => void;
+  onPrefillChat?: (text: string) => void;
 }
 
 const PALETTE = [
@@ -40,10 +41,12 @@ export const EChartsViewer: React.FC<EChartsViewerProps> = ({
   className = '',
   isKiosk = false,
   onDrillDown,
+  onPrefillChat,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartInstanceRef = useRef<echarts.ECharts | null>(null);
   const [drilldownState, setDrilldownState] = useState<DrillDownPoint | null>(null);
+  const [customQuestion, setCustomQuestion] = useState('');
   const [rawRowsModal, setRawRowsModal] = useState<{
     dimension: string;
     rows: any[];
@@ -584,6 +587,7 @@ export const EChartsViewer: React.FC<EChartsViewerProps> = ({
         x: mouseX,
         y: mouseY,
       });
+      setCustomQuestion('');
     };
 
     chartInstance.on('click', handleChartClick);
@@ -641,6 +645,44 @@ export const EChartsViewer: React.FC<EChartsViewerProps> = ({
     }
   };
 
+  const handleCustomQuestionSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!drilldownState || !customQuestion.trim()) return;
+    const { dimension, metricName, metricValue } = drilldownState;
+    const formattedVal =
+      typeof metricValue === 'number'
+        ? metricValue.toLocaleString('id-ID')
+        : String(metricValue);
+
+    const prompt = `Mengenai data ${metricName} pada '${dimension}' (Nilai: ${formattedVal}): ${customQuestion.trim()}`;
+    setDrilldownState(null);
+    setCustomQuestion('');
+    if (onDrillDown) {
+      onDrillDown(prompt);
+    }
+  };
+
+  const handlePrefillToChat = () => {
+    if (!drilldownState) return;
+    const { dimension, metricName, metricValue } = drilldownState;
+    const formattedVal =
+      typeof metricValue === 'number'
+        ? metricValue.toLocaleString('id-ID')
+        : String(metricValue);
+
+    const basePrompt = customQuestion.trim()
+      ? `Mengenai data ${metricName} pada '${dimension}' (Nilai: ${formattedVal}): ${customQuestion.trim()}`
+      : `Mengenai data ${metricName} pada '${dimension}' (Nilai: ${formattedVal}), tolong analisis `;
+
+    setDrilldownState(null);
+    setCustomQuestion('');
+    if (onPrefillChat) {
+      onPrefillChat(basePrompt);
+    } else if (onDrillDown) {
+      onDrillDown(basePrompt);
+    }
+  };
+
   const handleOpenRawRows = () => {
     if (!drilldownState) return;
     const dim = drilldownState.dimension;
@@ -693,7 +735,7 @@ export const EChartsViewer: React.FC<EChartsViewerProps> = ({
             style={{
               position: 'fixed',
               left: `${Math.min(window.innerWidth - 330, Math.max(16, drilldownState.x - 150))}px`,
-              top: `${Math.min(window.innerHeight - 340, Math.max(60, drilldownState.y - 20))}px`,
+              top: `${Math.min(window.innerHeight - 440, Math.max(60, drilldownState.y - 20))}px`,
             }}
             className="z-50 w-80 max-w-[calc(100vw-32px)] rounded-xl bg-[#0b1424] border border-sky-500/40 p-3.5 shadow-2xl shadow-black/80 font-sans text-slate-100 animate-in fade-in zoom-in-95 duration-150"
           >
@@ -773,6 +815,40 @@ export const EChartsViewer: React.FC<EChartsViewerProps> = ({
                 </div>
                 <ExternalLink className="w-3 h-3 text-slate-500 group-hover:text-purple-300 shrink-0" />
               </button>
+            </div>
+
+            {/* Custom Question Form Section */}
+            <div className="pt-2.5 mt-2.5 border-t border-white/[0.08]">
+              <div className="text-[10px] font-mono uppercase text-slate-400 font-semibold mb-1.5 flex items-center justify-between">
+                <span>Atau Ajukan Pertanyaan Sendiri</span>
+              </div>
+              <form onSubmit={handleCustomQuestionSubmit} className="flex items-center gap-1.5">
+                <input
+                  type="text"
+                  value={customQuestion}
+                  onChange={(e) => setCustomQuestion(e.target.value)}
+                  placeholder="Ketik pertanyaan kustom..."
+                  className="flex-1 px-2.5 py-1.5 rounded-lg bg-[#070e1b] border border-white/[0.1] text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-sky-500 font-sans"
+                />
+                <button
+                  type="submit"
+                  disabled={!customQuestion.trim()}
+                  className="p-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white disabled:opacity-40 transition cursor-pointer shrink-0"
+                  title="Kirim pertanyaan kustom ke chat analitik"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                </button>
+              </form>
+              <div className="flex items-center justify-end mt-1.5">
+                <button
+                  type="button"
+                  onClick={handlePrefillToChat}
+                  className="text-[10.5px] text-sky-400 hover:text-sky-300 transition cursor-pointer flex items-center gap-1"
+                >
+                  <MessageSquare className="w-3 h-3" />
+                  <span>Ketik lebih leluasa di kolom chat</span>
+                </button>
+              </div>
             </div>
           </div>
         </>
