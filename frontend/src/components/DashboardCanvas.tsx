@@ -567,7 +567,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                 type="button"
                 onClick={() => setIsTvEditLayout((prev) => !prev)}
                 className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-sans transition cursor-pointer ${isTvEditLayout
-                  ? 'bg-sky-500/20 text-sky-300 border border-sky-400/30 font-medium'
+                  ? 'bg-sky-500/20 text-sky-300 font-medium'
                   : 'text-slate-300 hover:text-white hover:bg-white/[0.05]'
                   }`}
                 title="Atur tata letak dan posisi widget"
@@ -582,7 +582,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                 type="button"
                 onClick={() => setIsTvAutoFit((prev) => !prev)}
                 className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-sans transition cursor-pointer ${isTvAutoFit
-                  ? 'bg-sky-500/20 text-sky-300 border border-sky-400/30 font-medium'
+                  ? 'bg-sky-500/20 text-sky-300 font-medium'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.05]'
                   }`}
                 title={
@@ -934,7 +934,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
               <h1 className="text-lg font-semibold text-[#f8fafc] font-sans flex items-center gap-2.5">
                 <span>Live BI Dashboard Canvas</span>
                 {isSavingLayout && (
-                  <span className="flex items-center gap-1 text-[11px] font-mono text-sky-400 bg-sky-950/60 px-2 py-0.5 rounded border border-sky-800/40">
+                  <span className="flex items-center gap-1 text-[11px] font-mono text-sky-300 bg-sky-500/15 px-2 py-0.5 rounded">
                     <RefreshCw className="w-2.5 h-2.5 animate-spin" />
                     <span>Menyimpan layout...</span>
                   </span>
@@ -1292,7 +1292,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                 Lampiran: Tata Kelola Data & Jejak Audit (Data Lineage & Audit Trail)
               </h3>
               <span className="text-[9px] text-emerald-700 font-semibold px-2 py-0.5 rounded bg-emerald-50 border border-emerald-200">
-                ✓ Guardrail Certified: 100% Read-Only Safety
+                Guardrail Certified: 100% Read-Only Safety
               </span>
             </div>
             <p className="text-[9.5pt] text-gray-500 mb-4 font-sans">

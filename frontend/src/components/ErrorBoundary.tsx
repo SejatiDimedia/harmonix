@@ -32,9 +32,9 @@ export class ErrorBoundary extends Component<Props, State> {
   public render() {
     if (this.state.hasError) {
       return (
-        <div className="p-6 rounded-2xl bg-[#0f1a2e] border border-amber-900/40 text-[#f8fafc] my-4 shadow-lg">
+        <div className="p-6 rounded-2xl bg-[#0f1a2e] border border-white/[0.08] text-[#f8fafc] my-4 shadow-lg">
           <div className="flex items-start gap-3">
-            <div className="p-2 rounded-lg bg-amber-950/60 text-amber-400 border border-amber-800/40 shrink-0">
+            <div className="p-2 rounded-xl bg-amber-500/15 text-amber-400 shrink-0">
               <AlertTriangle className="w-5 h-5" />
             </div>
             <div className="flex-1 space-y-2">

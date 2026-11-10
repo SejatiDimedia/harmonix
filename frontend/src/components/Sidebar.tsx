@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Plus, RefreshCw, MessageSquare, LayoutDashboard, Layers, Trash2, Pencil, Check, X, PanelLeft } from 'lucide-react';
 import { ChatSessionSummary, ActiveTab } from '../types';
 import { formatSessionDate } from '../utils/formatters';
+import { Button, Badge } from './ui';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -248,20 +249,22 @@ const SidebarComponent: React.FC<SidebarProps> = ({
           </button>
         </div>
 
-        {/* Primary Action: New Chat Button (Styled like reference + New chat) */}
+        {/* Primary Action: New Chat Button */}
         <div className="p-3 pb-2">
-          <button
-            type="button"
+          <Button
+            variant="secondary"
+            size="md"
+            fullWidth
             onClick={() => {
               onNewChat();
               onSelectTab('chat');
               if (window.innerWidth < 768) onCloseMobile();
             }}
-            className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-slate-800/90 hover:bg-slate-700/90 active:bg-slate-900 text-slate-200 hover:text-white font-medium text-xs shadow-sm transition border border-slate-700/60 cursor-pointer"
+            leftIcon={<Plus className="w-4 h-4 text-sky-400 shrink-0" />}
+            className="justify-start border-slate-700/60"
           >
-            <Plus className="w-4 h-4 text-sky-400 shrink-0" />
-            <span className="font-sans font-medium text-xs">Percakapan Baru</span>
-          </button>
+            Percakapan Baru
+          </Button>
         </div>
 
         {/* Primary Workspace Navigation Tabs (Replaces top navbar tabs) */}
@@ -301,14 +304,9 @@ const SidebarComponent: React.FC<SidebarProps> = ({
               <span className="font-sans">Live Dashboard</span>
             </div>
             {widgetCount > 0 && (
-              <span
-                className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono font-semibold ${activeTab === 'dashboard'
-                  ? 'bg-sky-950 text-sky-300 border border-sky-800/60'
-                  : 'bg-slate-800 text-slate-400 border border-slate-700/50'
-                  }`}
-              >
+              <Badge variant={activeTab === 'dashboard' ? 'info' : 'neutral'} size="xs">
                 {widgetCount}
-              </span>
+              </Badge>
             )}
           </button>
 

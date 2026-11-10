@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Copy, Check } from 'lucide-react';
 import { formatSQL } from '../utils/formatters';
+import { Card, Button } from './ui';
 
 interface SQLBoxProps {
   queries: string[];
@@ -19,30 +20,23 @@ export const SQLBox: React.FC<SQLBoxProps> = ({ queries }) => {
   };
 
   return (
-    <div className="mt-3 rounded-xl bg-[#0b1322] border border-white/[0.06] overflow-hidden shadow-sm">
+    <Card variant="dark" padding="none" className="mt-3 overflow-hidden shadow-sm">
       <div className="px-3 py-1.5 bg-[#0f1a2e] border-b border-white/[0.04] text-[10px] font-mono text-[#94a3b8] flex justify-between items-center select-none">
-        <span className="tracking-wider">POSTGRESQL (SANITIZED & LIMIT 100)</span>
-        <button
-          type="button"
+        <span className="tracking-wider">POSTGRESQL (SANITIZED &amp; LIMIT 100)</span>
+        <Button
+          variant="ghost"
+          size="xs"
           onClick={handleCopy}
-          className="hover:text-white transition flex items-center gap-1 cursor-pointer"
+          leftIcon={copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
         >
-          {copied ? (
-            <>
-              <Check className="w-3 h-3 text-emerald-400" />
-              <span className="text-emerald-400">Tersalin!</span>
-            </>
-          ) : (
-            <>
-              <Copy className="w-3 h-3" />
-              <span>Salin SQL</span>
-            </>
-          )}
-        </button>
+          <span className={copied ? 'text-emerald-400' : ''}>
+            {copied ? 'Tersalin!' : 'Salin SQL'}
+          </span>
+        </Button>
       </div>
       <pre className="p-3 text-[11px] font-mono text-clay-300 whitespace-pre-wrap break-words leading-relaxed overflow-hidden select-text">
         {formatted}
       </pre>
-    </div>
+    </Card>
   );
 };

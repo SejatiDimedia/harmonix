@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
-import { Loader2, Brain, Database, ChevronDown, Copy, Check, Pencil, RotateCcw, FileText, Layers, Square } from 'lucide-react';
+import { Loader2, Brain, Database, ChevronDown, Copy, Check, Pencil, RotateCcw, FileText, Layers, Square, Zap } from 'lucide-react';
 import { ChatTurn, ChartSpec, TableData } from '../types';
 import { SQLBox } from './SQLBox';
 import { DataTable } from './DataTable';
@@ -394,8 +394,9 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
                                 {task.instruction}
                               </div>
                               {task.result_summary && (
-                                <div className="text-emerald-400 text-[10px] font-mono mt-0.5 truncate">
-                                  ✓ {task.result_summary}
+                                <div className="text-emerald-400 text-[10px] font-mono mt-0.5 truncate flex items-center gap-1">
+                                  <Check className="w-3 h-3 shrink-0" />
+                                  <span>{task.result_summary}</span>
                                 </div>
                               )}
                             </div>
@@ -533,10 +534,10 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
                 ) : null}
                 {turn.metrics.cached_tokens && turn.metrics.cached_tokens > 0 ? (
                   <span
-                    className="inline-flex items-center gap-0.5 text-[10px] text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 font-medium"
+                    className="inline-flex items-center gap-1 text-[10px] text-emerald-300 bg-emerald-500/15 px-1.5 py-0.5 rounded font-medium"
                     title={`Prompt Caching: ${turn.metrics.cached_tokens.toLocaleString('id-ID')} token dibaca langsung dari cache`}
                   >
-                    <span>⚡</span>
+                    <Zap className="w-2.5 h-2.5" />
                     <span>{turn.metrics.cached_tokens.toLocaleString('id-ID')} cached</span>
                   </span>
                 ) : null}

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Compass, ArrowRight } from 'lucide-react';
+import { Button } from './ui';
 
 interface FollowUpChipsProps {
   suggestions?: string[];
@@ -26,22 +27,25 @@ export const FollowUpChips: React.FC<FollowUpChipsProps> = ({ suggestions, onSel
 
   return (
     <div className="mt-4 pt-3 border-t border-white/[0.06]">
-      <div className="text-[11px] font-medium text-[#94a3b8] flex items-center gap-1.5 mb-2.5 font-mono">
-        <Compass className="w-3.5 h-3.5 text-clay-400" />
+      <div className="text-[11px] font-medium text-slate-400 flex items-center gap-1.5 mb-2.5 font-mono">
+        <Compass className="w-3.5 h-3.5 text-sky-400" />
         <span>Eksplorasi Analisis Lanjutan</span>
       </div>
 
       <div className="flex flex-wrap gap-2">
         {cleanedSuggestions.map((text, idx) => (
-          <button
+          <Button
             key={idx}
-            type="button"
+            variant="secondary"
+            size="sm"
             onClick={() => onSelect(text)}
-            className="group text-left text-xs text-[#cbd5e1] hover:text-[#f8fafc] bg-[#101b30] hover:bg-[#15243f] border border-white/[0.06] hover:border-clay-400/40 rounded-xl px-3.5 py-2 transition-all shadow-sm flex items-center justify-between gap-2.5 cursor-pointer"
+            className="text-left font-normal text-slate-200 hover:text-white rounded-xl py-2 px-3.5 shadow-sm"
+            rightIcon={
+              <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-sky-400 group-hover:translate-x-0.5 transition-all shrink-0" />
+            }
           >
-            <span className="font-sans leading-snug">{text}</span>
-            <ArrowRight className="w-3.5 h-3.5 text-[#64748b] group-hover:text-clay-400 group-hover:translate-x-0.5 transition-all shrink-0" />
-          </button>
+            <span className="leading-snug">{text}</span>
+          </Button>
         ))}
       </div>
     </div>

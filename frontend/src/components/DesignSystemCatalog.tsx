@@ -10,10 +10,8 @@ import {
   AlertTriangle,
   CheckCircle2,
   XCircle,
-  Info,
   X,
   ChevronDown,
-  Search,
   FileText,
   Sliders,
   Send,
@@ -116,13 +114,13 @@ export const DesignSystemCatalog: React.FC<DesignSystemCatalogProps> = ({ showTo
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="space-y-1.5">
               <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                <div className="p-2 rounded-xl bg-sky-500/15 text-sky-400">
                   <Palette className="w-5 h-5" />
                 </div>
                 <h1 className="text-xl sm:text-2xl font-bold font-sans tracking-tight text-[#f8fafc]">
                   Harmonix Design System
                 </h1>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-950/80 text-sky-400 border border-sky-800/60 font-semibold">
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-500/15 text-sky-300 font-semibold">
                   v2.4 • Anti-Slop
                 </span>
               </div>
@@ -160,10 +158,10 @@ export const DesignSystemCatalog: React.FC<DesignSystemCatalogProps> = ({ showTo
                 key={cat.id}
                 type="button"
                 onClick={() => setActiveCategory(cat.id as any)}
-                className={`px-3 py-1.5 rounded-lg font-sans font-medium transition cursor-pointer shrink-0 border ${
+                className={`px-3 py-1.5 rounded-lg font-sans font-medium transition cursor-pointer shrink-0 ${
                   activeCategory === cat.id
-                    ? 'bg-sky-500/20 text-sky-300 border-sky-400/40 shadow-sm'
-                    : 'bg-[#14223b]/60 text-slate-400 hover:text-white hover:bg-[#14223b] border-transparent'
+                    ? 'bg-sky-500/20 text-sky-300 shadow-sm'
+                    : 'bg-[#14223b]/60 text-slate-400 hover:text-white hover:bg-[#14223b]'
                 }`}
               >
                 {cat.label}
@@ -194,7 +192,7 @@ export const DesignSystemCatalog: React.FC<DesignSystemCatalogProps> = ({ showTo
                 <div
                   key={c.name}
                   onClick={() => handleCopy(c.hex, c.name)}
-                  className="group relative p-3.5 rounded-xl bg-[#0f1a2e] border border-white/[0.06] hover:border-sky-500/40 transition-all cursor-pointer shadow-sm flex flex-col justify-between"
+                  className="group relative p-3.5 rounded-xl bg-[#0f1a2e] border border-white/[0.06] hover:border-white/[0.15] transition-all cursor-pointer shadow-sm flex flex-col justify-between"
                   title="Klik untuk menyalin kode Hex"
                 >
                   <div className="flex items-center justify-between mb-3">
@@ -294,7 +292,7 @@ export const DesignSystemCatalog: React.FC<DesignSystemCatalogProps> = ({ showTo
                   <button
                     type="button"
                     onClick={() => showToast?.('Destructive Button diklik')}
-                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-rose-950/40 hover:bg-rose-900/50 text-rose-300 border border-rose-800/40 text-xs font-sans transition cursor-pointer"
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 font-medium text-xs font-sans transition cursor-pointer"
                   >
                     <Trash2 className="w-3.5 h-3.5 text-rose-400" />
                     <span>Destructive</span>
@@ -330,7 +328,7 @@ export const DesignSystemCatalog: React.FC<DesignSystemCatalogProps> = ({ showTo
                       onClick={() => setSegmentedActive('fit')}
                       className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-sans transition cursor-pointer ${
                         segmentedActive === 'fit'
-                          ? 'bg-sky-500/20 text-sky-300 border border-sky-400/30 font-medium'
+                          ? 'bg-sky-500/20 text-sky-300 font-medium'
                           : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.05]'
                       }`}
                     >
@@ -343,7 +341,7 @@ export const DesignSystemCatalog: React.FC<DesignSystemCatalogProps> = ({ showTo
                       onClick={() => setSegmentedActive('layout')}
                       className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-sans transition cursor-pointer ${
                         segmentedActive === 'layout'
-                          ? 'bg-sky-500/20 text-sky-300 border border-sky-400/30 font-medium'
+                          ? 'bg-sky-500/20 text-sky-300 font-medium'
                           : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.05]'
                       }`}
                     >
@@ -491,7 +489,7 @@ export const DesignSystemCatalog: React.FC<DesignSystemCatalogProps> = ({ showTo
               <button
                 type="button"
                 onClick={() => setIsDemoConfirmOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-950/40 hover:bg-rose-900/50 text-rose-300 border border-rose-800/40 text-xs font-medium transition cursor-pointer"
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 text-xs font-medium transition cursor-pointer"
               >
                 <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
                 <span>Uji Confirmation Modal</span>
@@ -589,9 +587,9 @@ export const DesignSystemCatalog: React.FC<DesignSystemCatalogProps> = ({ showTo
             {/* Confirmation Destructive Modal Dialog */}
             {isDemoConfirmOpen && (
               <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-150">
-                <div className="w-full max-w-md bg-[#0f1b2d] border border-rose-900/40 rounded-2xl shadow-2xl overflow-hidden p-6 space-y-4">
+                <div className="w-full max-w-md bg-[#0f1b2d] border border-white/[0.08] rounded-2xl shadow-2xl overflow-hidden p-6 space-y-4">
                   <div className="flex items-center gap-3">
-                    <div className="p-2.5 rounded-xl bg-rose-950/60 text-rose-400 border border-rose-800/40 shrink-0">
+                    <div className="p-2.5 rounded-xl bg-rose-500/15 text-rose-400 shrink-0">
                       <AlertTriangle className="w-5 h-5" />
                     </div>
                     <div>
@@ -726,7 +724,7 @@ export const DesignSystemCatalog: React.FC<DesignSystemCatalogProps> = ({ showTo
                 <button
                   type="button"
                   onClick={() => showToast?.('Navigasi ke Chat')}
-                  className="px-3 py-1.5 rounded-lg bg-sky-600/20 text-sky-300 border border-sky-500/30 text-xs font-sans hover:bg-sky-600/30 transition cursor-pointer"
+                  className="px-3.5 py-1.5 rounded-lg bg-sky-500/20 text-sky-300 hover:bg-sky-500/30 font-medium text-xs font-sans transition cursor-pointer"
                 >
                   Buka Chat Sekarang
                 </button>
@@ -749,8 +747,8 @@ export const DesignSystemCatalog: React.FC<DesignSystemCatalogProps> = ({ showTo
               </div>
 
               {/* Error State */}
-              <div className="p-6 rounded-2xl bg-[#0f1a2e] border border-rose-900/40 text-center flex flex-col items-center justify-center space-y-3">
-                <div className="w-12 h-12 rounded-xl bg-rose-950/40 border border-rose-800/40 flex items-center justify-center text-rose-400">
+              <div className="p-6 rounded-2xl bg-[#0f1a2e] border border-white/[0.06] text-center flex flex-col items-center justify-center space-y-3">
+                <div className="w-12 h-12 rounded-xl bg-rose-500/15 flex items-center justify-center text-rose-400">
                   <XCircle className="w-6 h-6" />
                 </div>
                 <div className="space-y-1">
@@ -764,7 +762,7 @@ export const DesignSystemCatalog: React.FC<DesignSystemCatalogProps> = ({ showTo
                 <button
                   type="button"
                   onClick={() => showToast?.('Mencoba menyambungkan kembali...')}
-                  className="px-3 py-1.5 rounded-lg bg-rose-950/60 text-rose-300 border border-rose-800/60 text-xs font-sans hover:bg-rose-900/60 transition cursor-pointer"
+                  className="px-3.5 py-1.5 rounded-lg bg-rose-500/20 text-rose-300 font-medium text-xs font-sans hover:bg-rose-500/30 transition cursor-pointer"
                 >
                   Coba Ulang
                 </button>

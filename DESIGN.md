@@ -39,16 +39,17 @@ Harmonix is an autonomous enterprise analytics engine designed for data teams, b
 | **Light Accent** | `#7dd3fc` | `sky-300` / `clay-300` | Inline code text, high-contrast links, active tags |
 | **Deep Accent Glow** | `#0c4a6e` | `clay-900` | Subtle background tint behind active pill badges |
 
-### 2.3 Semantic Status Colors
-| State | Text & Icon | Background & Border | Usage |
+### 2.3 Semantic Status Colors & Borderless Badges
+| State | Text & Icon | Background (Borderless) | Usage |
 |:---|:---|:---|:---|
-| **Success / Safe** | `#34d399` (`emerald-400`) | `bg-emerald-950/40 border-emerald-800/40` | Read-only verification, healthy DB, completed jobs |
-| **Warning / Notice** | `#fbbf24` (`amber-400`) | `bg-amber-950/40 border-amber-800/40` | Degraded health, human approval required |
-| **Danger / Destructive** | `#f87171` (`rose-400`) | `bg-rose-950/40 border-rose-800/40` | Delete session, abort stream, error toasts |
-| **Info / Engine** | `#38bdf8` (`sky-400`) | `bg-sky-950/60 border-sky-800/60` | Model badge, orchestrator status |
+| **Success / Safe** | `#34d399` (`emerald-400` / `emerald-300`) | `bg-emerald-500/15` | Read-only verification, healthy DB, normal watchdog status |
+| **Warning / Notice** | `#fbbf24` (`amber-400` / `amber-300`) | `bg-amber-500/15` | Degraded health, human approval required, pending rules |
+| **Danger / Destructive** | `#f87171` (`rose-400` / `rose-300`) | `bg-rose-500/20` | Delete session, anomaly alert triggered, error log banner |
+| **Info / Engine** | `#38bdf8` (`sky-400` / `sky-300`) | `bg-sky-500/15` | Model badge, orchestrator status, diagnostic capsule |
 
 ### 2.4 Typography Hierarchy
-- **Typeface**: `Plus Jakarta Sans`, system-ui, -apple-system, sans-serif
+- **Brand Wordmark**: `Plus Jakarta Sans` (`font-sans font-bold tracking-tight text-slate-100`) — identitas resmi kata "Harmonix".
+- **UI & Body Typeface**: `Plus Jakarta Sans`, system-ui, -apple-system, sans-serif (`font-sans`) — untuk teks antarmuka, tabel, form, dan kartu.
 - **Mono Numeric Figures**: `Plus Jakarta Sans` with `font-mono` tracking for alignment in metrics, timestamps, and row counts
 - **Focus Indicator**: `outline: 2px solid #38bdf8 !important; outline-offset: 2px !important;` (WCAG 2.1 AA SC 2.4.7)
 
@@ -59,8 +60,8 @@ Harmonix is an autonomous enterprise analytics engine designed for data teams, b
 ### 3.1 Buttons
 1. **Primary Button**: `bg-clay-600 hover:bg-clay-500 text-white font-sans font-medium rounded-xl shadow-sm transition active:scale-95`
 2. **Secondary Button**: `bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700/80 rounded-xl transition`
-3. **Subtle / Ghost Button**: `bg-transparent hover:bg-[#14223b] text-slate-400 hover:text-white rounded-xl transition border border-transparent hover:border-slate-800/80`
-4. **Destructive Button**: `bg-rose-950/40 hover:bg-rose-900/50 text-rose-300 border border-rose-800/40 rounded-xl transition`
+3. **Subtle / Ghost Button**: `bg-transparent hover:bg-[#14223b] text-slate-400 hover:text-white rounded-xl transition`
+4. **Destructive Button**: `bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 font-sans font-medium rounded-xl transition` (Borderless — tanpa border kaku)
 5. **Segmented TV Capsule**: `bg-[#14223b]/90 border border-white/[0.08] rounded-lg p-0.5 text-xs flex items-center`
 
 ### 3.2 Cards
@@ -70,7 +71,7 @@ Harmonix is an autonomous enterprise analytics engine designed for data teams, b
 
 ### 3.3 Modals & Overlays
 - **Backdrop**: `fixed inset-0 bg-black/60 backdrop-blur-sm z-50`
-- **Container**: `bg-[#0f1b2d] border border-white/[0.10] rounded-2xl shadow-2xl p-6`
+- **Container**: `bg-[#0f1b2d] border border-white/[0.08] rounded-2xl shadow-2xl p-6` (Tidak menggunakan border warna merah/kuning pada modal)
 - **Dismissal**: Closes via top-right `X` button, backdrop click, or `Escape` key
 
 ### 3.4 Mandatory UI States (Antislop R-27)
@@ -78,4 +79,10 @@ Every data display component **MUST** implement:
 - **Empty State**: Clear reason why it is empty + single primary call-to-action.
 - **Loading State**: Contextual message explaining what is being fetched, with an accessible spinner or structured skeleton.
 - **Error State**: Non-cryptic explanation of what failed + a clear Retry button.
+
+### 3.5 Borderless Semantic Elements Principle (Anti-Wireframe)
+Semua status badges, pill indicators, destructive buttons, dan diagnostic boxes menggunakan gaya **borderless**:
+- **Tanpa border berwarna**: Dilarang menggunakan border kaku berwarna (seperti `border-rose-500/30`, `border-emerald-500/20`, dsb.) karena memicu kelelahan visual (*wireframe fatigue*) dan kesan desain AI slop yang murah (*box soup*).
+- **Background Tinting**: Menggunakan saturasi latar belakang lembut `15% - 20%` (`bg-rose-500/20`, `bg-emerald-500/15`, `bg-sky-500/20`) dipadukan dengan tipografi berbobot medium berkontras tinggi (`text-rose-300`, `text-emerald-300`, `text-sky-300`).
+- **Border Khusus Pembatas Struktur Netral**: Border hanya dipakai untuk mendefinisikan pembungkus kartu / modal secara netral (`border-white/[0.06]` s.d. `border-white/[0.08]`).
 

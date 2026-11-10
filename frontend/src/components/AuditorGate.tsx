@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShieldCheck, AlertTriangle, AlertOctagon, ChevronDown, Lightbulb } from 'lucide-react';
+import { ShieldCheck, AlertTriangle, AlertOctagon, ChevronDown, Lightbulb, CheckCircle2 } from 'lucide-react';
 import { AuditVerdict } from '../types';
 
 interface AuditorGateProps {
@@ -20,21 +20,21 @@ export const AuditorGate: React.FC<AuditorGateProps> = ({ verdict }) => {
   const critique = verdict.critique || '';
   const issues = verdict.issues || [];
 
-  let badgeBg = 'bg-[#0c1424] border-white/[0.06] text-slate-200';
+  let badgeBg = 'bg-[#0f1a2e] border-white/[0.06] text-slate-200';
   let Icon = ShieldCheck;
   let iconColor = 'text-emerald-400';
-  let confidenceBg = 'bg-slate-800 text-slate-300 border border-slate-700/50';
+  let confidenceBg = 'bg-emerald-500/15 text-emerald-300';
 
   if (status === 'flagged') {
-    badgeBg = 'bg-[#0c1424] border-rose-500/25 text-rose-200';
+    badgeBg = 'bg-[#0f1a2e] border-white/[0.06] text-rose-200';
     Icon = AlertOctagon;
     iconColor = 'text-rose-400';
-    confidenceBg = 'bg-rose-950/60 text-rose-300 border border-rose-800/40';
+    confidenceBg = 'bg-rose-500/20 text-rose-300';
   } else if (status === 'warning') {
-    badgeBg = 'bg-[#0c1424] border-amber-500/20 text-slate-200';
+    badgeBg = 'bg-[#0f1a2e] border-white/[0.06] text-slate-200';
     Icon = AlertTriangle;
     iconColor = 'text-amber-400';
-    confidenceBg = 'bg-slate-800 text-amber-300 border border-amber-500/20';
+    confidenceBg = 'bg-amber-500/15 text-amber-300';
   }
 
   return (
@@ -68,7 +68,7 @@ export const AuditorGate: React.FC<AuditorGateProps> = ({ verdict }) => {
         {isExpanded && (
           <div className="mt-2.5 pt-2.5 border-t border-white/10 text-[11px] leading-relaxed space-y-2.5">
             <div className="text-[10px] font-mono text-sky-300 bg-[#0c192e] px-2.5 py-1.5 rounded-lg border border-sky-800/40 flex items-center gap-1.5">
-              <span>✓</span>
+              <CheckCircle2 className="w-3.5 h-3.5 text-sky-400 shrink-0" />
               <span>Audit Maker-Checker: Logika SQL valid, konsistensi numerik diverifikasi, dan bebas pelanggaran guardrail.</span>
             </div>
             <div className="text-[#cbd5e1]">{critique}</div>

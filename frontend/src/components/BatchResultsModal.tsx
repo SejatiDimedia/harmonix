@@ -25,6 +25,7 @@ import DOMPurify from 'dompurify';
 import { BatchJobRecord } from '../types';
 import { getBatchJob } from '../services/api';
 import { formatPseudoTableToMarkdown } from '../utils/formatters';
+import { Button, Badge } from './ui';
 
 interface BatchResultsModalProps {
   batchId: string | null;
@@ -266,17 +267,20 @@ export const BatchResultsModal: React.FC<BatchResultsModalProps> = ({
                 <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-slate-900 text-sky-300 border border-slate-800">
                   {liveBatch.batch_id}
                 </span>
-                <span
-                  className={`px-2 py-0.5 rounded text-[10px] font-mono font-semibold uppercase tracking-wider ${
+                <Badge
+                  variant={
                     liveBatch.status === 'completed'
-                      ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-800/60'
+                      ? 'success'
                       : liveBatch.status === 'processing'
-                      ? 'bg-sky-950/80 text-sky-400 border border-sky-800/60 animate-pulse'
-                      : 'bg-rose-950/80 text-rose-400 border border-rose-800/60'
-                  }`}
+                      ? 'info'
+                      : 'danger'
+                  }
+                  size="xs"
+                  dot
+                  pulse={liveBatch.status === 'processing'}
                 >
-                  {liveBatch.status}
-                </span>
+                  {liveBatch.status.toUpperCase()}
+                </Badge>
               </div>
               <div className="flex items-center gap-3 text-[11px] text-slate-400 font-mono mt-0.5">
                 <span>Total: {liveBatch.completed_queries}/{liveBatch.total_queries} selesai</span>
@@ -328,52 +332,49 @@ export const BatchResultsModal: React.FC<BatchResultsModalProps> = ({
             </div>
 
             {/* Copy Full Report */}
-            <button
-              type="button"
+            <Button
+              variant="secondary"
+              size="xs"
               onClick={handleCopyFullReportMarkdown}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs text-slate-300 font-sans transition cursor-pointer"
+              leftIcon={copiedId === 'full_report' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-slate-400" />}
               title="Salin seluruh isi pertanyaan dan jawaban sebagai Markdown"
             >
-              {copiedId === 'full_report' ? (
-                <Check className="w-3.5 h-3.5 text-emerald-400" />
-              ) : (
-                <Copy className="w-3.5 h-3.5 text-slate-400" />
-              )}
               <span className="hidden sm:inline">Salin Laporan</span>
-            </button>
+            </Button>
 
             {/* Print / Save PDF */}
-            <button
-              type="button"
+            <Button
+              variant="secondary"
+              size="xs"
               onClick={handlePrint}
-              className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs text-slate-300 font-sans transition cursor-pointer"
+              leftIcon={<Printer className="w-3.5 h-3.5 text-slate-400" />}
+              className="hidden md:flex"
               title="Cetak atau simpan laporan sebagai dokumen PDF"
             >
-              <Printer className="w-3.5 h-3.5 text-slate-400" />
-              <span>Cetak / PDF</span>
-            </button>
+              Cetak / PDF
+            </Button>
 
             {/* Download CSV */}
-            <button
-              type="button"
+            <Button
+              variant="secondary"
+              size="xs"
               onClick={() => handleDownload('csv')}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs text-slate-300 font-mono transition cursor-pointer"
+              leftIcon={<Download className="w-3.5 h-3.5 text-emerald-400" />}
               title="Unduh seluruh data sebagai spreadsheet CSV"
             >
-              <Download className="w-3.5 h-3.5 text-emerald-400" />
-              <span>CSV</span>
-            </button>
+              CSV
+            </Button>
 
             {/* Manual Refresh */}
-            <button
-              type="button"
+            <Button
+              variant="ghost"
+              size="xs"
               onClick={handleManualRefresh}
               disabled={isRefreshing}
-              className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-white transition cursor-pointer"
               title="Perbarui data batch"
             >
               <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-sky-400' : ''}`} />
-            </button>
+            </Button>
 
             {/* Close Button */}
             <button

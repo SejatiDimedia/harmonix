@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import * as echarts from 'echarts';
 import { Search, MapPin, CreditCard, Table, X, Sparkles, ExternalLink, Send, MessageSquare } from 'lucide-react';
 import { ChartSpec, TableData } from '../types';
+import { Modal, Button } from './ui';
 
 export interface DrillDownPoint {
   dimension: string;
@@ -856,65 +857,49 @@ export const EChartsViewer: React.FC<EChartsViewerProps> = ({
 
       {/* Raw Data Modal */}
       {rawRowsModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-150">
-          <div className="relative w-full max-w-2xl max-h-[80vh] rounded-2xl bg-[#0b1424] border border-white/[0.1] shadow-2xl flex flex-col overflow-hidden font-sans">
-            <div className="flex items-center justify-between p-4 border-b border-white/[0.08] bg-[#0f1c33]">
-              <div>
-                <h3 className="text-sm font-semibold text-white">
-                  Baris Data Mentah: {rawRowsModal.dimension}
-                </h3>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Menampilkan {rawRowsModal.rows.length} baris data terkait
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setRawRowsModal(null)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="flex-1 p-4 overflow-auto">
-              <table className="w-full text-xs text-left border-collapse">
-                <thead className="sticky top-0 bg-[#14223b] text-slate-300 font-mono text-[11px] uppercase">
-                  <tr>
-                    {rawRowsModal.columns.map((col, cIdx) => (
-                      <th key={cIdx} className="p-2.5 border-b border-white/[0.08]">
-                        {col}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/[0.04]">
-                  {rawRowsModal.rows.map((row, rIdx) => {
-                    const cells = Array.isArray(row) ? row : Object.values(row);
-                    return (
-                      <tr key={rIdx} className="hover:bg-white/[0.02] transition">
-                        {cells.map((val, cellIdx) => (
-                          <td key={cellIdx} className="p-2.5 text-slate-300 font-mono text-[11px]">
-                            {typeof val === 'number' ? val.toLocaleString('id-ID') : String(val ?? '')}
-                          </td>
-                        ))}
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="flex items-center justify-end p-3 border-t border-white/[0.08] bg-[#0f1c33]">
-              <button
-                type="button"
-                onClick={() => setRawRowsModal(null)}
-                className="px-3.5 py-1.5 rounded-lg bg-[#14223b] hover:bg-[#1a2d4e] text-xs font-semibold text-slate-200 transition cursor-pointer"
-              >
+        <Modal
+          isOpen={!!rawRowsModal}
+          onClose={() => setRawRowsModal(null)}
+          size="2xl"
+          title={`Baris Data Mentah: ${rawRowsModal.dimension}`}
+          description={`Menampilkan ${rawRowsModal.rows.length} baris data terkait`}
+          icon={<Table className="w-5 h-5 text-purple-400" />}
+          footer={
+            <div className="flex justify-end w-full">
+              <Button variant="secondary" size="sm" onClick={() => setRawRowsModal(null)}>
                 Tutup
-              </button>
+              </Button>
             </div>
+          }
+        >
+          <div className="overflow-auto max-h-[60vh] -mx-6 -my-2 px-6">
+            <table className="w-full text-xs text-left border-collapse">
+              <thead className="sticky top-0 bg-[#14223b] text-slate-300 font-mono text-[11px] uppercase z-10">
+                <tr>
+                  {rawRowsModal.columns.map((col, cIdx) => (
+                    <th key={cIdx} className="p-2.5 border-b border-white/[0.08]">
+                      {col}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/[0.04]">
+                {rawRowsModal.rows.map((row, rIdx) => {
+                  const cells = Array.isArray(row) ? row : Object.values(row);
+                  return (
+                    <tr key={rIdx} className="hover:bg-white/[0.02] transition">
+                      {cells.map((val, cellIdx) => (
+                        <td key={cellIdx} className="p-2.5 text-slate-300 font-mono text-[11px]">
+                          {typeof val === 'number' ? val.toLocaleString('id-ID') : String(val ?? '')}
+                        </td>
+                      ))}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
-        </div>
+        </Modal>
       )}
     </>
   );

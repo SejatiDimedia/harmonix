@@ -42,13 +42,23 @@ export interface Citation {
 
 export interface MetricSummary {
   total_requests: number;
+  successful_requests?: number;
+  failed_requests?: number;
+  error_count?: number;
+  error_rate?: number;
   success_rate_percentage: number;
+  avg_latency_ms?: number;
+  avg_total_latency_ms?: number;
   p50_latency_ms: number;
   p95_latency_ms: number;
+  avg_ttft_ms?: number;
+  avg_db_execution_ms?: number;
   total_tokens_consumed: number;
   total_prompt_tokens?: number;
   total_completion_tokens?: number;
   total_cached_tokens?: number;
+  total_estimated_cost_usd?: number;
+  tool_failure_rate_percentage?: number;
   drift_detected: boolean;
   drift_reasons?: string[];
 }
