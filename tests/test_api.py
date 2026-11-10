@@ -305,6 +305,12 @@ async def test_web_ui_endpoint():
         assert "root" in body
         assert "Jakarta" in body
 
+        # Test /design-system direct route
+        ds_resp = await client.get("/design-system")
+        assert ds_resp.status_code == 200
+        assert "text/html" in ds_resp.headers.get("content-type", "")
+        assert "Harmonix" in ds_resp.text
+
 
 @pytest.mark.asyncio
 async def test_approval_idempotency_and_rejection():

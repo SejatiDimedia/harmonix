@@ -1200,3 +1200,11 @@ async def tv_ui(session_id: str):
     if STATIC_INDEX_PATH.exists():
         return HTMLResponse(content=STATIC_INDEX_PATH.read_text(encoding="utf-8"))
     return HTMLResponse(content="<h1>Harmonix UI template not found.</h1>", status_code=404)
+
+
+@app.get("/design-system", response_class=HTMLResponse, tags=["UI"])
+async def design_system_ui():
+    """Harmonix Design System & Component Catalog UI."""
+    if STATIC_INDEX_PATH.exists():
+        return HTMLResponse(content=STATIC_INDEX_PATH.read_text(encoding="utf-8"))
+    return HTMLResponse(content="<h1>Harmonix UI template not found.</h1>", status_code=404)

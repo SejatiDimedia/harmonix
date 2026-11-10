@@ -189,7 +189,7 @@ export interface HealthStatus {
   environment?: string;
 }
 
-export type ActiveTab = 'chat' | 'dashboard' | 'batch';
+export type ActiveTab = 'chat' | 'dashboard' | 'batch' | 'design-system';
 
 export interface BatchQueryItem {
   query_id: string;

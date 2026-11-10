@@ -29,6 +29,8 @@ const NavbarComponent: React.FC<NavbarProps> = ({
         return 'Live BI Dashboard';
       case 'batch':
         return 'Bulk Analytics';
+      case 'design-system':
+        return 'Design System';
       case 'chat':
       default:
         return 'Percakapan Analitik';

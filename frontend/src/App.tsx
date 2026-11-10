@@ -34,6 +34,7 @@ import { ModelSettingsModal } from './components/ModelSettingsModal';
 import { WatchdogModal } from './components/WatchdogModal';
 import { DashboardCanvas } from './components/DashboardCanvas';
 import { BatchRunner } from './components/BatchRunner';
+import { DesignSystemCatalog } from './components/DesignSystemCatalog';
 import { ConfirmDeleteModal } from './components/ConfirmDeleteModal';
 import { Toast } from './components/Toast';
 
@@ -128,6 +129,13 @@ export const App: React.FC = () => {
     if (searchParams.get('tv') === 'true' || path.startsWith('/tv/')) {
       setIsStandaloneTv(true);
       setActiveTab('dashboard');
+    } else if (
+      path === '/design-system' ||
+      path.startsWith('/design-system') ||
+      searchParams.get('tab') === 'design-system' ||
+      searchParams.get('design-system') === 'true'
+    ) {
+      setActiveTab('design-system');
     }
   }, [setCurrentSessionId, setActiveTab]);
 
@@ -984,14 +992,24 @@ export const App: React.FC = () => {
             activeModel={activeModel}
             showToast={showToast}
           />
-        ) : (
+        ) : activeTab === 'batch' ? (
           <BatchRunner
             showToast={showToast}
             activeProvider={activeProvider}
             activeModel={activeModel}
             sessionId={currentSessionId || undefined}
           />
-        )}
+        ) : activeTab === 'design-system' ? (
+          <DesignSystemCatalog
+            showToast={showToast}
+            onBack={() => {
+              setActiveTab('chat');
+              if (window.location.pathname.startsWith('/design-system')) {
+                window.history.pushState({}, '', '/');
+              }
+            }}
+          />
+        ) : null}
       </div>
 
       {/* Observability Metrics Modal */}
