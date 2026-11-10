@@ -47,8 +47,8 @@ class TerminalExecutionLogger:
         c = TerminalColors
         sess_str = f" | Session: {c.WHITE}{session_id}{c.RESET}" if session_id else ""
         print(f"\n{c.BOLD}{c.CYAN}{'=' * 80}{c.RESET}")
-        print(f"{c.BOLD}{c.CYAN}🤖 [AGENT TASK START]{c.RESET} ID: {c.WHITE}{task_id}{c.RESET}{sess_str}")
-        print(f"{c.BOLD}{c.WHITE}💬 [USER QUERY]:{c.RESET} \"{c.YELLOW}{query}{c.RESET}\"")
+        print(f"{c.BOLD}{c.CYAN}[AGENT TASK START]{c.RESET} ID: {c.WHITE}{task_id}{c.RESET}{sess_str}")
+        print(f"{c.BOLD}{c.WHITE}[USER QUERY]:{c.RESET} \"{c.YELLOW}{query}{c.RESET}\"")
         print(f"{c.CYAN}{'=' * 80}{c.RESET}")
 
     def log_step_start(self, step: int, max_steps: int, elapsed_seconds: float) -> None:
@@ -57,7 +57,7 @@ class TerminalExecutionLogger:
             return
 
         c = TerminalColors
-        print(f"\n{c.BOLD}{c.YELLOW}▶ [STEP {step}/{max_steps}]{c.RESET} {c.DIM}(Elapsed: {elapsed_seconds:.2f}s){c.RESET}")
+        print(f"\n{c.BOLD}{c.YELLOW}>> [STEP {step}/{max_steps}]{c.RESET} {c.DIM}(Elapsed: {elapsed_seconds:.2f}s){c.RESET}")
 
     def log_thought(self, thought: str) -> None:
         """Log agent internal reasoning / plan before executing tools or answering."""
@@ -71,7 +71,7 @@ class TerminalExecutionLogger:
         # Show first 300 chars if thought is long
         preview = clean[:300] + ("..." if len(clean) > 300 else "")
         c = TerminalColors
-        print(f"{c.BOLD}{c.BLUE}🧠 [REASONING]:{c.RESET} {preview}")
+        print(f"{c.BOLD}{c.BLUE}[REASONING]:{c.RESET} {preview}")
 
     def log_tool_trigger(self, tool_name: str, tool_args: dict[str, Any]) -> None:
         """Log agent tool trigger with cleaned parameters."""
@@ -79,7 +79,7 @@ class TerminalExecutionLogger:
             return
 
         c = TerminalColors
-        print(f"{c.BOLD}{c.MAGENTA}🔧 [TOOL TRIGGER]{c.RESET} {c.BOLD}{c.WHITE}{tool_name}{c.RESET}")
+        print(f"{c.BOLD}{c.MAGENTA}[TOOL TRIGGER]{c.RESET} {c.BOLD}{c.WHITE}{tool_name}{c.RESET}")
 
         if tool_name == "run_sql":
             query = tool_args.get("query") or tool_args.get("sql") or ""
@@ -109,34 +109,34 @@ class TerminalExecutionLogger:
             status = observation.get("status", "success")
             if status == "error" or "error" in observation:
                 err_msg = observation.get("error") or observation.get("message")
-                print(f"   {c.BOLD}{c.RED}❌ [TOOL ERROR]{c.RESET} {tool_name}{dur_str} -> {err_msg}")
+                print(f"   {c.BOLD}{c.RED}[TOOL ERROR]{c.RESET} {tool_name}{dur_str} -> {err_msg}")
                 return
             elif status == "approval_required":
                 reasons = "; ".join(observation.get("risk_reasons", []))
-                print(f"   {c.BOLD}{c.YELLOW}⚠️ [APPROVAL REQUIRED]{c.RESET} {tool_name} -> {reasons}")
+                print(f"   {c.BOLD}{c.YELLOW}[APPROVAL REQUIRED]{c.RESET} {tool_name} -> {reasons}")
                 return
             elif tool_name == "run_sql" and status == "success":
                 row_count = observation.get("row_count", len(observation.get("rows", [])))
                 exec_ms = observation.get("execution_time_ms", duration_ms)
                 cols = ", ".join(observation.get("columns", []))
-                print(f"   {c.BOLD}{c.GREEN}📊 [TOOL RESULT]{c.RESET} {c.GREEN}run_sql success:{c.RESET} {row_count} rows returned ({exec_ms}ms) [Cols: {cols}]")
+                print(f"   {c.BOLD}{c.GREEN}[TOOL RESULT]{c.RESET} {c.GREEN}run_sql success:{c.RESET} {row_count} rows returned ({exec_ms}ms) [Cols: {cols}]")
                 return
             elif tool_name == "get_schema":
                 tables = list(observation.get("tables", {}).keys()) or observation.get("available_tables", [])
-                print(f"   {c.BOLD}{c.GREEN}📊 [TOOL RESULT]{c.RESET} {c.GREEN}get_schema success:{c.RESET} Inspected {len(tables)} table(s): {tables}")
+                print(f"   {c.BOLD}{c.GREEN}[TOOL RESULT]{c.RESET} {c.GREEN}get_schema success:{c.RESET} Inspected {len(tables)} table(s): {tables}")
                 return
             elif tool_name == "search_glossary":
                 metrics = [m.get("metric_name") for m in observation.get("metrics", [])]
-                print(f"   {c.BOLD}{c.GREEN}📊 [TOOL RESULT]{c.RESET} {c.GREEN}search_glossary success:{c.RESET} Found definitions: {metrics}")
+                print(f"   {c.BOLD}{c.GREEN}[TOOL RESULT]{c.RESET} {c.GREEN}search_glossary success:{c.RESET} Found definitions: {metrics}")
                 return
             elif tool_name == "calculate":
                 result = observation.get("result")
-                print(f"   {c.BOLD}{c.GREEN}📊 [TOOL RESULT]{c.RESET} {c.GREEN}calculate success:{c.RESET} result = {c.WHITE}{result}{c.RESET}")
+                print(f"   {c.BOLD}{c.GREEN}[TOOL RESULT]{c.RESET} {c.GREEN}calculate success:{c.RESET} result = {c.WHITE}{result}{c.RESET}")
                 return
 
         # Fallback summary
         obs_preview = str(observation)[:200] + ("..." if len(str(observation)) > 200 else "")
-        print(f"   {c.BOLD}{c.GREEN}📊 [TOOL RESULT]{c.RESET} {tool_name}{dur_str} -> {obs_preview}")
+        print(f"   {c.BOLD}{c.GREEN}[TOOL RESULT]{c.RESET} {tool_name}{dur_str} -> {obs_preview}")
 
     def log_approval_required(self, approval_id: str, query: str, reasons: list[str]) -> None:
         """Log HITL approval suspension."""
@@ -145,7 +145,7 @@ class TerminalExecutionLogger:
 
         c = TerminalColors
         print(f"\n{c.BOLD}{c.YELLOW}{'!' * 80}{c.RESET}")
-        print(f"{c.BOLD}{c.YELLOW}⚠️ [HUMAN-IN-THE-LOOP APPROVAL GATE ACTIVATED]{c.RESET}")
+        print(f"{c.BOLD}{c.YELLOW}[HUMAN-IN-THE-LOOP APPROVAL GATE ACTIVATED]{c.RESET}")
         print(f"   Approval ID : {c.WHITE}{approval_id}{c.RESET}")
         print(f"   Reasons     : {c.RED}{'; '.join(reasons)}{c.RESET}")
         print(f"   Pending SQL : {c.WHITE}{query}{c.RESET}")
@@ -157,7 +157,7 @@ class TerminalExecutionLogger:
             return
 
         c = TerminalColors
-        print(f"{c.BOLD}{c.CYAN}📝 [SYNTHESIZING ANSWER]{c.RESET} Menyiapkan laporan analisis akhir data...")
+        print(f"{c.BOLD}{c.CYAN}[SYNTHESIZING ANSWER]{c.RESET} Preparing final analytical data report...")
 
     def log_auditing(self, model: str = "") -> None:
         """Log when Data Auditor quality gate is invoked (FR-35)."""
@@ -166,7 +166,7 @@ class TerminalExecutionLogger:
 
         c = TerminalColors
         model_str = f" via {c.WHITE}{model}{c.RESET}" if model else ""
-        print(f"{c.BOLD}{c.MAGENTA}🛡️ [DATA AUDITOR GATE]{c.RESET} Memverifikasi logika SQL & konsistensi data{model_str}...")
+        print(f"{c.BOLD}{c.MAGENTA}[DATA AUDITOR GATE]{c.RESET} Verifying SQL logic and data consistency{model_str}...")
 
     def log_audit_verdict(self, status: str, confidence: float, badge: str, critique: str) -> None:
         """Log the Data Auditor quality gate outcome (FR-35)."""
@@ -176,15 +176,12 @@ class TerminalExecutionLogger:
         c = TerminalColors
         if status.upper() == "PASSED":
             color = c.GREEN
-            icon = "✅"
         elif status.upper() == "WARNING":
             color = c.YELLOW
-            icon = "⚠️"
         else:
             color = c.RED
-            icon = "🚨"
 
-        print(f"   {color}{icon} [{status.upper()}]{c.RESET} {c.BOLD}{badge}{c.RESET} (Confidence: {confidence:.0%})")
+        print(f"   {color}[{status.upper()}]{c.RESET} {c.BOLD}{badge}{c.RESET} (Confidence: {confidence:.0%})")
         if critique:
             print(f"      {c.DIM}{critique}{c.RESET}")
 
@@ -202,7 +199,7 @@ class TerminalExecutionLogger:
 
         c = TerminalColors
         print(f"\n{c.BOLD}{c.GREEN}{'=' * 80}{c.RESET}")
-        print(f"{c.BOLD}{c.GREEN}✨ [AGENT TASK COMPLETED]{c.RESET} ID: {c.WHITE}{task_id}{c.RESET}")
+        print(f"{c.BOLD}{c.GREEN}[AGENT TASK COMPLETED]{c.RESET} ID: {c.WHITE}{task_id}{c.RESET}")
         print(f"   {c.CYAN}Total Steps :{c.RESET} {c.WHITE}{steps}{c.RESET}")
         print(f"   {c.CYAN}SQL Queries :{c.RESET} {c.WHITE}{sql_count} executed{c.RESET}")
         print(f"   {c.CYAN}Token Usage :{c.RESET} {c.WHITE}{total_tokens:,} tokens{c.RESET}")

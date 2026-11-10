@@ -86,27 +86,26 @@ export const UploadedTableModal: React.FC<UploadedTableModalProps> = ({
   };
 
   const getScoreTheme = (grade: string) => {
-    switch (grade) {
-      case 'Prima':
-        return {
-          badgeVariant: 'success' as const,
-          scoreText: 'text-emerald-400',
-          icon: <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0" />,
-        };
-      case 'Perhatian':
-        return {
-          badgeVariant: 'warning' as const,
-          scoreText: 'text-amber-400',
-          icon: <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />,
-        };
-      case 'Kritis':
-      default:
-        return {
-          badgeVariant: 'danger' as const,
-          scoreText: 'text-rose-400',
-          icon: <AlertOctagon className="w-5 h-5 text-rose-400 shrink-0" />,
-        };
+    const g = (grade || '').toLowerCase();
+    if (g === 'prima' || g === 'excellent' || g === 'good' || g === 'clean') {
+      return {
+        badgeVariant: 'success' as const,
+        scoreText: 'text-emerald-400',
+        icon: <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0" />,
+      };
     }
+    if (g === 'perhatian' || g === 'warning' || g === 'moderate' || g === 'fair') {
+      return {
+        badgeVariant: 'warning' as const,
+        scoreText: 'text-amber-400',
+        icon: <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />,
+      };
+    }
+    return {
+      badgeVariant: 'danger' as const,
+      scoreText: 'text-rose-400',
+      icon: <AlertOctagon className="w-5 h-5 text-rose-400 shrink-0" />,
+    };
   };
 
   const scoreTheme = healthProfile ? getScoreTheme(healthProfile.health_grade) : null;
@@ -114,13 +113,13 @@ export const UploadedTableModal: React.FC<UploadedTableModalProps> = ({
   const tabs = [
     {
       id: 'health',
-      label: 'Kesehatan Data & Audit',
+      label: 'Data Health & Audit',
       icon: <Activity className="w-3.5 h-3.5" />,
       count: healthProfile ? healthProfile.health_score : undefined,
     },
     {
       id: 'schema',
-      label: 'Struktur Kolom',
+      label: 'Column Schema',
       icon: <Table className="w-3.5 h-3.5" />,
       count: table.columns.length,
     },
@@ -130,21 +129,21 @@ export const UploadedTableModal: React.FC<UploadedTableModalProps> = ({
     <div className="flex flex-wrap items-center justify-between gap-3 w-full">
       {confirmDelete ? (
         <div className="flex items-center gap-2 bg-rose-500/20 px-3 py-1.5 rounded-xl">
-          <span className="text-xs text-rose-300 font-sans font-medium">Hapus dataset ini dari sesi?</span>
+          <span className="text-xs text-rose-300 font-sans font-medium">Delete this dataset from session?</span>
           <Button
             variant="danger"
             size="xs"
             isLoading={isDeleting}
             onClick={handleDeleteTable}
           >
-            Ya, Hapus
+            Yes, Delete
           </Button>
           <Button
             variant="ghost"
             size="xs"
             onClick={() => setConfirmDelete(false)}
           >
-            Batal
+            Cancel
           </Button>
         </div>
       ) : (
@@ -153,19 +152,19 @@ export const UploadedTableModal: React.FC<UploadedTableModalProps> = ({
           size="sm"
           leftIcon={<Trash2 className="w-3.5 h-3.5" />}
           onClick={() => setConfirmDelete(true)}
-          title="Hapus dataset ini dari database sesi"
+          title="Delete this dataset from session database"
         >
-          Hapus Dataset
+          Delete Dataset
         </Button>
       )}
 
       <div className="flex items-center gap-3">
         <span className="text-xs font-mono text-slate-400 hidden sm:inline">
-          <strong className="text-slate-200">{table.row_count.toLocaleString()}</strong> baris •{' '}
-          <strong className="text-slate-200">{table.columns.length}</strong> kolom
+          <strong className="text-slate-200">{table.row_count.toLocaleString()}</strong> rows •{' '}
+          <strong className="text-slate-200">{table.columns.length}</strong> columns
         </span>
         <Button variant="secondary" size="sm" onClick={onClose}>
-          Tutup
+          Close
         </Button>
       </div>
     </div>
@@ -177,7 +176,7 @@ export const UploadedTableModal: React.FC<UploadedTableModalProps> = ({
       onClose={onClose}
       size="4xl"
       title={table.original_filename}
-      description={`Tabel analitik: ${qualifiedName}`}
+      description={`Analytics table: ${qualifiedName}`}
       icon={<FileSpreadsheet className="w-5 h-5 text-sky-400" />}
       badge={
         table.sheet_name ? (
@@ -202,9 +201,9 @@ export const UploadedTableModal: React.FC<UploadedTableModalProps> = ({
             size="xs"
             leftIcon={copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
             onClick={handleCopyName}
-            title="Salin nama tabel SQL lengkap"
+            title="Copy full qualified SQL table name"
           >
-            {copied ? 'Tersalin' : 'Salin Nama'}
+            {copied ? 'Copied' : 'Copy Name'}
           </Button>
         </div>
 
@@ -215,14 +214,14 @@ export const UploadedTableModal: React.FC<UploadedTableModalProps> = ({
               <div className="py-12 text-center space-y-3">
                 <RefreshCw className="w-5 h-5 animate-spin text-sky-400 mx-auto" />
                 <p className="text-xs text-slate-400 font-mono">
-                  Memindai kelengkapan data, duplikasi, dan pencilan statistik (IQR)...
+                  Scanning data completeness, duplicates, and statistical outliers (IQR)...
                 </p>
               </div>
             ) : isHealthError || !healthProfile ? (
               <Card variant="default" padding="md" className="text-center space-y-2">
-                <p className="text-xs text-rose-300">Gagal memuat metrik profil kesehatan data.</p>
+                <p className="text-xs text-rose-300">Failed to load data health profile metrics.</p>
                 <Button variant="secondary" size="xs" onClick={() => refetchHealth()}>
-                  Coba Lagi
+                  Try Again
                 </Button>
               </Card>
             ) : (
@@ -236,7 +235,7 @@ export const UploadedTableModal: React.FC<UploadedTableModalProps> = ({
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-mono uppercase tracking-wider text-slate-400">
-                          Skor Kesehatan Data
+                          Data Health Score
                         </span>
                         {scoreTheme && (
                           <Badge variant={scoreTheme.badgeVariant} size="xs" dot>
@@ -246,8 +245,8 @@ export const UploadedTableModal: React.FC<UploadedTableModalProps> = ({
                       </div>
                       <p className="text-xs text-slate-400 mt-1 font-sans leading-relaxed">
                         {healthProfile.anomalies.length > 0
-                          ? `Ditemukan ${healthProfile.anomalies.length} anomali potensial pada dataset ini.`
-                          : 'Dataset terverifikasi bersih tanpa anomali struktural atau pencilan ekstrem.'}
+                          ? `Found ${healthProfile.anomalies.length} potential anomalies in this dataset.`
+                          : 'Dataset verified clean with no structural anomalies or extreme outliers.'}
                       </p>
                     </div>
                   </div>
@@ -258,7 +257,7 @@ export const UploadedTableModal: React.FC<UploadedTableModalProps> = ({
                       <span className="text-xs font-normal text-slate-500">/100</span>
                     </div>
                     <span className="text-[11px] text-slate-400 font-mono block mt-0.5">
-                      {healthProfile.overall_completeness_pct}% Lengkap
+                      {healthProfile.overall_completeness_pct}% Complete
                     </span>
                   </div>
                 </Card>
@@ -266,7 +265,7 @@ export const UploadedTableModal: React.FC<UploadedTableModalProps> = ({
                 {/* 4 Summary Metric Cards */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                   <Card variant="default" padding="sm" className="space-y-1.5">
-                    <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wide">Kelengkapan</span>
+                    <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wide">Completeness</span>
                     <div className="text-sm font-semibold font-mono text-slate-200">
                       {healthProfile.overall_completeness_pct}%
                     </div>
@@ -279,32 +278,32 @@ export const UploadedTableModal: React.FC<UploadedTableModalProps> = ({
                   </Card>
 
                   <Card variant="default" padding="sm" className="space-y-1.5">
-                    <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wide">Total Baris</span>
+                    <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wide">Total Rows</span>
                     <div className="text-sm font-semibold font-mono text-slate-200">
                       {healthProfile.total_rows.toLocaleString()}
                     </div>
                     <span className="text-[10px] text-slate-400 font-mono block">
-                      {healthProfile.total_columns} kolom
+                      {healthProfile.total_columns} columns
                     </span>
                   </Card>
 
                   <Card variant="default" padding="sm" className="space-y-1.5">
-                    <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wide">Baris Duplikat</span>
+                    <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wide">Duplicate Rows</span>
                     <div className={`text-sm font-semibold font-mono ${healthProfile.duplicate_rows > 0 ? 'text-amber-400' : 'text-slate-200'}`}>
                       {healthProfile.duplicate_rows.toLocaleString()}
                     </div>
                     <span className="text-[10px] text-slate-400 font-mono block">
-                      {healthProfile.duplicate_rate_pct}% duplikasi
+                      {healthProfile.duplicate_rate_pct}% duplicates
                     </span>
                   </Card>
 
                   <Card variant="default" padding="sm" className="space-y-1.5">
-                    <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wide">Anomali Terdeteksi</span>
+                    <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wide">Detected Anomalies</span>
                     <div className={`text-sm font-semibold font-mono ${healthProfile.anomalies.length > 0 ? 'text-amber-400' : 'text-slate-200'}`}>
-                      {healthProfile.anomalies.length} Temuan
+                      {healthProfile.anomalies.length} Findings
                     </div>
                     <span className="text-[10px] text-slate-400 font-mono block">
-                      {healthProfile.anomalies.filter((a) => a.severity === 'critical').length} Kritis
+                      {healthProfile.anomalies.filter((a) => a.severity === 'critical').length} Critical
                     </span>
                   </Card>
                 </div>
@@ -314,7 +313,7 @@ export const UploadedTableModal: React.FC<UploadedTableModalProps> = ({
                   <div className="space-y-2.5">
                     <div className="flex items-center gap-2 text-xs font-mono font-medium text-slate-300 uppercase tracking-wider">
                       <Compass className="w-3.5 h-3.5 text-sky-400" />
-                      <span>Saran Analisis Data</span>
+                      <span>Analytical Suggestions</span>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                       {healthProfile.quick_prompts.map((qp) => (
@@ -330,7 +329,7 @@ export const UploadedTableModal: React.FC<UploadedTableModalProps> = ({
                             {qp.title}
                           </span>
                           <div className="flex items-center justify-between text-[11px] text-slate-400 font-sans">
-                            <span>Ajukan pertanyaan</span>
+                            <span>Ask question</span>
                             <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-sky-300 group-hover:translate-x-0.5 transition shrink-0" />
                           </div>
                         </Card>
@@ -342,12 +341,12 @@ export const UploadedTableModal: React.FC<UploadedTableModalProps> = ({
                 {/* Detected Anomalies List */}
                 <div className="space-y-2.5">
                   <h4 className="text-xs font-mono font-medium text-slate-300 uppercase tracking-wider">
-                    Daftar Temuan Anomali &amp; Outlier ({healthProfile.anomalies.length})
+                    Detected Anomalies &amp; Outliers ({healthProfile.anomalies.length})
                   </h4>
                   {healthProfile.anomalies.length === 0 ? (
                     <Card variant="surface" padding="md" className="text-xs text-slate-300 flex items-center gap-2.5 font-sans">
                       <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-                      <span>Data bersih. Tidak ditemukan duplikasi baris, nilai kosong signifikan, atau outlier ekstrem.</span>
+                      <span>Clean dataset. No row duplicates, significant nulls, or extreme outliers detected.</span>
                     </Card>
                   ) : (
                     <div className="space-y-2">
@@ -396,16 +395,16 @@ export const UploadedTableModal: React.FC<UploadedTableModalProps> = ({
                 {/* Column Quality Mini-Table */}
                 <div className="space-y-2.5">
                   <h4 className="text-xs font-mono font-medium text-slate-300 uppercase tracking-wider">
-                    Ringkasan Kelengkapan Kolom
+                    Column Completeness Summary
                   </h4>
                   <div className="rounded-xl border border-slate-800 overflow-hidden bg-slate-950/40">
                     <table className="w-full text-left text-xs font-mono">
                       <thead>
                         <tr className="border-b border-slate-800 bg-slate-900 text-slate-400">
-                          <th scope="col" className="py-2.5 px-3 font-medium">Kolom</th>
-                          <th scope="col" className="py-2.5 px-3 font-medium">Tipe</th>
-                          <th scope="col" className="py-2.5 px-3 font-medium">Kelengkapan</th>
-                          <th scope="col" className="py-2.5 px-3 font-medium">Outlier / Nilai Unik</th>
+                          <th scope="col" className="py-2.5 px-3 font-medium">Column</th>
+                          <th scope="col" className="py-2.5 px-3 font-medium">Type</th>
+                          <th scope="col" className="py-2.5 px-3 font-medium">Completeness</th>
+                          <th scope="col" className="py-2.5 px-3 font-medium">Outliers / Distinct Values</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-800/60">
@@ -443,11 +442,11 @@ export const UploadedTableModal: React.FC<UploadedTableModalProps> = ({
                                 </Badge>
                               ) : cp.is_unique ? (
                                 <Badge variant="success" size="xs">
-                                  100% Unik
+                                  100% Distinct
                                 </Badge>
                               ) : (
                                 <span className="text-slate-400 font-mono">
-                                  {cp.distinct_count.toLocaleString()} unik
+                                  {cp.distinct_count.toLocaleString()} distinct
                                 </span>
                               )}
                             </td>
@@ -465,15 +464,15 @@ export const UploadedTableModal: React.FC<UploadedTableModalProps> = ({
           <div className="space-y-5">
             <div>
               <h4 className="text-xs font-mono font-medium text-slate-300 uppercase tracking-wider mb-2.5">
-                Struktur Kolom &amp; Tipe Data
+                Column Schema &amp; Data Types
               </h4>
               <div className="rounded-xl border border-slate-800 overflow-hidden bg-slate-950/40">
                 <table className="w-full text-left text-xs font-mono">
                   <thead>
                     <tr className="border-b border-slate-800 bg-slate-900 text-slate-400">
-                      <th scope="col" className="py-2.5 px-3.5 font-medium">Nama Kolom</th>
-                      <th scope="col" className="py-2.5 px-3.5 font-medium">Tipe PostgreSQL</th>
-                      <th scope="col" className="py-2.5 px-3.5 font-medium">Contoh Nilai</th>
+                      <th scope="col" className="py-2.5 px-3.5 font-medium">Column Name</th>
+                      <th scope="col" className="py-2.5 px-3.5 font-medium">PostgreSQL Type</th>
+                      <th scope="col" className="py-2.5 px-3.5 font-medium">Sample Values</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800/60">
@@ -502,7 +501,7 @@ export const UploadedTableModal: React.FC<UploadedTableModalProps> = ({
             {/* Quick Query Suggestions */}
             <div>
               <h4 className="text-xs font-mono font-medium text-slate-300 uppercase tracking-wider mb-2">
-                Contoh Pertanyaan Cepat
+                Quick Query Examples
               </h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <Card
@@ -510,12 +509,12 @@ export const UploadedTableModal: React.FC<UploadedTableModalProps> = ({
                   padding="sm"
                   isInteractive
                   onClick={() =>
-                    handleAction(`Tampilkan 5 baris pertama dari tabel ${qualifiedName} dalam bentuk tabel`)
+                    handleAction(`Show first 5 rows of table ${qualifiedName} in a data table`)
                   }
                   className="flex items-center justify-between text-left group"
                 >
                   <span className="text-xs text-slate-300 group-hover:text-slate-100 font-sans">
-                    Lihat 5 sampel data pertama
+                    View first 5 sample rows
                   </span>
                   <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-sky-300 shrink-0 ml-2 transition" />
                 </Card>
@@ -525,12 +524,12 @@ export const UploadedTableModal: React.FC<UploadedTableModalProps> = ({
                   padding="sm"
                   isInteractive
                   onClick={() =>
-                    handleAction(`Hitung ringkasan statistik (jumlah, rata-rata, nilai min dan max) untuk tabel ${qualifiedName}`)
+                    handleAction(`Compute summary statistics (count, average, min, max) for columns in table ${qualifiedName}`)
                   }
                   className="flex items-center justify-between text-left group"
                 >
                   <span className="text-xs text-slate-300 group-hover:text-slate-100 font-sans">
-                    Hitung ringkasan statistik kolom
+                    Compute column summary statistics
                   </span>
                   <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-sky-300 shrink-0 ml-2 transition" />
                 </Card>
@@ -540,12 +539,12 @@ export const UploadedTableModal: React.FC<UploadedTableModalProps> = ({
                   padding="sm"
                   isInteractive
                   onClick={() =>
-                    handleAction(`Bandingkan dan gabungkan data dari tabel ${qualifiedName} dengan data pesanan di tabel orders`)
+                    handleAction(`Compare and join data from table ${qualifiedName} with orders table`)
                   }
                   className="flex items-center justify-between text-left group sm:col-span-2"
                 >
                   <span className="text-xs text-slate-300 group-hover:text-slate-100 font-sans">
-                    Cross-Join: Gabungkan data ini dengan data transaksi pesanan (orders)
+                    Cross-Join: Join this dataset with customer orders transactions
                   </span>
                   <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-sky-300 shrink-0 ml-2 transition" />
                 </Card>

@@ -285,10 +285,11 @@ def is_english_query(text: str) -> bool:
     }
     words = re.findall(r"\b[a-zA-Z]+\b", t_lower)
     if not words:
-        return False
+        return True  # Default to English when no text
     en_count = sum(1 for w in words if w in english_keywords)
     id_count = sum(1 for w in words if w in id_keywords)
-    return en_count > id_count
+    # Default to English unless Indonesian keywords explicitly outnumber English keywords
+    return id_count == 0 or en_count >= id_count
 
 
 def generate_heuristic_suggestions(

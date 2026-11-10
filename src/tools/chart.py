@@ -81,7 +81,7 @@ class MakeChartTool(BaseTool):
                         x_axis = target_x
                         y_axis = target_y
                         sanitized_data = [
-                            {target_x: r[0], target_y: r[1]}
+                            dict(zip(cols, r))
                             for r in rows
                         ]
             except Exception:

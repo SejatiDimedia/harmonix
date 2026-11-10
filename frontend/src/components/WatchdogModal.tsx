@@ -105,7 +105,7 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
   const handleSaveRule = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!ruleName.trim() || !sqlQuery.trim() || !targetColumn.trim()) {
-      showToast?.('Nama aturan, SQL, dan kolom target wajib diisi');
+      showToast?.('Rule name, SQL, and target column are required');
       return;
     }
 
@@ -126,10 +126,10 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
     try {
       if (editingRuleId) {
         await updateMutation.mutateAsync({ ruleId: editingRuleId, rule: payload });
-        showToast?.(`Aturan #${editingRuleId} berhasil diperbarui`);
+        showToast?.(`Rule #${editingRuleId} updated successfully`);
       } else {
         await createMutation.mutateAsync(payload);
-        showToast?.('Aturan pemantauan watchdog baru berhasil dibuat');
+        showToast?.('New watchdog monitoring rule created successfully');
       }
       setIsFormOpen(false);
     } catch (err: any) {
@@ -143,24 +143,24 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
         ruleId: rule.id,
         rule: { enabled: !rule.enabled },
       });
-      showToast?.(`Aturan #${rule.id} sekarang ${!rule.enabled ? 'diaktifkan' : 'dinonaktifkan'}`);
+      showToast?.(`Rule #${rule.id} is now ${!rule.enabled ? 'enabled' : 'disabled'}`);
     } catch (err: any) {
-      showToast?.(`Gagal mengubah status aturan: ${err.message}`);
+      showToast?.(`Failed to update rule status: ${err.message}`);
     }
   };
 
   const handleRunRule = async (ruleId: number) => {
     try {
-      showToast?.(`Menjalankan evaluasi aturan #${ruleId}...`);
+      showToast?.(`Evaluating rule #${ruleId}...`);
       const res = await runMutation.mutateAsync(ruleId);
       const isTrig = res.result.is_triggered;
       showToast?.(
         isTrig
-          ? `Alert terpicu! Nilai ${res.result.metric_value} memenuhi ambang batas`
-          : `Kondisi aman (Nilai: ${res.result.metric_value})`
+          ? `Alert triggered! Value ${res.result.metric_value} breached threshold`
+          : `Status healthy (Value: ${res.result.metric_value})`
       );
     } catch (err: any) {
-      showToast?.(`Gagal mengeksekusi watchdog: ${err.message}`);
+      showToast?.(`Failed to execute watchdog: ${err.message}`);
     }
   };
 
@@ -169,10 +169,10 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
     const id = ruleToDelete.id;
     try {
       await deleteMutation.mutateAsync(id);
-      showToast?.(`Aturan #${id} berhasil dihapus`);
+      showToast?.(`Rule #${id} deleted successfully`);
       setRuleToDelete(null);
     } catch (err: any) {
-      showToast?.(`Gagal menghapus aturan: ${err.message}`);
+      showToast?.(`Failed to delete rule: ${err.message}`);
     }
   };
 
@@ -181,13 +181,13 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
       case 'healthy':
         return (
           <Badge variant="success" icon={<CheckCircle2 className="w-3 h-3" />}>
-            Normal
+            Healthy
           </Badge>
         );
       case 'triggered':
         return (
           <Badge variant="danger" pulse icon={<AlertOctagon className="w-3 h-3" />}>
-            Terpicu
+            Triggered
           </Badge>
         );
       case 'error':
@@ -199,7 +199,7 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
       default:
         return (
           <Badge variant="warning" icon={<Clock className="w-3 h-3" />}>
-            Menunggu
+            Pending
           </Badge>
         );
     }
@@ -208,11 +208,11 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
   const getSeverityBadge = (sev: string) => {
     switch (sev) {
       case 'critical':
-        return <Badge variant="danger">Kritis</Badge>;
+        return <Badge variant="danger">Critical</Badge>;
       case 'warning':
-        return <Badge variant="warning">Peringatan</Badge>;
+        return <Badge variant="warning">Warning</Badge>;
       default:
-        return <Badge variant="info">Informasi</Badge>;
+        return <Badge variant="info">Info</Badge>;
     }
   };
 
@@ -224,12 +224,12 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
         size="4xl"
         icon={<ShieldAlert className="w-5 h-5 text-rose-400" />}
         title="Metric Watchdog & Anomaly Alerting"
-        subtitle="Pemantau otomatis metrik gudang data dengan diagnosis akar masalah AI & webhook integrasi"
+        subtitle="Automated data warehouse metric watchdog with AI root-cause diagnosis & webhook integration"
         footer={
           <>
-            <span>Harmonix Autonomous Background Scheduler berjalan aktif di latar belakang server.</span>
+            <span>Harmonix Autonomous Background Scheduler running actively in server background.</span>
             <Button variant="secondary" size="sm" onClick={onClose}>
-              Tutup
+              Close
             </Button>
           </>
         }
@@ -237,21 +237,21 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
         {/* Metric Summary Cards */}
         <div className="grid grid-cols-4 gap-3">
           <Card variant="dark" className="p-3">
-            <span className="text-[11px] text-slate-400">Total Aturan</span>
+            <span className="text-[11px] text-slate-400">Total Rules</span>
             <div className="text-lg font-bold text-white mt-0.5">{rules.length}</div>
           </Card>
           <Card variant="dark" className="p-3">
-            <span className="text-[11px] text-slate-400">Aturan Aktif</span>
+            <span className="text-[11px] text-slate-400">Active Rules</span>
             <div className="text-lg font-bold text-sky-400 mt-0.5">{activeCount}</div>
           </Card>
           <Card variant="dark" className="p-3">
-            <span className="text-[11px] text-slate-400">Anomali Terpicu</span>
+            <span className="text-[11px] text-slate-400">Triggered Anomalies</span>
             <div className={`text-lg font-bold mt-0.5 ${triggeredCount > 0 ? 'text-rose-400' : 'text-slate-400'}`}>
               {triggeredCount}
             </div>
           </Card>
           <Card variant="dark" className="p-3">
-            <span className="text-[11px] text-slate-400">Total Log Eksekusi</span>
+            <span className="text-[11px] text-slate-400">Execution Logs</span>
             <div className="text-lg font-bold text-emerald-400 mt-0.5">{logs.length}</div>
           </Card>
         </div>
@@ -260,8 +260,8 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
         <div className="flex items-center justify-between pt-1">
           <Tabs
             tabs={[
-              { id: 'rules', label: 'Aturan Pemantauan', count: rules.length },
-              { id: 'logs', label: 'Riwayat Log & Alert', count: logs.length },
+              { id: 'rules', label: 'Monitoring Rules', count: rules.length },
+              { id: 'logs', label: 'Logs & Alert History', count: logs.length },
             ]}
             activeTab={activeTab}
             onChange={(tabId) => {
@@ -275,7 +275,7 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
               variant="ghost"
               size="sm"
               onClick={() => (activeTab === 'rules' ? refetchRules() : refetchLogs())}
-              title="Segarkan data"
+              title="Refresh data"
               leftIcon={<RefreshCw className="w-3.5 h-3.5" />}
             />
             {activeTab === 'rules' && !isFormOpen && (
@@ -285,7 +285,7 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
                 onClick={handleOpenCreate}
                 leftIcon={<Plus className="w-3.5 h-3.5" />}
               >
-                Tambah Aturan
+                Add Rule
               </Button>
             )}
           </div>
@@ -298,43 +298,43 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
               <div className="flex items-center gap-2">
                 <Sliders className="w-4 h-4 text-sky-400" />
                 <span className="text-sm font-semibold text-white">
-                  {editingRuleId ? `Edit Aturan #${editingRuleId}` : 'Konfigurasi Aturan Watchdog Baru'}
+                  {editingRuleId ? `Edit Rule #${editingRuleId}` : 'Configure New Watchdog Rule'}
                 </span>
               </div>
               <Button variant="ghost" size="xs" onClick={() => setIsFormOpen(false)}>
-                Batal
+                Cancel
               </Button>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <Input
-                label="Nama Aturan"
+                label="Rule Name"
                 value={ruleName}
                 onChange={(e) => setRuleName(e.target.value)}
-                placeholder="Contoh: Tingkat Pembatalan Pesanan Tinggi"
+                placeholder="Example: High Order Cancellation Rate"
                 required
               />
               <Select
-                label="Tingkat Keparahan (Severity)"
+                label="Severity"
                 value={severity}
                 onChange={(e) => setSeverity(e.target.value as any)}
                 options={[
-                  { value: 'info', label: 'Informasi (Info)' },
-                  { value: 'warning', label: 'Peringatan (Warning)' },
-                  { value: 'critical', label: 'Kritis (Critical)' },
+                  { value: 'info', label: 'Info' },
+                  { value: 'warning', label: 'Warning' },
+                  { value: 'critical', label: 'Critical' },
                 ]}
               />
             </div>
 
             <Input
-              label="Deskripsi / Konteks Bisnis"
+              label="Description / Business Context"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Penjelasan latar belakang atau target operasional yang dipantau"
+              placeholder="Operational background or target being monitored"
             />
 
             <Textarea
-              label="Query SQL Analitik"
+              label="Analytics SQL Query"
               value={sqlQuery}
               onChange={(e) => setSqlQuery(e.target.value)}
               rows={3}
@@ -345,10 +345,10 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
 
             <div className="grid grid-cols-4 gap-3">
               <Input
-                label="Kolom Target"
+                label="Target Column"
                 value={targetColumn}
                 onChange={(e) => setTargetColumn(e.target.value)}
-                placeholder="Contoh: late_pct"
+                placeholder="e.g. late_pct"
                 isMonospace
                 required
               />
@@ -358,16 +358,16 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
                 onChange={(e) => setOperator(e.target.value)}
                 isMonospace
                 options={[
-                  { value: '>', label: '> (Lebih Dari)' },
-                  { value: '>=', label: '>= (Lebih Dari / Sama)' },
-                  { value: '<', label: '< (Kurang Dari)' },
-                  { value: '<=', label: '<= (Kurang Dari / Sama)' },
-                  { value: '==', label: '== (Sama Dengan)' },
-                  { value: '!=', label: '!= (Tidak Sama Dengan)' },
+                  { value: '>', label: '> (Greater Than)' },
+                  { value: '>=', label: '>= (Greater or Equal)' },
+                  { value: '<', label: '< (Less Than)' },
+                  { value: '<=', label: '<= (Less or Equal)' },
+                  { value: '==', label: '== (Equal)' },
+                  { value: '!=', label: '!= (Not Equal)' },
                 ]}
               />
               <Input
-                label="Nilai Ambang (Threshold)"
+                label="Threshold Value"
                 type="number"
                 step="any"
                 value={thresholdValue}
@@ -376,30 +376,30 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
                 required
               />
               <Select
-                label="Interval Pengecekan"
+                label="Check Interval"
                 value={intervalMinutes}
                 onChange={(e) => setIntervalMinutes(parseInt(e.target.value, 10))}
                 options={[
-                  { value: 15, label: 'Setiap 15 Menit' },
-                  { value: 30, label: 'Setiap 30 Menit' },
-                  { value: 60, label: 'Setiap 1 Jam' },
-                  { value: 120, label: 'Setiap 2 Jam' },
-                  { value: 360, label: 'Setiap 6 Jam' },
-                  { value: 1440, label: 'Setiap 24 Jam' },
+                  { value: 15, label: 'Every 15 Minutes' },
+                  { value: 30, label: 'Every 30 Minutes' },
+                  { value: 60, label: 'Every 1 Hour' },
+                  { value: 120, label: 'Every 2 Hours' },
+                  { value: 360, label: 'Every 6 Hours' },
+                  { value: 1440, label: 'Every 24 Hours' },
                 ]}
               />
             </div>
 
             <div className="grid grid-cols-2 gap-3 pt-2 border-t border-white/[0.04]">
               <Input
-                label="Webhook Alert URL (Opsional)"
+                label="Webhook Alert URL (Optional)"
                 type="url"
                 value={webhookUrl}
                 onChange={(e) => setWebhookUrl(e.target.value)}
-                placeholder="https://hooks.slack.com/services/... atau Discord Webhook"
+                placeholder="https://hooks.slack.com/services/... or Discord Webhook"
               />
               <Select
-                label="Format Kanal Webhook"
+                label="Webhook Channel Format"
                 value={channelType}
                 onChange={(e) => setChannelType(e.target.value)}
                 options={[
@@ -420,13 +420,13 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
                 />
                 <span className="text-xs text-slate-300 flex items-center gap-1.5">
                   <BrainCircuit className="w-3.5 h-3.5 text-sky-400" />
-                  Aktifkan diagnosis otomatis akar penyebab masalah oleh Model AI saat anomali terpicu
+                  Enable automated AI root-cause diagnosis when anomaly is triggered
                 </span>
               </label>
 
               <div className="flex items-center gap-2">
                 <Button variant="ghost" size="sm" onClick={() => setIsFormOpen(false)}>
-                  Batal
+                  Cancel
                 </Button>
                 <Button
                   variant="primary"
@@ -434,7 +434,7 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
                   type="submit"
                   isLoading={createMutation.isPending || updateMutation.isPending}
                 >
-                  {editingRuleId ? 'Perbarui Aturan' : 'Simpan Aturan'}
+                  {editingRuleId ? 'Update Rule' : 'Save Rule'}
                 </Button>
               </div>
             </div>
@@ -446,11 +446,11 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
           <div className="space-y-3">
             {isLoadingRules ? (
               <div className="text-center py-12 text-slate-500 text-xs">
-                Memuat aturan pemantauan watchdog...
+                Loading watchdog rules...
               </div>
             ) : rules.length === 0 ? (
               <div className="text-center py-12 border border-dashed border-white/[0.06] rounded-xl text-slate-400 text-xs">
-                Belum ada aturan watchdog yang terdaftar. Klik &quot;Tambah Aturan&quot; untuk memulai.
+                No watchdog rules registered yet. Click &quot;Add Rule&quot; to begin.
               </div>
             ) : (
               rules.map((rule) => (
@@ -467,7 +467,7 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
                         </span>
                         {getSeverityBadge(rule.severity)}
                         {getStatusBadge(rule.last_status)}
-                        {!rule.enabled && <Badge variant="neutral">Nonaktif</Badge>}
+                        {!rule.enabled && <Badge variant="neutral">Disabled</Badge>}
                       </div>
                       {rule.description && (
                         <p className="text-xs text-slate-400">{rule.description}</p>
@@ -481,30 +481,30 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
                         onClick={() => handleRunRule(rule.id)}
                         isLoading={runMutation.isPending}
                         leftIcon={<Play className="w-3 h-3 text-sky-400 fill-sky-400" />}
-                        title="Jalankan evaluasi aturan ini sekarang"
+                        title="Evaluate this rule now"
                       >
-                        Uji Sekarang
+                        Test Now
                       </Button>
                       <Button
                         variant={rule.enabled ? 'success' : 'secondary'}
                         size="xs"
                         onClick={() => handleToggleEnable(rule)}
-                        title={rule.enabled ? 'Nonaktifkan aturan' : 'Aktifkan aturan'}
+                        title={rule.enabled ? 'Disable rule' : 'Enable rule'}
                       >
-                        {rule.enabled ? 'Aktif' : 'Mati'}
+                        {rule.enabled ? 'Active' : 'Off'}
                       </Button>
                       <Button
                         variant="ghost"
                         size="xs"
                         onClick={() => handleOpenEdit(rule)}
-                        title="Edit aturan"
+                        title="Edit rule"
                         leftIcon={<Edit2 className="w-3.5 h-3.5" />}
                       />
                       <Button
                         variant="ghost"
                         size="xs"
                         onClick={() => setRuleToDelete(rule)}
-                        title="Hapus aturan"
+                        title="Delete rule"
                         className="text-slate-400 hover:text-rose-400 hover:bg-rose-500/10"
                         leftIcon={<Trash2 className="w-3.5 h-3.5" />}
                       />
@@ -514,20 +514,20 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
                   {/* Rule Condition & Metadata Bar */}
                   <div className="flex items-center gap-4 text-xs bg-[#0b1322] px-3 py-2 rounded-lg border border-white/[0.04] text-slate-300 flex-wrap font-sans">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-slate-500">Kondisi:</span>
+                      <span className="text-slate-500">Condition:</span>
                       <code className="font-mono text-sky-300 font-medium">
                         {rule.target_column} {rule.operator} {rule.threshold_value}
                       </code>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <span className="text-slate-500">Nilai Terakhir:</span>
+                      <span className="text-slate-500">Last Value:</span>
                       <span className={`font-mono font-medium ${rule.last_status === 'triggered' ? 'text-rose-400 font-bold' : 'text-slate-200'}`}>
                         {rule.last_metric_value !== null ? rule.last_metric_value : '-'}
                       </span>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <span className="text-slate-500">Interval:</span>
-                      <span className="text-slate-300">{rule.cron_interval_minutes} menit</span>
+                      <span className="text-slate-300">{rule.cron_interval_minutes} min</span>
                     </div>
                     {rule.webhook_url && (
                       <div className="flex items-center gap-1 text-slate-400" title={rule.webhook_url}>
@@ -536,7 +536,7 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
                       </div>
                     )}
                     {rule.ai_diagnosis_enabled && (
-                      <div className="flex items-center gap-1 text-sky-300 text-[11px] bg-sky-500/15 px-2 py-0.5 rounded-full" title="AI Diagnosis Otomatis Aktif">
+                      <div className="flex items-center gap-1 text-sky-300 text-[11px] bg-sky-500/15 px-2 py-0.5 rounded-full" title="Automated AI Diagnosis Active">
                         <BrainCircuit className="w-3.5 h-3.5" />
                         <span>AI Diagnosis</span>
                       </div>
@@ -553,11 +553,11 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
           <div className="space-y-3">
             {isLoadingLogs ? (
               <div className="text-center py-12 text-slate-500 text-xs">
-                Memuat riwayat log eksekusi watchdog...
+                Loading watchdog execution logs...
               </div>
             ) : logs.length === 0 ? (
               <div className="text-center py-12 border border-dashed border-white/[0.06] rounded-xl text-slate-400 text-xs">
-                Belum ada log eksekusi. Jalankan uji aturan di tab Aturan Pemantauan.
+                No execution logs yet. Test a rule in the Monitoring Rules tab.
               </div>
             ) : (
               logs.map((log) => {
@@ -577,15 +577,15 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
                         <div>
                           <div className="flex items-center gap-2">
                             <span className="text-xs font-semibold text-white">
-                              {log.rule_name || `Aturan #${log.rule_id}`}
+                              {log.rule_name || `Rule #${log.rule_id}`}
                             </span>
                             <span className="text-[10px] text-slate-500 font-mono">
-                              {log.created_at ? new Date(log.created_at).toLocaleString('id-ID') : '-'}
+                              {log.created_at ? new Date(log.created_at).toLocaleString('en-US') : '-'}
                             </span>
                           </div>
                           <div className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-2">
-                            <span>Nilai Metrik: <strong className="text-slate-200 font-mono">{log.metric_value !== null ? log.metric_value : '-'}</strong></span>
-                            <span>(Ambang: <code className="text-slate-300 font-mono">{log.operator} {log.threshold_value}</code>)</span>
+                            <span>Metric Value: <strong className="text-slate-200 font-mono">{log.metric_value !== null ? log.metric_value : '-'}</strong></span>
+                            <span>(Threshold: <code className="text-slate-300 font-mono">{log.operator} {log.threshold_value}</code>)</span>
                           </div>
                         </div>
                       </div>
@@ -593,7 +593,7 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
                       <div className="flex items-center gap-2">
                         {log.webhook_sent && (
                           <Badge variant="success">
-                            Webhook Terkirim (HTTP {log.webhook_response_code})
+                            Webhook Sent (HTTP {log.webhook_response_code})
                           </Badge>
                         )}
                         {isExpanded ? (
@@ -611,7 +611,7 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
                           <div className="p-3 rounded-lg bg-sky-500/15 text-slate-200 space-y-1.5">
                             <div className="flex items-center gap-1.5 text-sky-300 font-medium text-[11px]">
                               <BrainCircuit className="w-3.5 h-3.5 text-sky-400" />
-                              <span>Diagnosis & Rekomendasi AI Harmonix</span>
+                              <span>Harmonix AI Diagnosis &amp; Recommendations</span>
                             </div>
                             <p className="whitespace-pre-line text-xs text-slate-300 leading-relaxed font-sans">
                               {log.ai_diagnosis_summary}
@@ -639,12 +639,12 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
         isOpen={!!ruleToDelete}
         onClose={() => setRuleToDelete(null)}
         size="sm"
-        title="Konfirmasi Hapus Aturan"
+        title="Confirm Rule Deletion"
         icon={<AlertTriangle className="w-5 h-5 text-rose-400" />}
         footer={
           <div className="flex items-center justify-end gap-2 w-full">
             <Button variant="ghost" size="sm" onClick={() => setRuleToDelete(null)}>
-              Batal
+              Cancel
             </Button>
             <Button
               variant="danger"
@@ -652,15 +652,15 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
               isLoading={deleteMutation.isPending}
               onClick={handleConfirmDelete}
             >
-              Hapus Aturan
+              Delete Rule
             </Button>
           </div>
         }
       >
         <p className="text-xs text-slate-300 leading-relaxed">
-          Apakah Anda yakin ingin menghapus aturan pemantauan{' '}
+          Are you sure you want to delete monitoring rule{' '}
           <strong className="text-white">&quot;{ruleToDelete?.rule_name}&quot;</strong>?
-          Seluruh riwayat log eksekusi terkait aturan ini akan dihapus secara permanen.
+          All execution logs associated with this rule will be permanently deleted.
         </p>
       </Modal>
     </>

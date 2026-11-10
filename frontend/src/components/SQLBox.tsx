@@ -30,7 +30,7 @@ export const SQLBox: React.FC<SQLBoxProps> = ({ queries }) => {
           leftIcon={copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
         >
           <span className={copied ? 'text-emerald-400' : ''}>
-            {copied ? 'Tersalin!' : 'Salin SQL'}
+            {copied ? 'Copied!' : 'Copy SQL'}
           </span>
         </Button>
       </div>

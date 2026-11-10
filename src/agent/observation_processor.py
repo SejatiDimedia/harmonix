@@ -101,7 +101,7 @@ class ObservationProcessor:
                 t_x = t_x_candidate if t_x_candidate in matching_tbl.columns else matching_tbl.columns[0]
                 t_y = t_y_candidate if t_y_candidate in matching_tbl.columns else matching_tbl.columns[1]
                 c_data = [
-                    {t_x: r[0] if r[0] is not None else "(NULL)", t_y: r[1]}
+                    dict(zip(matching_tbl.columns, r))
                     for r in matching_tbl.rows
                 ]
                 c_spec["x_axis"] = t_x
@@ -182,7 +182,7 @@ class ObservationProcessor:
                     ch.x_axis = t_x
                     ch.y_axis = t_y
                     ch.data = [
-                        {t_x: r[0] if r[0] is not None else "(NULL)", t_y: r[1]}
+                        dict(zip(matching_tbl.columns, r))
                         for r in matching_tbl.rows
                     ]
             if any(w in uq_lower for w in ("donat", "donut", "doughnut")):

@@ -453,7 +453,7 @@ class LangGraphAgent:
                             t_x = c_spec.get("x_axis") if c_spec.get("x_axis") in cols else cols[0]
                             t_y = c_spec.get("y_axis") if c_spec.get("y_axis") in cols else cols[1]
                             c_data = [
-                                {t_x: r[0] if r[0] is not None else "(NULL)", t_y: r[1]}
+                                dict(zip(cols, r))
                                 for r in rows
                             ]
                             c_spec["x_axis"] = t_x

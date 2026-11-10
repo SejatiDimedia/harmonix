@@ -280,8 +280,8 @@ export async function uploadSessionFiles(
     body: formData,
   });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ detail: 'Gagal mengunggah file' }));
-    throw new Error(err.detail || 'Gagal mengunggah file');
+    const err = await res.json().catch(() => ({ detail: 'Failed to upload files' }));
+    throw new Error(err.detail || 'Failed to upload files');
   }
   return res.json();
 }
@@ -291,7 +291,7 @@ export async function getSessionUploadedTables(
 ): Promise<UploadSessionTablesResponse> {
   const res = await fetch(`/v1/sessions/${sessionId}/tables`);
   if (!res.ok) {
-    throw new Error('Gagal memuat tabel data sesi');
+    throw new Error('Failed to load session data tables');
   }
   return res.json();
 }
@@ -302,8 +302,8 @@ export async function getTableHealth(
 ): Promise<TableHealthProfile> {
   const res = await fetch(`/v1/sessions/${sessionId}/tables/${tableName}/health`);
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ detail: 'Gagal memuat profil kesehatan data' }));
-    throw new Error(err.detail || 'Gagal memuat profil kesehatan data');
+    const err = await res.json().catch(() => ({ detail: 'Failed to load data health profile' }));
+    throw new Error(err.detail || 'Failed to load data health profile');
   }
   return res.json();
 }
@@ -316,8 +316,8 @@ export async function deleteUploadedTable(
     method: 'DELETE',
   });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ detail: 'Gagal menghapus tabel data' }));
-    throw new Error(err.detail || 'Gagal menghapus tabel data');
+    const err = await res.json().catch(() => ({ detail: 'Failed to delete data table' }));
+    throw new Error(err.detail || 'Failed to delete data table');
   }
   return true;
 }
@@ -340,21 +340,21 @@ export async function submitBatchJob(payload: {
     body: JSON.stringify(payload),
   });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ detail: 'Gagal mengirim tugas batch' }));
-    throw new Error(err.detail || 'Gagal mengirim tugas batch');
+    const err = await res.json().catch(() => ({ detail: 'Failed to submit batch job' }));
+    throw new Error(err.detail || 'Failed to submit batch job');
   }
   return res.json();
 }
 
 export async function getBatchJob(batchId: string): Promise<any> {
   const res = await fetch(`/v1/batch/${batchId}`);
-  if (!res.ok) throw new Error(`Batch '${batchId}' tidak ditemukan`);
+  if (!res.ok) throw new Error(`Batch '${batchId}' not found`);
   return res.json();
 }
 
 export async function listBatchJobs(): Promise<{ total: number; batches: any[] }> {
   const res = await fetch('/v1/batch');
-  if (!res.ok) throw new Error('Gagal memuat riwayat tugas batch');
+  if (!res.ok) throw new Error('Failed to load batch job history');
   return res.json();
 }
 
@@ -364,22 +364,22 @@ export async function listBatchJobs(): Promise<{ total: number; batches: any[] }
 
 export async function getQueueStatus(): Promise<any> {
   const res = await fetch('/v1/queue/status');
-  if (!res.ok) throw new Error('Gagal memuat status antrian tugas');
+  if (!res.ok) throw new Error('Failed to load task queue status');
   return res.json();
 }
 
 export async function listQueueJobs(status?: string, limit = 50): Promise<{ total: number; jobs: any[] }> {
   const url = status ? `/v1/queue/jobs?status=${status}&limit=${limit}` : `/v1/queue/jobs?limit=${limit}`;
   const res = await fetch(url);
-  if (!res.ok) throw new Error('Gagal memuat daftar antrian tugas');
+  if (!res.ok) throw new Error('Failed to load task queue list');
   return res.json();
 }
 
 export async function retryQueueJob(jobId: string): Promise<any> {
   const res = await fetch(`/v1/queue/jobs/${jobId}/retry`, { method: 'POST' });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ detail: 'Gagal me-retry tugas' }));
-    throw new Error(err.detail || 'Gagal me-retry tugas');
+    const err = await res.json().catch(() => ({ detail: 'Failed to retry task' }));
+    throw new Error(err.detail || 'Failed to retry task');
   }
   return res.json();
 }
@@ -390,7 +390,7 @@ export async function retryQueueJob(jobId: string): Promise<any> {
 
 export async function fetchWatchdogRules(): Promise<{ total: number; rules: WatchdogRule[] }> {
   const res = await fetch('/v1/watchdog/rules');
-  if (!res.ok) throw new Error('Gagal memuat aturan watchdog');
+  if (!res.ok) throw new Error('Failed to load watchdog rules');
   return res.json();
 }
 
@@ -401,8 +401,8 @@ export async function createWatchdogRule(rule: Partial<WatchdogRule>): Promise<{
     body: JSON.stringify(rule),
   });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ detail: 'Gagal membuat aturan watchdog' }));
-    throw new Error(err.detail || 'Gagal membuat aturan watchdog');
+    const err = await res.json().catch(() => ({ detail: 'Failed to create watchdog rule' }));
+    throw new Error(err.detail || 'Failed to create watchdog rule');
   }
   return res.json();
 }
@@ -414,8 +414,8 @@ export async function updateWatchdogRule(ruleId: number, rule: Partial<WatchdogR
     body: JSON.stringify(rule),
   });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ detail: 'Gagal memperbarui aturan watchdog' }));
-    throw new Error(err.detail || 'Gagal memperbarui aturan watchdog');
+    const err = await res.json().catch(() => ({ detail: 'Failed to update watchdog rule' }));
+    throw new Error(err.detail || 'Failed to update watchdog rule');
   }
   return res.json();
 }
@@ -425,8 +425,8 @@ export async function deleteWatchdogRule(ruleId: number): Promise<{ status: stri
     method: 'DELETE',
   });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ detail: 'Gagal menghapus aturan watchdog' }));
-    throw new Error(err.detail || 'Gagal menghapus aturan watchdog');
+    const err = await res.json().catch(() => ({ detail: 'Failed to delete watchdog rule' }));
+    throw new Error(err.detail || 'Failed to delete watchdog rule');
   }
   return res.json();
 }
@@ -436,8 +436,8 @@ export async function runWatchdogRule(ruleId: number): Promise<{ status: string;
     method: 'POST',
   });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ detail: 'Gagal menjalankan evaluasi watchdog' }));
-    throw new Error(err.detail || 'Gagal menjalankan evaluasi watchdog');
+    const err = await res.json().catch(() => ({ detail: 'Failed to run watchdog evaluation' }));
+    throw new Error(err.detail || 'Failed to run watchdog evaluation');
   }
   return res.json();
 }
@@ -445,7 +445,7 @@ export async function runWatchdogRule(ruleId: number): Promise<{ status: string;
 export async function fetchWatchdogLogs(limit = 50, ruleId?: number): Promise<{ total: number; logs: WatchdogLog[] }> {
   const url = ruleId ? `/v1/watchdog/logs?rule_id=${ruleId}&limit=${limit}` : `/v1/watchdog/logs?limit=${limit}`;
   const res = await fetch(url);
-  if (!res.ok) throw new Error('Gagal memuat log watchdog');
+  if (!res.ok) throw new Error('Failed to load watchdog logs');
   return res.json();
 }
 

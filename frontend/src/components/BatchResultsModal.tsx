@@ -158,14 +158,14 @@ export const BatchResultsModal: React.FC<BatchResultsModalProps> = ({
     navigator.clipboard.writeText(text);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
-    showToast(`${label} disalin ke clipboard`);
+    showToast(`${label} copied to clipboard`);
   };
 
   const handleCopyFullReportMarkdown = () => {
     const reportParts: string[] = [
-      `# Laporan Hasil Analitik Batch (${liveBatch.batch_id})`,
-      `Tanggal: ${new Date(liveBatch.created_at * 1000).toLocaleString('id-ID')}`,
-      `Total Kueri: ${liveBatch.completed_queries}/${liveBatch.total_queries} Selesai | Durasi: ${liveBatch.total_duration_sec}s`,
+      `# Batch Analytics Report (${liveBatch.batch_id})`,
+      `Date: ${new Date(liveBatch.created_at * 1000).toLocaleString('en-US')}`,
+      `Total Queries: ${liveBatch.completed_queries}/${liveBatch.total_queries} Completed | Duration: ${liveBatch.total_duration_sec}s`,
       `Engine: ${liveBatch.engine} | Model: ${liveBatch.model || 'Default'} (${liveBatch.provider || 'auto'})`,
       '---\n',
     ];
@@ -174,10 +174,10 @@ export const BatchResultsModal: React.FC<BatchResultsModalProps> = ({
       reportParts.push(`## ${idx + 1}. ${item.query}`);
       reportParts.push(`Status: ${item.status.toUpperCase()} (${item.duration_ms} ms)\n`);
       if (item.answer_text) {
-        reportParts.push(`### Jawaban:\n${item.answer_text}\n`);
+        reportParts.push(`### Answer:\n${item.answer_text}\n`);
       }
       if (item.error) {
-        reportParts.push(`### Galat:\n${item.error}\n`);
+        reportParts.push(`### Error:\n${item.error}\n`);
       }
       if (item.sql_queries && item.sql_queries.length > 0) {
         reportParts.push(`\`\`\`sql\n${item.sql_queries[0]}\n\`\`\`\n`);
@@ -185,7 +185,7 @@ export const BatchResultsModal: React.FC<BatchResultsModalProps> = ({
       reportParts.push('---\n');
     });
 
-    handleCopy('full_report', reportParts.join('\n'), 'Seluruh isi laporan batch');
+    handleCopy('full_report', reportParts.join('\n'), 'Full batch report');
   };
 
   const handleDownload = (format: 'csv' | 'jsonl') => {
@@ -202,9 +202,9 @@ export const BatchResultsModal: React.FC<BatchResultsModalProps> = ({
     try {
       const fresh = await getBatchJob(liveBatch.batch_id);
       if (fresh) setLiveBatch(fresh);
-      showToast('Hasil batch diperbarui');
+      showToast('Batch results refreshed');
     } catch {
-      showToast('Gagal memperbarui hasil batch');
+      showToast('Failed to refresh batch results');
     } finally {
       setIsRefreshing(false);
     }
@@ -262,7 +262,7 @@ export const BatchResultsModal: React.FC<BatchResultsModalProps> = ({
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h2 id="batch-results-title" className="text-sm sm:text-base font-bold text-white font-sans tracking-tight">
-                  Laporan Hasil Analitik Batch
+                  Batch Analytics Report
                 </h2>
                 <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-slate-900 text-sky-300 border border-slate-800">
                   {liveBatch.batch_id}
@@ -283,12 +283,12 @@ export const BatchResultsModal: React.FC<BatchResultsModalProps> = ({
                 </Badge>
               </div>
               <div className="flex items-center gap-3 text-[11px] text-slate-400 font-mono mt-0.5">
-                <span>Total: {liveBatch.completed_queries}/{liveBatch.total_queries} selesai</span>
+                <span>Total: {liveBatch.completed_queries}/{liveBatch.total_queries} completed</span>
                 {liveBatch.failed_queries > 0 && (
-                  <span className="text-rose-400 font-medium">({liveBatch.failed_queries} gagal)</span>
+                  <span className="text-rose-400 font-medium">({liveBatch.failed_queries} failed)</span>
                 )}
                 <span>•</span>
-                <span>Durasi: {liveBatch.total_duration_sec ? `${liveBatch.total_duration_sec}s` : '—'}</span>
+                <span>Duration: {liveBatch.total_duration_sec ? `${liveBatch.total_duration_sec}s` : '—'}</span>
                 {liveBatch.model && (
                   <>
                     <span>•</span>
@@ -313,9 +313,9 @@ export const BatchResultsModal: React.FC<BatchResultsModalProps> = ({
                     ? 'bg-slate-800 text-sky-300 shadow-xs'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
-                title="Tampilan interaktif dengan daftar kueri di sebelah kiri"
+                title="Interactive view with query list on the left"
               >
-                Interaktif
+                Split View
               </button>
               <button
                 type="button"
@@ -325,9 +325,9 @@ export const BatchResultsModal: React.FC<BatchResultsModalProps> = ({
                     ? 'bg-slate-800 text-sky-300 shadow-xs'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
-                title="Tampilan dokumen berurutan untuk membaca seluruh laporan"
+                title="Full document view to read all reports"
               >
-                Semua Jawaban
+                Full Document
               </button>
             </div>
 
@@ -337,9 +337,9 @@ export const BatchResultsModal: React.FC<BatchResultsModalProps> = ({
               size="xs"
               onClick={handleCopyFullReportMarkdown}
               leftIcon={copiedId === 'full_report' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-slate-400" />}
-              title="Salin seluruh isi pertanyaan dan jawaban sebagai Markdown"
+              title="Copy entire questions and answers report as Markdown"
             >
-              <span className="hidden sm:inline">Salin Laporan</span>
+              <span className="hidden sm:inline">Copy Report</span>
             </Button>
 
             {/* Print / Save PDF */}
@@ -349,9 +349,9 @@ export const BatchResultsModal: React.FC<BatchResultsModalProps> = ({
               onClick={handlePrint}
               leftIcon={<Printer className="w-3.5 h-3.5 text-slate-400" />}
               className="hidden md:flex"
-              title="Cetak atau simpan laporan sebagai dokumen PDF"
+              title="Print or export report as PDF"
             >
-              Cetak / PDF
+              Print / PDF
             </Button>
 
             {/* Download CSV */}
@@ -360,7 +360,7 @@ export const BatchResultsModal: React.FC<BatchResultsModalProps> = ({
               size="xs"
               onClick={() => handleDownload('csv')}
               leftIcon={<Download className="w-3.5 h-3.5 text-emerald-400" />}
-              title="Unduh seluruh data sebagai spreadsheet CSV"
+              title="Download entire dataset as CSV spreadsheet"
             >
               CSV
             </Button>
@@ -371,7 +371,7 @@ export const BatchResultsModal: React.FC<BatchResultsModalProps> = ({
               size="xs"
               onClick={handleManualRefresh}
               disabled={isRefreshing}
-              title="Perbarui data batch"
+              title="Refresh batch data"
             >
               <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-sky-400' : ''}`} />
             </Button>
@@ -381,7 +381,7 @@ export const BatchResultsModal: React.FC<BatchResultsModalProps> = ({
               type="button"
               onClick={onClose}
               className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition cursor-pointer ml-1"
-              aria-label="Tutup jendela laporan"
+              aria-label="Close report window"
             >
               <X className="w-5 h-5" />
             </button>
@@ -404,7 +404,7 @@ export const BatchResultsModal: React.FC<BatchResultsModalProps> = ({
                       type="text"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Filter pertanyaan..."
+                      placeholder="Filter queries..."
                       className="w-full pl-8 pr-3 py-1.5 rounded-lg bg-[#08101d] border border-slate-800 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-sky-500/60 font-sans"
                     />
                   </div>
@@ -412,7 +412,7 @@ export const BatchResultsModal: React.FC<BatchResultsModalProps> = ({
                     type="button"
                     onClick={() => setIsSidebarOpen(false)}
                     className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition cursor-pointer"
-                    title="Sembunyikan daftar untuk ruang baca lebih luas"
+                    title="Collapse list"
                   >
                     <PanelLeftClose className="w-4 h-4" />
                   </button>
@@ -444,16 +444,16 @@ export const BatchResultsModal: React.FC<BatchResultsModalProps> = ({
                           <div className="flex items-center gap-1.5">
                             <span className="text-[10px] text-slate-400">{item.duration_ms || 0}ms</span>
                             {item.status === 'completed' && (
-                              <span className="w-2 h-2 rounded-full bg-emerald-400" title="Selesai" />
+                              <span className="w-2 h-2 rounded-full bg-emerald-400" title="Completed" />
                             )}
                             {item.status === 'failed' && (
-                              <span className="w-2 h-2 rounded-full bg-rose-400" title="Gagal" />
+                              <span className="w-2 h-2 rounded-full bg-rose-400" title="Failed" />
                             )}
                             {item.status === 'processing' && (
-                              <span className="w-2 h-2 rounded-full bg-sky-400 animate-pulse" title="Sedang diproses" />
+                              <span className="w-2 h-2 rounded-full bg-sky-400 animate-pulse" title="Processing" />
                             )}
                             {item.status === 'pending' && (
-                              <span className="w-2 h-2 rounded-full bg-slate-500" title="Menunggu antrian" />
+                              <span className="w-2 h-2 rounded-full bg-slate-500" title="Pending queue" />
                             )}
                           </div>
                         </div>
@@ -466,14 +466,14 @@ export const BatchResultsModal: React.FC<BatchResultsModalProps> = ({
 
                   {filteredItems.length === 0 && (
                     <div className="text-center py-12 text-slate-500 text-xs font-sans">
-                      Tidak ada pertanyaan yang sesuai filter.
+                      No queries match the filter.
                     </div>
                   )}
                 </div>
 
                 {/* Footer Count */}
                 <div className="p-2.5 border-t border-white/[0.06] text-[11px] font-mono text-slate-500 text-center">
-                  Menampilkan {filteredItems.length} dari {items.length} kueri
+                  Showing {filteredItems.length} of {items.length} queries
                 </div>
               </aside>
             )}
@@ -493,14 +493,14 @@ export const BatchResultsModal: React.FC<BatchResultsModalProps> = ({
                           type="button"
                           onClick={() => setIsSidebarOpen(true)}
                           className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 transition cursor-pointer"
-                          title="Buka kembali daftar pertanyaan di sebelah kiri"
+                          title="Expand queries list"
                         >
                           <PanelLeftOpen className="w-4 h-4 text-sky-400" />
-                          <span>Daftar</span>
+                          <span>List</span>
                         </button>
                       )}
                       <span className="font-mono text-sky-400 font-semibold">
-                        Pertanyaan {selectedIndex + 1} dari {items.length}
+                        Query {selectedIndex + 1} of {items.length}
                       </span>
                     </div>
 
@@ -515,10 +515,10 @@ export const BatchResultsModal: React.FC<BatchResultsModalProps> = ({
                             ? 'bg-slate-900 hover:bg-slate-800 border-slate-800 text-slate-200 cursor-pointer'
                             : 'bg-transparent border-transparent text-slate-600 cursor-not-allowed'
                         }`}
-                        title="Pertanyaan sebelumnya (Shortcut: Panah Kiri)"
+                        title="Previous query (Shortcut: Left Arrow)"
                       >
                         <ChevronLeft className="w-3.5 h-3.5" />
-                        <span className="hidden sm:inline">Sebelumnya</span>
+                        <span className="hidden sm:inline">Previous</span>
                       </button>
 
                       <button
@@ -530,9 +530,9 @@ export const BatchResultsModal: React.FC<BatchResultsModalProps> = ({
                             ? 'bg-slate-900 hover:bg-slate-800 border-slate-800 text-slate-200 cursor-pointer'
                             : 'bg-transparent border-transparent text-slate-600 cursor-not-allowed'
                         }`}
-                        title="Pertanyaan berikutnya (Shortcut: Panah Kanan)"
+                        title="Next query (Shortcut: Right Arrow)"
                       >
-                        <span className="hidden sm:inline">Berikutnya</span>
+                        <span className="hidden sm:inline">Next</span>
                         <ChevronRight className="w-3.5 h-3.5" />
                       </button>
                     </div>
@@ -542,10 +542,10 @@ export const BatchResultsModal: React.FC<BatchResultsModalProps> = ({
                   <div className="space-y-2">
                     <div className="flex items-center justify-between gap-3 flex-wrap">
                       <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-sky-950/70 border border-sky-800/50 text-sky-300">
-                        Pertanyaan #{selectedIndex + 1}
+                        Query #{selectedIndex + 1}
                       </span>
                       <span className="text-xs font-mono text-slate-400">
-                        Durasi Eksekusi: {selectedItem.duration_ms ? `${selectedItem.duration_ms} ms` : '—'}
+                        Execution Duration: {selectedItem.duration_ms ? `${selectedItem.duration_ms} ms` : '—'}
                       </span>
                     </div>
                     <h3 className="text-lg sm:text-2xl font-bold text-white font-sans leading-snug tracking-tight">
@@ -558,8 +558,8 @@ export const BatchResultsModal: React.FC<BatchResultsModalProps> = ({
                     <div className="p-5 rounded-2xl bg-sky-950/30 border border-sky-800/50 flex items-center gap-4 text-sky-200">
                       <div className="w-5 h-5 border-2 border-sky-400 border-t-transparent rounded-full animate-spin shrink-0" />
                       <div className="text-sm font-sans space-y-0.5">
-                        <span className="font-semibold block text-sky-300">Sedang Menganalisis Kueri</span>
-                        <span className="text-slate-400 text-xs">AI Agent sedang mengeksekusi SQL analitik dan menyusun sintesis jawaban...</span>
+                        <span className="font-semibold block text-sky-300">Analyzing Query</span>
+                        <span className="text-slate-400 text-xs">AI Agent is executing SQL queries and synthesizing report answer...</span>
                       </div>
                     </div>
                   )}
@@ -569,10 +569,10 @@ export const BatchResultsModal: React.FC<BatchResultsModalProps> = ({
                     <div className="p-5 rounded-2xl bg-rose-950/40 border border-rose-800/60 text-rose-200 space-y-3 font-sans">
                       <div className="flex items-center gap-2 text-rose-300 font-semibold text-sm">
                         <AlertTriangle className="w-4 h-4 text-rose-400" />
-                        <span>Eksekusi Kueri Gagal</span>
+                        <span>Query Execution Failed</span>
                       </div>
                       <div className="font-mono text-xs bg-black/50 p-3 rounded-xl border border-rose-900/60 text-rose-200 whitespace-pre-wrap leading-relaxed">
-                        {selectedItem.error || 'Terjadi kesalahan teknis saat mengeksekusi kueri analitik.'}
+                        {selectedItem.error || 'A technical error occurred while executing the analytical query.'}
                       </div>
                     </div>
                   )}
@@ -583,12 +583,12 @@ export const BatchResultsModal: React.FC<BatchResultsModalProps> = ({
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2 text-xs font-bold text-slate-300 font-sans uppercase tracking-wider">
                           <Sparkles className="w-3.5 h-3.5 text-sky-400" />
-                          <span>Jawaban & Kesimpulan Analitik</span>
+                          <span>Analytical Findings &amp; Summary</span>
                         </div>
                         {selectedItem.answer_text && (
                           <button
                             type="button"
-                            onClick={() => handleCopy(selectedItem.query_id, selectedItem.answer_text!, 'Jawaban')}
+                            onClick={() => handleCopy(selectedItem.query_id, selectedItem.answer_text!, 'Answer')}
                             className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs text-slate-300 hover:text-sky-300 transition cursor-pointer font-sans"
                           >
                             {copiedId === selectedItem.query_id ? (
@@ -596,7 +596,7 @@ export const BatchResultsModal: React.FC<BatchResultsModalProps> = ({
                             ) : (
                               <Copy className="w-3.5 h-3.5" />
                             )}
-                            <span>Salin Jawaban</span>
+                            <span>Copy Answer</span>
                           </button>
                         )}
                       </div>
@@ -605,7 +605,7 @@ export const BatchResultsModal: React.FC<BatchResultsModalProps> = ({
                       <div className="p-6 sm:p-8 rounded-2xl bg-[#0b1629] border border-white/[0.08] text-slate-100 shadow-lg overflow-x-auto">
                         {renderRichMarkdown(selectedItem.answer_text) || (
                           <span className="text-slate-400 italic text-sm font-sans">
-                            Analisis selesai tanpa ringkasan teks naratif tambahan.
+                            Analysis completed without additional narrative summary.
                           </span>
                         )}
                       </div>
@@ -626,11 +626,11 @@ export const BatchResultsModal: React.FC<BatchResultsModalProps> = ({
                         >
                           <div className="flex items-center gap-2">
                             <Database className="w-4 h-4 text-sky-400" />
-                            <span className="font-semibold">Kueri SQL yang Dijalankan ({selectedItem.sql_queries.length})</span>
+                            <span className="font-semibold">Executed SQL Queries ({selectedItem.sql_queries.length})</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <span className="text-[11px] text-slate-500 font-mono">
-                              {openSqlSections[selectedItem.query_id] ? 'Tutup' : 'Lihat SQL'}
+                              {openSqlSections[selectedItem.query_id] ? 'Close' : 'View SQL'}
                             </span>
                             {openSqlSections[selectedItem.query_id] ? (
                               <ChevronUp className="w-4 h-4 text-slate-400" />
@@ -654,7 +654,7 @@ export const BatchResultsModal: React.FC<BatchResultsModalProps> = ({
                                 ) : (
                                   <Copy className="w-3 h-3" />
                                 )}
-                                <span>Salin SQL</span>
+                                <span>Copy SQL</span>
                               </button>
                             </div>
                             <pre className="p-3.5 rounded-xl bg-black/60 border border-slate-800 text-xs font-mono text-sky-300 overflow-x-auto whitespace-pre-wrap leading-relaxed">
@@ -676,12 +676,12 @@ export const BatchResultsModal: React.FC<BatchResultsModalProps> = ({
                           <div className="flex items-center gap-2">
                             <TableIcon className="w-4 h-4 text-emerald-400" />
                             <span className="font-semibold">
-                              Tabel Data Hasil Query ({selectedItem.tables[0].rows?.length || 0} baris)
+                              Query Result Data Table ({selectedItem.tables[0].rows?.length || 0} rows)
                             </span>
                           </div>
                           <div className="flex items-center gap-2">
                             <span className="text-[11px] text-slate-500 font-mono">
-                              {openTableSections[selectedItem.query_id] ? 'Tutup' : 'Lihat Data'}
+                              {openTableSections[selectedItem.query_id] ? 'Close' : 'View Data'}
                             </span>
                             {openTableSections[selectedItem.query_id] ? (
                               <ChevronUp className="w-4 h-4 text-slate-400" />
@@ -723,14 +723,14 @@ export const BatchResultsModal: React.FC<BatchResultsModalProps> = ({
                 </div>
               ) : (
                 <div className="text-center py-24 text-slate-500 text-sm font-sans">
-                  Pilih salah satu pertanyaan di panel sebelah kiri untuk membaca jawaban.
+                  Select a query from the left panel to read the answer.
                 </div>
               )}
             </main>
           </div>
         ) : (
           /* ==============================================================================
-           * Mode 2: Sequential Full Document View ("Semua Jawaban")
+           * Mode 2: Sequential Full Document View ("Full Document")
            * ============================================================================== */
           <div
             ref={docScrollRef}
@@ -741,7 +741,7 @@ export const BatchResultsModal: React.FC<BatchResultsModalProps> = ({
               <div className="pb-6 border-b border-white/[0.08] space-y-3">
                 <div className="flex items-center justify-between gap-3 flex-wrap">
                   <h3 className="text-xl sm:text-2xl font-bold text-white font-sans tracking-tight">
-                    Laporan Lengkap Hasil Analisis
+                    Complete Analytics Report
                   </h3>
                   <button
                     type="button"
@@ -749,16 +749,16 @@ export const BatchResultsModal: React.FC<BatchResultsModalProps> = ({
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs text-sky-300 transition cursor-pointer font-sans"
                   >
                     <Copy className="w-3.5 h-3.5" />
-                    <span>Salin Laporan Markdown</span>
+                    <span>Copy Markdown Report</span>
                   </button>
                 </div>
                 <p className="text-xs text-slate-400 font-sans leading-relaxed">
-                  Laporan analisis untuk batch <span className="font-mono text-sky-300">{liveBatch.batch_id}</span> memuat seluruh {items.length} pertanyaan dan jawaban analitik terverifikasi.
+                  Analytics report for batch <span className="font-mono text-sky-300">{liveBatch.batch_id}</span> includes all {items.length} verified questions and analytical answers.
                 </p>
 
                 {/* Quick Table of Contents Pills */}
                 <div className="pt-2 flex items-center gap-2 flex-wrap">
-                  <span className="text-[11px] font-mono text-slate-500 uppercase tracking-wider">Lompat ke:</span>
+                  <span className="text-[11px] font-mono text-slate-500 uppercase tracking-wider">Jump to:</span>
                   {items.map((item, idx) => (
                     <button
                       key={item.query_id}
@@ -785,7 +785,7 @@ export const BatchResultsModal: React.FC<BatchResultsModalProps> = ({
                     <div className="space-y-1.5">
                       <div className="flex items-center justify-between gap-3">
                         <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-sky-950/70 border border-sky-800/50 text-sky-300">
-                          Pertanyaan #{idx + 1}
+                          Query #{idx + 1}
                         </span>
                         <span
                           className={`px-2 py-0.5 rounded text-[10px] font-mono shrink-0 uppercase tracking-wider ${
@@ -814,8 +814,8 @@ export const BatchResultsModal: React.FC<BatchResultsModalProps> = ({
                     {/* Failure Message */}
                     {item.status === 'failed' && (
                       <div className="p-4 rounded-xl bg-rose-950/40 border border-rose-800/60 text-rose-200 text-xs font-mono whitespace-pre-wrap">
-                        <span className="font-semibold block text-rose-300 mb-1">Galat:</span>
-                        {item.error || 'Eksekusi kueri gagal.'}
+                        <span className="font-semibold block text-rose-300 mb-1">Error:</span>
+                        {item.error || 'Query execution failed.'}
                       </div>
                     )}
 
@@ -831,10 +831,10 @@ export const BatchResultsModal: React.FC<BatchResultsModalProps> = ({
                             >
                               <div className="flex items-center gap-2">
                                 <Database className="w-3.5 h-3.5 text-sky-400" />
-                                <span>Kueri SQL ({item.sql_queries.length})</span>
+                                <span>SQL Queries ({item.sql_queries.length})</span>
                               </div>
                               <span className="text-[11px] font-mono text-slate-500">
-                                {openSqlSections[`doc_${item.query_id}`] ? 'Sembunyikan' : 'Tampilkan'}
+                                {openSqlSections[`doc_${item.query_id}`] ? 'Hide' : 'Show'}
                               </span>
                             </button>
                             {openSqlSections[`doc_${item.query_id}`] && (
@@ -858,7 +858,7 @@ export const BatchResultsModal: React.FC<BatchResultsModalProps> = ({
                   className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs text-slate-300 font-sans cursor-pointer transition"
                 >
                   <ArrowUp className="w-3.5 h-3.5" />
-                  <span>Kembali ke Atas</span>
+                  <span>Back to Top</span>
                 </button>
               </div>
             </div>
@@ -870,8 +870,8 @@ export const BatchResultsModal: React.FC<BatchResultsModalProps> = ({
          * ============================================================================== */}
         <div className="px-6 py-3 border-t border-white/[0.08] bg-[#050b14] flex items-center justify-between text-xs font-mono text-slate-400 shrink-0 print:hidden">
           <div className="flex items-center gap-2">
-            <span>Shortcut: [ESC] Tutup</span>
-            {viewMode === 'split' && <span className="hidden sm:inline">• [← / →] Pindah Pertanyaan</span>}
+            <span>Shortcut: [ESC] Close</span>
+            {viewMode === 'split' && <span className="hidden sm:inline">• [← / →] Navigate Queries</span>}
           </div>
           <div className="flex items-center gap-3">
             <button
@@ -879,7 +879,7 @@ export const BatchResultsModal: React.FC<BatchResultsModalProps> = ({
               onClick={onClose}
               className="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-sans text-xs transition cursor-pointer"
             >
-              Tutup Laporan
+              Close Report
             </button>
           </div>
         </div>

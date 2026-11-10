@@ -43,28 +43,28 @@ const PRESETS: QueryPreset[] = [
     id: 'ecommerce',
     label: 'E-Commerce Baseline',
     queries: [
-      'Berapa total omzet keseluruhan pesanan delivered?',
-      'Tampilkan 5 kategori produk dengan volume penjualan tertinggi',
-      'Berapa rata-rata nilai transaksi (AOV) per pesanan?',
-      'Berapa jumlah pesanan yang statusnya canceled?',
+      'What is the overall total revenue of delivered orders?',
+      'Show the top 5 product categories by sales volume',
+      'What is the average order value (AOV)?',
+      'How many orders have been canceled?',
     ],
   },
   {
     id: 'logistics',
     label: 'Logistics & SLA',
     queries: [
-      'Berapa rata-rata durasi pengiriman pesanan dalam hitungan hari?',
-      'Sebutkan 3 negara bagian dengan volume pesanan terbanyak',
-      'Berapa persentase pesanan yang tiba sebelum estimasi tanggal terkirim?',
+      'What is the average delivery duration in days?',
+      'List the top 3 states with the highest order volume',
+      'What percentage of orders arrived before estimated delivery date?',
     ],
   },
   {
     id: 'payments',
     label: 'Payment Distributions',
     queries: [
-      'Metode pembayaran apa yang paling sering digunakan pelanggan?',
-      'Berapa rata-rata cicilan (installments) untuk pembayaran kartu kredit?',
-      'Tampilkan rincian nilai transaksi berdasarkan metode pembayaran',
+      'Which payment method is most frequently used by customers?',
+      'What is the average number of installments for credit card payments?',
+      'Show transaction value breakdown by payment method',
     ],
   },
 ];
@@ -114,7 +114,7 @@ export const BatchRunner: React.FC<BatchRunnerProps> = ({
     setIsRefreshing(true);
     await fetchStatusAndJobs();
     setIsRefreshing(false);
-    showToast('Antrian & status batch diperbarui');
+    showToast('Queue and batch status refreshed');
   };
 
   const handleSubmitBatch = async (e: React.FormEvent) => {
@@ -125,7 +125,7 @@ export const BatchRunner: React.FC<BatchRunnerProps> = ({
       .filter((q) => q.length > 0);
 
     if (cleanQueries.length === 0) {
-      showToast('Masukkan minimal satu pertanyaan analitik');
+      showToast('Enter at least one analytical question');
       return;
     }
 
@@ -139,12 +139,12 @@ export const BatchRunner: React.FC<BatchRunnerProps> = ({
         model: activeModel,
         session_id: sessionId,
       });
-      showToast(`Pekerjaan batch ${res.batch_id} dijadwalkan`);
+      showToast(`Batch job ${res.batch_id} scheduled`);
       setQueriesInput('');
       setExpandedBatchId(res.batch_id);
       await fetchStatusAndJobs();
     } catch (err: any) {
-      showToast(`Gagal menjadwalkan batch: ${err.message}`);
+      showToast(`Failed to schedule batch: ${err.message}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -167,7 +167,7 @@ export const BatchRunner: React.FC<BatchRunnerProps> = ({
               typeof item === 'string' ? item : item.query || JSON.stringify(item)
             );
             setQueriesInput(list.join('\n'));
-            showToast(`${list.length} pertanyaan dimuat dari JSON`);
+            showToast(`${list.length} questions loaded from JSON`);
             return;
           }
         } catch {
@@ -186,7 +186,7 @@ export const BatchRunner: React.FC<BatchRunnerProps> = ({
         );
 
       setQueriesInput(lines.join('\n'));
-      showToast(`${lines.length} pertanyaan dimuat dari file`);
+      showToast(`${lines.length} questions loaded from file`);
     };
     reader.readAsText(file);
     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -196,7 +196,7 @@ export const BatchRunner: React.FC<BatchRunnerProps> = ({
     navigator.clipboard.writeText(sql);
     setCopiedQueryId(queryId);
     setTimeout(() => setCopiedQueryId(null), 2000);
-    showToast('SQL disalin ke clipboard');
+    showToast('SQL copied to clipboard');
   };
 
   const handleDownload = (batchId: string, format: 'csv' | 'jsonl') => {
@@ -223,7 +223,7 @@ export const BatchRunner: React.FC<BatchRunnerProps> = ({
               </h1>
             </div>
             <p className="text-xs text-slate-400 max-w-2xl font-sans leading-relaxed">
-              Pemrosesan analitik massal asinkronus terpisah dari HTTP web server menggunakan worker queue transaksional PostgreSQL.
+              Asynchronous bulk analytical processing isolated from the HTTP web server using transactional PostgreSQL worker queues.
             </p>
           </div>
 
@@ -235,7 +235,7 @@ export const BatchRunner: React.FC<BatchRunnerProps> = ({
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-slate-700/60 text-xs text-slate-300 transition cursor-pointer"
             >
               <RotateCcw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
-              <span>Segarkan</span>
+              <span>Refresh</span>
             </button>
             <div className="px-3 py-1 rounded-lg bg-slate-900/90 border border-slate-800 text-[11px] font-mono text-slate-300 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-400" />
@@ -248,25 +248,25 @@ export const BatchRunner: React.FC<BatchRunnerProps> = ({
         <div className="bg-[#0b1526] border border-white/[0.07] rounded-xl px-4 py-3 flex flex-wrap items-center justify-between gap-y-3 gap-x-6 text-xs font-mono shadow-sm">
           <div className="flex items-center gap-2 text-slate-400">
             <Server className="w-3.5 h-3.5 text-slate-400" />
-            <span>Worker Aktif:</span>
+            <span>Active Workers:</span>
             <span className="text-white font-semibold">{queueStats?.active_workers ?? 1}</span>
           </div>
           <div className="h-4 w-px bg-slate-800 hidden md:block" />
           <div className="flex items-center gap-2 text-slate-400">
             <Clock className="w-3.5 h-3.5 text-slate-400" />
-            <span>Dalam Antrian:</span>
+            <span>In Queue:</span>
             <span className="text-slate-200 font-semibold">{queueStats?.queued ?? 0}</span>
           </div>
           <div className="h-4 w-px bg-slate-800 hidden md:block" />
           <div className="flex items-center gap-2 text-slate-400">
             <Cpu className="w-3.5 h-3.5 text-sky-400" />
-            <span>Sedang Berjalan:</span>
+            <span>Running:</span>
             <span className="text-sky-300 font-semibold">{queueStats?.processing ?? 0}</span>
           </div>
           <div className="h-4 w-px bg-slate-800 hidden md:block" />
           <div className="flex items-center gap-2 text-slate-400">
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Selesai:</span>
+            <span>Completed:</span>
             <span className="text-emerald-300 font-semibold">{queueStats?.completed ?? 0}</span>
           </div>
           <div className="h-4 w-px bg-slate-800 hidden md:block" />
@@ -284,7 +284,7 @@ export const BatchRunner: React.FC<BatchRunnerProps> = ({
             <div className="flex items-center justify-between border-b border-white/[0.06] pb-3">
               <h2 className="text-sm font-semibold text-white tracking-tight flex items-center gap-2">
                 <Play className="w-3.5 h-3.5 text-sky-400" />
-                <span>Kirim Batch Pertanyaan</span>
+                <span>Submit Batch Questions</span>
               </h2>
               <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-900 text-slate-400 border border-slate-800">
                 Queue Worker
@@ -293,7 +293,7 @@ export const BatchRunner: React.FC<BatchRunnerProps> = ({
 
             {/* Presets */}
             <div className="space-y-1.5">
-              <div className="text-[11px] font-medium text-slate-400">Preset Pertanyaan:</div>
+              <div className="text-[11px] font-medium text-slate-400">Question Presets:</div>
               <div className="flex flex-wrap gap-1.5">
                 {PRESETS.map((p) => (
                   <button
@@ -301,7 +301,7 @@ export const BatchRunner: React.FC<BatchRunnerProps> = ({
                     type="button"
                     onClick={() => {
                       setQueriesInput(p.queries.join('\n'));
-                      showToast(`Preset "${p.label}" diterapkan`);
+                      showToast(`Preset "${p.label}" applied`);
                     }}
                     className="text-[11px] font-mono px-2.5 py-1 rounded-md bg-slate-900/80 hover:bg-slate-800 text-slate-300 border border-slate-800 transition cursor-pointer"
                   >
@@ -315,14 +315,14 @@ export const BatchRunner: React.FC<BatchRunnerProps> = ({
               {/* Queries Textarea */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between text-[11px] text-slate-400 font-sans">
-                  <label htmlFor="batch-queries-input">Daftar Pertanyaan (1 per baris):</label>
+                  <label htmlFor="batch-queries-input">Question List (1 per line):</label>
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
                     className="text-sky-400 hover:text-sky-300 flex items-center gap-1 cursor-pointer transition"
                   >
                     <Upload className="w-3 h-3" />
-                    <span>Unggah File</span>
+                    <span>Upload File</span>
                   </button>
                   <input
                     ref={fileInputRef}
@@ -337,7 +337,7 @@ export const BatchRunner: React.FC<BatchRunnerProps> = ({
                   rows={8}
                   value={queriesInput}
                   onChange={(e) => setQueriesInput(e.target.value)}
-                  placeholder="Berapa total transaksi delivered per bulan?&#10;Tampilkan 5 pelanggan dengan transaksi tertinggi&#10;Berapa rata-rata durasi pengiriman pesanan?"
+                  placeholder="What is total delivered revenue per month?&#10;Show top 5 customers by purchase volume&#10;What is the average order delivery duration?"
                   className="w-full p-3 rounded-lg bg-[#070d18] border border-slate-800 text-xs text-slate-200 placeholder-slate-600 font-mono focus:outline-none focus:border-sky-500/60 leading-relaxed resize-y"
                 />
               </div>
@@ -374,8 +374,8 @@ export const BatchRunner: React.FC<BatchRunnerProps> = ({
 
                 <div className="space-y-1">
                   <div className="flex items-center justify-between text-[11px] text-slate-400">
-                    <span>Konkurensi:</span>
-                    <span className="font-mono text-sky-400">{concurrency} paralel</span>
+                    <span>Concurrency:</span>
+                    <span className="font-mono text-sky-400">{concurrency} parallel</span>
                   </div>
                   <div className="flex gap-1 pt-0.5">
                     {[1, 2, 3, 5].map((lvl) => (
@@ -405,12 +405,12 @@ export const BatchRunner: React.FC<BatchRunnerProps> = ({
                 {isSubmitting ? (
                   <>
                     <RotateCcw className="w-3.5 h-3.5 animate-spin" />
-                    <span>Menjadwalkan...</span>
+                    <span>Scheduling...</span>
                   </>
                 ) : (
                   <>
                     <Play className="w-3.5 h-3.5 fill-current" />
-                    <span>Jalankan Antrian Batch</span>
+                    <span>Run Batch Queue</span>
                   </>
                 )}
               </button>
@@ -423,7 +423,7 @@ export const BatchRunner: React.FC<BatchRunnerProps> = ({
               <div className="flex items-center gap-2">
                 <FileSpreadsheet className="w-4 h-4 text-slate-400" />
                 <h2 className="text-sm font-semibold text-white tracking-tight">
-                  Riwayat Pekerjaan ({batchJobs.length})
+                  Job History ({batchJobs.length})
                 </h2>
               </div>
 
@@ -449,9 +449,9 @@ export const BatchRunner: React.FC<BatchRunnerProps> = ({
             {filteredBatches.length === 0 ? (
               <div className="bg-[#0b1526] border border-white/[0.06] rounded-xl p-8 text-center text-slate-400 text-xs font-sans">
                 <Layers className="w-8 h-8 text-slate-600 mx-auto mb-2.5 opacity-60" />
-                <p className="font-medium text-slate-300">Belum ada riwayat batch dengan filter ini.</p>
+                <p className="font-medium text-slate-300">No batch history matches this filter.</p>
                 <p className="text-slate-500 text-[11px] mt-1">
-                  Kirim pertanyaan melalui formulir di sebelah kiri untuk memulai eksekusi.
+                  Submit questions using the form on the left to start execution.
                 </p>
               </div>
             ) : (
@@ -500,10 +500,10 @@ export const BatchRunner: React.FC<BatchRunnerProps> = ({
                             type="button"
                             onClick={() => setSelectedBatchId(job.batch_id)}
                             className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-medium text-xs shadow-xs transition cursor-pointer"
-                            title="Buka laporan jawaban interaktif di layar"
+                            title="Open interactive answers report"
                           >
                             <FileText className="w-3.5 h-3.5" />
-                            <span>Buka Hasil Jawaban</span>
+                            <span>View Results</span>
                           </button>
 
                           <button
@@ -514,9 +514,9 @@ export const BatchRunner: React.FC<BatchRunnerProps> = ({
                                 ? 'bg-slate-800 text-sky-300 border-slate-700'
                                 : 'bg-slate-900 hover:bg-slate-800 text-slate-400 border-slate-800'
                             }`}
-                            title={isExpanded ? 'Tutup intip' : 'Intip rincian'}
+                            title={isExpanded ? 'Close preview' : 'Peek details'}
                           >
-                            <span>{isExpanded ? 'Tutup' : 'Intip'}</span>
+                            <span>{isExpanded ? 'Close' : 'Peek'}</span>
                             {isExpanded ? (
                               <ChevronDown className="w-3 h-3" />
                             ) : (
@@ -550,12 +550,12 @@ export const BatchRunner: React.FC<BatchRunnerProps> = ({
                       <div className="space-y-1.5">
                         <div className="flex items-center justify-between text-[11px] font-mono text-slate-400">
                           <span>
-                            Progress: {job.completed_queries + job.failed_queries}/{job.total_queries} kueri ({progressPct}%)
+                            Progress: {job.completed_queries + job.failed_queries}/{job.total_queries} queries ({progressPct}%)
                           </span>
                           <span>
                             {job.total_duration_sec
-                              ? `Waktu: ${job.total_duration_sec}s`
-                              : 'Sedang mengeksekusi...'}
+                              ? `Duration: ${job.total_duration_sec}s`
+                              : 'Executing...'}
                           </span>
                         </div>
                         <div className="w-full h-1.5 rounded-full bg-slate-900 overflow-hidden border border-slate-800/60">
@@ -576,7 +576,7 @@ export const BatchRunner: React.FC<BatchRunnerProps> = ({
                       {isExpanded && (
                         <div className="mt-3 pt-3 border-t border-white/[0.06] space-y-2.5 font-sans">
                           <div className="text-[11px] font-medium text-slate-400">
-                            Rincian Eksekusi Kueri ({job.items?.length || 0}):
+                            Query Execution Details ({job.items?.length || 0}):
                           </div>
                           <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
                             {job.items?.map((item) => (
@@ -612,7 +612,7 @@ export const BatchRunner: React.FC<BatchRunnerProps> = ({
                                       onClick={() => setSelectedBatchId(job.batch_id)}
                                       className="text-[11px] font-sans text-sky-400 hover:text-sky-300 hover:underline cursor-pointer inline-flex items-center gap-1"
                                     >
-                                      <span>Buka Laporan Lengkap di Modal</span>
+                                      <span>Open Full Report in Modal</span>
                                       <span aria-hidden="true">&rarr;</span>
                                     </button>
                                   </div>
@@ -627,7 +627,7 @@ export const BatchRunner: React.FC<BatchRunnerProps> = ({
                                       type="button"
                                       onClick={() => handleCopySQL(item.query_id, item.sql_queries![0])}
                                       className="absolute top-1.5 right-1.5 p-1 rounded bg-slate-800/80 hover:bg-slate-700 text-slate-300 opacity-0 group-hover:opacity-100 transition cursor-pointer"
-                                      title="Salin SQL"
+                                      title="Copy SQL"
                                     >
                                       {copiedQueryId === item.query_id ? (
                                         <Check className="w-3 h-3 text-emerald-400" />

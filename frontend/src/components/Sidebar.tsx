@@ -263,12 +263,12 @@ const SidebarComponent: React.FC<SidebarProps> = ({
             leftIcon={<Plus className="w-4 h-4 text-sky-400 shrink-0" />}
             className="justify-start border-slate-700/60"
           >
-            Percakapan Baru
+            New Chat
           </Button>
         </div>
 
         {/* Primary Workspace Navigation Tabs (Replaces top navbar tabs) */}
-        <nav aria-label="Navigasi Utama" className="px-3 py-1 space-y-1 select-none">
+        <nav aria-label="Main Navigation" className="px-3 py-1 space-y-1 select-none">
           {/* Percakapan */}
           <button
             type="button"
@@ -283,7 +283,7 @@ const SidebarComponent: React.FC<SidebarProps> = ({
           >
             <div className="flex items-center gap-2.5">
               <MessageSquare className={`w-4 h-4 shrink-0 ${activeTab === 'chat' ? 'text-sky-400' : 'text-slate-400'}`} />
-              <span className="font-sans">Percakapan</span>
+              <span className="font-sans">Analytics Chat</span>
             </div>
           </button>
 
@@ -329,18 +329,18 @@ const SidebarComponent: React.FC<SidebarProps> = ({
           </button>
         </nav>
 
-        {/* Section Header: Riwayat Sesi (Recents) */}
+        {/* Section Header: Session History */}
         <div className="mt-2 pt-2.5 px-3.5 pb-1 flex items-center justify-between text-[10px] font-mono text-slate-400 select-none">
           <div className="flex items-center gap-1.5 uppercase tracking-wider font-semibold">
-            <span>Riwayat Sesi</span>
+            <span>Session History</span>
             <span className="text-slate-500 font-normal">({sessions.length})</span>
           </div>
           <button
             type="button"
             onClick={onRefreshSessions}
-            aria-label="Muat ulang riwayat sesi"
+            aria-label="Refresh session history"
             className="p-1 rounded-md text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition cursor-pointer"
-            title="Muat Ulang Riwayat"
+            title="Refresh History"
           >
             <RefreshCw className="w-3.5 h-3.5" />
           </button>
@@ -350,8 +350,8 @@ const SidebarComponent: React.FC<SidebarProps> = ({
         <div className="flex-1 overflow-y-auto px-2 py-1 space-y-1">
           {sessions.length === 0 ? (
             <div className="p-6 text-center text-xs text-[#94a3b8]">
-              <p className="font-serif italic text-sm text-[#f8fafc]">Belum ada riwayat</p>
-              <p className="text-[11px] mt-1">Mulai ajukan pertanyaan data analitik pertama Anda.</p>
+              <p className="font-serif italic text-sm text-[#f8fafc]">No history yet</p>
+              <p className="text-[11px] mt-1">Ask your first data analysis question to get started.</p>
             </div>
           ) : (
             sessions.map((s) => {
@@ -384,25 +384,25 @@ const SidebarComponent: React.FC<SidebarProps> = ({
                         }}
                         autoFocus
                         maxLength={100}
-                        aria-label="Nama sesi percakapan"
-                        placeholder="Nama sesi..."
+                        aria-label="Session title"
+                        placeholder="Session title..."
                         className="w-full bg-[#080f1d] border border-clay-500/60 rounded-lg px-2 py-1 text-xs text-[#f8fafc] focus:outline-none focus:ring-1 focus:ring-clay-500 shadow-inner"
                       />
                       <button
                         type="submit"
                         disabled={!editTitle.trim()}
-                        aria-label="Simpan perubahan nama sesi"
+                        aria-label="Save session title"
                         className="p-1 rounded-md text-emerald-400 hover:text-emerald-300 hover:bg-emerald-950/50 disabled:opacity-30 transition cursor-pointer shrink-0"
-                        title="Simpan nama"
+                        title="Save title"
                       >
                         <Check className="w-3.5 h-3.5" />
                       </button>
                       <button
                         type="button"
                         onClick={handleCancelRename}
-                        aria-label="Batal ubah nama sesi"
+                        aria-label="Cancel renaming"
                         className="p-1 rounded-md text-[#94a3b8] hover:text-[#f8fafc] hover:bg-[#182a47] transition cursor-pointer shrink-0"
-                        title="Batal"
+                        title="Cancel"
                       >
                         <X className="w-3.5 h-3.5" />
                       </button>
@@ -416,10 +416,10 @@ const SidebarComponent: React.FC<SidebarProps> = ({
                         />
                         <div className="min-w-0 flex-1">
                           <div className="font-medium truncate leading-tight">
-                            {s.title || 'Percakapan'}
+                            {s.title || 'Conversation'}
                           </div>
                           <div className="text-[10px] text-[#94a3b8] mt-1 font-mono flex items-center gap-1.5">
-                            <span>{s.total_turns} pesan</span>
+                            <span>{s.total_turns} {s.total_turns === 1 ? 'turn' : 'turns'}</span>
                             <span>•</span>
                             <span>{formatSessionDate(s.last_activity || s.created_at)}</span>
                           </div>
@@ -430,9 +430,9 @@ const SidebarComponent: React.FC<SidebarProps> = ({
                         <button
                           type="button"
                           onClick={(e) => handleStartRename(e, s.session_id, s.title)}
-                          aria-label={`Ubah nama sesi ${s.title || 'percakapan'}`}
+                          aria-label={`Rename session ${s.title || 'conversation'}`}
                           className="p-1 rounded-lg text-[#94a3b8] hover:text-clay-300 hover:bg-[#1e3557] transition cursor-pointer"
-                          title="Ubah nama sesi"
+                          title="Rename session"
                         >
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
@@ -442,9 +442,9 @@ const SidebarComponent: React.FC<SidebarProps> = ({
                             e.stopPropagation();
                             onDeleteSession(s.session_id, s.title);
                           }}
-                          aria-label={`Hapus sesi ${s.title || 'percakapan'}`}
+                          aria-label={`Delete session ${s.title || 'conversation'}`}
                           className="p-1 rounded-lg text-[#94a3b8] hover:text-rose-400 hover:bg-rose-950/40 transition shrink-0 cursor-pointer"
-                          title="Hapus sesi"
+                          title="Delete session"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>

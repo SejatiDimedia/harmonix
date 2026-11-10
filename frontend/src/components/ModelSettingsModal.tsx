@@ -120,7 +120,7 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
       });
       onClose();
     } catch (err: any) {
-      setErrorFeedback(err.message || 'Gagal menyimpan konfigurasi model');
+      setErrorFeedback(err.message || 'Failed to save model configuration');
     } finally {
       setIsSaving(false);
     }
@@ -137,19 +137,19 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
       if (openrouterKey.trim()) payload.openrouter_api_key = openrouterKey.trim();
 
       if (Object.keys(payload).length === 0) {
-        setErrorFeedback('Silakan masukkan minimal satu API Key untuk disimpan.');
+        setErrorFeedback('Please enter at least one API Key to save.');
         setIsSaving(false);
         return;
       }
 
       await updateApiKeysMutation.mutateAsync(payload);
-      setSuccessFeedback('Kunci API berhasil disimpan, diperbarui di .env, dan langsung aktif!');
+      setSuccessFeedback('API Keys successfully saved, updated in .env, and immediately active!');
       setGroqKey('');
       setGeminiKey('');
       setOpenrouterKey('');
       refetchApiKeys();
     } catch (err: any) {
-      setErrorFeedback(err.message || 'Gagal menyimpan kunci API');
+      setErrorFeedback(err.message || 'Failed to save API keys');
     } finally {
       setIsSaving(false);
     }
@@ -160,14 +160,14 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
   const openrouterInfo = apiKeysData?.keys?.openrouter;
 
   const modalTabs = [
-    { id: 'models', label: 'Pilihan Model Aktif', icon: <Cpu className="w-4 h-4" /> },
-    { id: 'keys', label: 'Kunci API (API Keys)', icon: <Key className="w-4 h-4" /> },
+    { id: 'models', label: 'Active Models', icon: <Cpu className="w-4 h-4" /> },
+    { id: 'keys', label: 'API Keys', icon: <Key className="w-4 h-4" /> },
   ];
 
   const modalFooter = (
     <div className="flex items-center justify-end gap-3 w-full">
       <Button variant="ghost" size="sm" onClick={onClose}>
-        Batal
+        Cancel
       </Button>
       {modalTab === 'models' ? (
         <Button
@@ -177,7 +177,7 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
           onClick={handleSaveModels}
           leftIcon={<CheckCircle2 className="w-4 h-4" />}
         >
-          Simpan &amp; Terapkan Model
+          Save &amp; Apply Models
         </Button>
       ) : (
         <Button
@@ -188,7 +188,7 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
           onClick={handleSaveKeys}
           leftIcon={<Key className="w-4 h-4" />}
         >
-          Simpan Kunci API
+          Save API Keys
         </Button>
       )}
     </div>
@@ -199,8 +199,8 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
       isOpen={isOpen}
       onClose={onClose}
       size="2xl"
-      title="Kelola Model LLM & Kunci API"
-      description="Konfigurasi provider, model aktif, dan API key langsung dari antarmuka web"
+      title="Manage LLM Models & API Keys"
+      description="Configure providers, active models, and API keys directly from the interface"
       icon={<Sliders className="w-5 h-5 text-sky-400" />}
       footer={modalFooter}
     >
@@ -238,7 +238,7 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
             {/* Provider status cards */}
             <div>
               <label className="block text-xs font-mono uppercase tracking-wider text-[#94a3b8] mb-2.5 select-none">
-                Status Provider Terhubung
+                Connected Provider Status
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                 {catalog.providers.map((p) => (
@@ -253,7 +253,7 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
                         {p.provider.toUpperCase()}
                       </span>
                       <Badge variant={p.is_ready ? 'success' : 'neutral'} size="xs" dot>
-                        {p.is_ready ? 'SIAP' : 'OFFLINE'}
+                        {p.is_ready ? 'READY' : 'OFFLINE'}
                       </Badge>
                     </div>
                     <span className={`text-[11px] truncate font-mono block ${p.is_ready ? 'text-sky-300/80' : 'text-[#64748b]'}`}>
@@ -268,7 +268,7 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
             <div className="space-y-3 pt-4 border-t border-[#1e3557]">
               <div className="flex items-center gap-2">
                 <h4 className="text-sm font-medium text-[#f8fafc]">
-                  Model Primary Analyst (Text-to-SQL)
+                  Primary Analyst Model (Text-to-SQL)
                 </h4>
               </div>
 
@@ -279,12 +279,12 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
                   onChange={(e) => handleAnalystProvChange(e.target.value)}
                   options={catalog.providers.map((p) => ({
                     value: p.provider,
-                    label: `${p.display_name} ${p.is_ready ? '' : '(Key Belum Ada)'}`,
+                    label: `${p.display_name} ${p.is_ready ? '' : '(Key Missing)'}`,
                   }))}
                 />
 
                 <Select
-                  label="Model Pilihan"
+                  label="Selected Model"
                   value={analystMod}
                   onChange={(e) => setAnalystMod(e.target.value)}
                   options={(currentAnalystProviderData?.available_models || []).map((m) => ({
@@ -296,8 +296,8 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
 
               {analystModelData && (
                 <p className="text-[11px] text-[#94a3b8] font-mono">
-                  {analystModelData.description} • Konteks:{' '}
-                  {(analystModelData.context_length || 8192).toLocaleString()} token
+                  {analystModelData.description} • Context:{' '}
+                  {(analystModelData.context_length || 8192).toLocaleString()} tokens
                 </p>
               )}
             </div>
@@ -306,7 +306,7 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
             <div className="space-y-3 pt-4 border-t border-[#1e3557]">
               <div className="flex items-center gap-2">
                 <h4 className="text-sm font-medium text-[#f8fafc]">
-                  Model Data Auditor (Verifikasi Silang)
+                  Data Auditor Model (Cross-Verification)
                 </h4>
               </div>
 
@@ -319,13 +319,13 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
                     { value: 'auto', label: 'Auto (Model Diversity)' },
                     ...catalog.providers.map((p) => ({
                       value: p.provider,
-                      label: `${p.display_name} ${p.is_ready ? '' : '(Key Belum Ada)'}`,
+                      label: `${p.display_name} ${p.is_ready ? '' : '(Key Missing)'}`,
                     })),
                   ]}
                 />
 
                 <Select
-                  label="Model Pilihan"
+                  label="Selected Model"
                   value={auditorMod}
                   onChange={(e) => setAuditorMod(e.target.value)}
                   disabled={auditorProv === 'auto'}
@@ -342,9 +342,9 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
 
               <p className="text-[11px] text-[#94a3b8] font-mono">
                 {auditorProv === 'auto'
-                  ? 'Auditor akan memilih model independen yang berbeda secara otomatis untuk validasi akurasi data.'
+                  ? 'The auditor will automatically select an independent model to validate data accuracy.'
                   : auditorModelData
-                  ? `${auditorModelData.description} • Konteks: ${(auditorModelData.context_length || 8192).toLocaleString()} token`
+                  ? `${auditorModelData.description} • Context: ${(auditorModelData.context_length || 8192).toLocaleString()} tokens`
                   : ''}
               </p>
             </div>
@@ -355,9 +355,9 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
             <Card variant="surface" padding="md" className="flex items-start gap-3">
               <ShieldCheck className="w-5 h-5 text-sky-400 shrink-0 mt-0.5" />
               <div>
-                <p className="font-medium text-xs text-[#f8fafc]">Dua Cara Mengatur Kunci API</p>
+                <p className="font-medium text-xs text-[#f8fafc]">Configuring API Keys</p>
                 <p className="text-[#94a3b8] text-xs mt-0.5 leading-relaxed">
-                  Kunci API dapat diisi langsung di bawah ini atau melalui berkas <code className="text-sky-300 bg-[#0f1a2e] px-1 py-0.5 rounded">.env</code> di root server. Kunci yang disimpan dari form ini otomatis diperbarui ke file <code className="text-sky-300 bg-[#0f1a2e] px-1 py-0.5 rounded">.env</code> dan langsung aktif tanpa restart.
+                  API keys can be entered directly below or set in the server's <code className="text-sky-300 bg-[#0f1a2e] px-1 py-0.5 rounded">.env</code> file. Keys saved from this modal are automatically updated in <code className="text-sky-300 bg-[#0f1a2e] px-1 py-0.5 rounded">.env</code> and active immediately without restart.
                 </p>
               </div>
             </Card>
@@ -370,7 +370,7 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
                   <span className="text-[10px] font-mono text-[#94a3b8]">GROQ_API_KEY</span>
                 </div>
                 <Badge variant={groqInfo?.is_set ? 'success' : 'neutral'} size="xs" dot>
-                  {groqInfo?.is_set ? `Aktif (${groqInfo.masked_key})` : 'Belum Diisi'}
+                  {groqInfo?.is_set ? `Active (${groqInfo.masked_key})` : 'Not Set'}
                 </Badge>
               </div>
 
@@ -378,13 +378,13 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
                 type={showGroq ? 'text' : 'password'}
                 value={groqKey}
                 onChange={(e) => setGroqKey(e.target.value)}
-                placeholder={groqInfo?.is_set ? 'Ketik kunci baru untuk mengganti...' : 'gsk_...'}
+                placeholder={groqInfo?.is_set ? 'Enter new key to replace...' : 'gsk_...'}
                 monospace
                 rightIcon={
                   <button
                     type="button"
                     onClick={() => setShowGroq(!showGroq)}
-                    aria-label={showGroq ? 'Sembunyikan kunci API Groq' : 'Tampilkan kunci API Groq'}
+                    aria-label={showGroq ? 'Hide Groq API key' : 'Show Groq API key'}
                     className="text-[#94a3b8] hover:text-[#f8fafc] transition cursor-pointer"
                   >
                     {showGroq ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -393,14 +393,14 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
               />
 
               <div className="flex items-center justify-between text-[11px] text-[#94a3b8]">
-                <span>Model OpenAI GPT-OSS 120B &amp; Qwen 3.8 di LPU (~500 t/s)</span>
+                <span>OpenAI GPT-OSS 120B &amp; Qwen models on LPU (~500 t/s)</span>
                 <a
                   href="https://console.groq.com/keys"
                   target="_blank"
                   rel="noreferrer"
                   className="text-sky-400 hover:text-sky-300 flex items-center gap-1 transition"
                 >
-                  <span>Dapatkan API Key</span>
+                  <span>Get API Key</span>
                   <ExternalLink className="w-3 h-3" />
                 </a>
               </div>
@@ -414,7 +414,7 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
                   <span className="text-[10px] font-mono text-[#94a3b8]">GEMINI_API_KEY</span>
                 </div>
                 <Badge variant={geminiInfo?.is_set ? 'success' : 'neutral'} size="xs" dot>
-                  {geminiInfo?.is_set ? `Aktif (${geminiInfo.masked_key})` : 'Belum Diisi'}
+                  {geminiInfo?.is_set ? `Active (${geminiInfo.masked_key})` : 'Not Set'}
                 </Badge>
               </div>
 
@@ -422,13 +422,13 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
                 type={showGemini ? 'text' : 'password'}
                 value={geminiKey}
                 onChange={(e) => setGeminiKey(e.target.value)}
-                placeholder={geminiInfo?.is_set ? 'Ketik kunci baru untuk mengganti...' : 'AIzaSy...'}
+                placeholder={geminiInfo?.is_set ? 'Enter new key to replace...' : 'AIzaSy...'}
                 monospace
                 rightIcon={
                   <button
                     type="button"
                     onClick={() => setShowGemini(!showGemini)}
-                    aria-label={showGemini ? 'Sembunyikan kunci API Gemini' : 'Tampilkan kunci API Gemini'}
+                    aria-label={showGemini ? 'Hide Gemini API key' : 'Show Gemini API key'}
                     className="text-[#94a3b8] hover:text-[#f8fafc] transition cursor-pointer"
                   >
                     {showGemini ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -444,7 +444,7 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
                   rel="noreferrer"
                   className="text-sky-400 hover:text-sky-300 flex items-center gap-1 transition"
                 >
-                  <span>Dapatkan API Key</span>
+                  <span>Get API Key</span>
                   <ExternalLink className="w-3 h-3" />
                 </a>
               </div>
@@ -458,7 +458,7 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
                   <span className="text-[10px] font-mono text-[#94a3b8]">OPENROUTER_API_KEY</span>
                 </div>
                 <Badge variant={openrouterInfo?.is_set ? 'success' : 'neutral'} size="xs" dot>
-                  {openrouterInfo?.is_set ? `Aktif (${openrouterInfo.masked_key})` : 'Belum Diisi'}
+                  {openrouterInfo?.is_set ? `Active (${openrouterInfo.masked_key})` : 'Not Set'}
                 </Badge>
               </div>
 
@@ -466,13 +466,13 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
                 type={showOpenRouter ? 'text' : 'password'}
                 value={openrouterKey}
                 onChange={(e) => setOpenrouterKey(e.target.value)}
-                placeholder={openrouterInfo?.is_set ? 'Ketik kunci baru untuk mengganti...' : 'sk-or-v1-...'}
+                placeholder={openrouterInfo?.is_set ? 'Enter new key to replace...' : 'sk-or-v1-...'}
                 monospace
                 rightIcon={
                   <button
                     type="button"
                     onClick={() => setShowOpenRouter(!showOpenRouter)}
-                    aria-label={showOpenRouter ? 'Sembunyikan kunci API OpenRouter' : 'Tampilkan kunci API OpenRouter'}
+                    aria-label={showOpenRouter ? 'Hide OpenRouter API key' : 'Show OpenRouter API key'}
                     className="text-[#94a3b8] hover:text-[#f8fafc] transition cursor-pointer"
                   >
                     {showOpenRouter ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -481,14 +481,14 @@ export const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
               />
 
               <div className="flex items-center justify-between text-[11px] text-[#94a3b8]">
-                <span>Akses model Llama 3, Gemma 4, Nvidia Nemotron via OpenRouter</span>
+                <span>Access Llama 3, Gemma 4, and Nvidia Nemotron models via OpenRouter</span>
                 <a
                   href="https://openrouter.ai/keys"
                   target="_blank"
                   rel="noreferrer"
                   className="text-sky-400 hover:text-sky-300 flex items-center gap-1 transition"
                 >
-                  <span>Dapatkan API Key</span>
+                  <span>Get API Key</span>
                   <ExternalLink className="w-3 h-3" />
                 </a>
               </div>

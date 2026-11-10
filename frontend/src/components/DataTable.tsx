@@ -24,28 +24,28 @@ export const DataTable: React.FC<DataTableProps> = ({ tables, onPinTable }) => {
         >
           <div className="flex items-center justify-between px-3 py-2 bg-[#14223b] border-b border-white/[0.04] gap-2">
             <span className="text-[11px] font-mono text-[#94a3b8]">
-              Tabel Data ({t.rows?.length || 0} baris)
+              Data Table ({t.rows?.length || 0} rows)
             </span>
 
             <div className="flex items-center gap-1.5">
               <Button
                 variant="secondary"
                 size="xs"
-                onClick={() => exportTableToCSV(t, `harmonix_tabel_${tIdx + 1}`)}
-                aria-label={`Unduh data tabel ${tIdx + 1} sebagai file CSV`}
-                title="Unduh data tabel sebagai file CSV untuk Excel / Google Sheets"
+                onClick={() => exportTableToCSV(t, `harmonix_table_${tIdx + 1}`)}
+                aria-label={`Download table data ${tIdx + 1} as CSV`}
+                title="Download table data as CSV for Excel / Google Sheets"
                 leftIcon={<Download className="w-3 h-3 text-clay-400" />}
               >
-                Unduh CSV
+                Download CSV
               </Button>
 
               {onPinTable && (
                 <Button
                   variant="secondary"
                   size="xs"
-                  onClick={() => onPinTable(t, `Tabel Hasil Analisis #${tIdx + 1}`)}
-                  aria-label={`Sematkan tabel ${tIdx + 1} ke Live Dashboard`}
-                  title="Sematkan tabel ini ke Live Dashboard"
+                  onClick={() => onPinTable(t, `Analytical Table Result #${tIdx + 1}`)}
+                  aria-label={`Pin table ${tIdx + 1} to Live Dashboard`}
+                  title="Pin this table to Live Dashboard"
                   leftIcon={<Pin className="w-3 h-3 text-clay-400" />}
                 >
                   Pin
@@ -54,7 +54,7 @@ export const DataTable: React.FC<DataTableProps> = ({ tables, onPinTable }) => {
             </div>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-xs text-left border-collapse table-auto" aria-label={`Tabel data hasil analitik nomor ${tIdx + 1}`}>
+            <table className="w-full text-xs text-left border-collapse table-auto" aria-label={`Analytical data table number ${tIdx + 1}`}>
               <thead>
                 <tr>
                   {(t.columns || []).map((col, cIdx) => (

@@ -7,6 +7,7 @@ interface DataChartProps {
   charts: ChartSpec[];
   tables?: TableData[];
   hideHeader?: boolean;
+  showToolbox?: boolean;
   onPinChart?: (spec: ChartSpec) => void;
   onDrillDown?: (prompt: string) => void;
   onPrefillChat?: (text: string) => void;
@@ -18,6 +19,7 @@ interface SingleChartProps {
   tables?: TableData[];
   index: number;
   hideHeader?: boolean;
+  showToolbox?: boolean;
   onPinChart?: (spec: ChartSpec) => void;
   onDrillDown?: (prompt: string) => void;
   onPrefillChat?: (text: string) => void;
@@ -28,11 +30,14 @@ const SingleChartCanvas: React.FC<SingleChartProps> = ({
   spec,
   tables,
   hideHeader = false,
+  showToolbox,
   onPinChart,
   onDrillDown,
   onPrefillChat,
   isKiosk = false,
 }) => {
+  const resolvedShowToolbox = showToolbox !== undefined ? showToolbox : !hideHeader;
+
   return (
     <div
       className={
@@ -45,7 +50,7 @@ const SingleChartCanvas: React.FC<SingleChartProps> = ({
         <div className="flex items-center justify-between mb-3 pb-2.5 border-b border-white/[0.04]">
           <div className="flex items-center gap-2">
             <span className="text-xs font-medium text-[#f8fafc] font-sans">
-              {spec.title || 'Visualisasi Data'}
+              {spec.title || 'Data Visualization'}
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -57,7 +62,7 @@ const SingleChartCanvas: React.FC<SingleChartProps> = ({
                 type="button"
                 onClick={() => onPinChart(spec)}
                 className="flex items-center gap-1 text-[11px] font-mono px-2.5 py-1 rounded-lg bg-[#14223b] hover:bg-clay-600/30 text-[#f8fafc] hover:text-clay-300 transition cursor-pointer shadow-sm"
-                title="Sematkan grafik ini ke Live Dashboard"
+                title="Pin this chart to Live Dashboard"
               >
                 <Pin className="w-3 h-3 text-clay-400" />
                 <span>Pin</span>
@@ -77,7 +82,7 @@ const SingleChartCanvas: React.FC<SingleChartProps> = ({
         <EChartsViewer
           spec={spec}
           tables={tables}
-          showToolbox={true}
+          showToolbox={resolvedShowToolbox}
           isKiosk={isKiosk}
           onDrillDown={onDrillDown}
           onPrefillChat={onPrefillChat}
@@ -91,6 +96,7 @@ export const DataChart: React.FC<DataChartProps> = ({
   charts,
   tables,
   hideHeader = false,
+  showToolbox,
   onPinChart,
   onDrillDown,
   onPrefillChat,
@@ -99,7 +105,7 @@ export const DataChart: React.FC<DataChartProps> = ({
   if (!charts || charts.length === 0) return null;
 
   return (
-    <div className={hideHeader ? (isKiosk ? 'w-full h-full flex-1 flex flex-col' : 'w-full') : 'space-y-4 mt-4'}>
+    <div className={hideHeader ? 'w-full h-full flex-1 flex flex-col min-h-0' : 'space-y-4 mt-4'}>
       {charts.map((c, idx) => (
         <SingleChartCanvas
           key={idx}
@@ -107,6 +113,7 @@ export const DataChart: React.FC<DataChartProps> = ({
           tables={tables}
           index={idx}
           hideHeader={hideHeader}
+          showToolbox={showToolbox}
           onPinChart={onPinChart}
           onDrillDown={onDrillDown}
           onPrefillChat={onPrefillChat}

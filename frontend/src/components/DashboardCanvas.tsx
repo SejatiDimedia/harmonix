@@ -91,7 +91,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
 
   const handleCopyTvLink = () => {
     if (!sessionId) {
-      if (showToast) showToast('Pilih atau buat sesi percakapan terlebih dahulu');
+      if (showToast) showToast('Please select or create a conversation session first');
       return;
     }
     const origin = window.location.origin;
@@ -100,7 +100,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
     setCopiedTvLink(true);
     setTimeout(() => setCopiedTvLink(false), 2500);
     if (showToast) {
-      showToast('Tautan TV Command Center disalin ke clipboard!');
+      showToast('TV Command Center link copied to clipboard!');
     }
   };
 
@@ -170,12 +170,12 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
       }));
       await updateDashboardLayout(sessionId, items);
       if (showToast) {
-        showToast('Tata letak dashboard tersimpan');
+        showToast('Dashboard layout saved');
       }
     } catch (err) {
       console.error('Failed to save dashboard layout:', err);
       if (showToast) {
-        showToast('Gagal menyimpan tata letak dashboard');
+        showToast('Failed to save dashboard layout');
       }
     } finally {
       setIsSavingLayout(false);
@@ -208,13 +208,13 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
   };
 
   const parseHeightPx = (height?: string | number, isKiosk: boolean = false): number => {
-    if (typeof height === 'number') return Math.max(260, Math.min(900, height));
+    if (typeof height === 'number') return Math.max(220, Math.min(900, height));
     if (!height) return isKiosk ? 460 : 440;
     if (height === 'compact') return isKiosk ? 340 : 320;
     if (height === 'normal') return isKiosk ? 460 : 440;
     if (height === 'tall') return isKiosk ? 580 : 560;
     const num = parseInt(height, 10);
-    return isNaN(num) ? (isKiosk ? 460 : 440) : Math.max(260, Math.min(900, num));
+    return isNaN(num) ? (isKiosk ? 460 : 440) : Math.max(220, Math.min(900, num));
   };
 
   const getSpanClass = (span?: string | number): string => {
@@ -337,7 +337,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
       const colWidth = Math.max(40, resizingState.gridWidth / 12);
       const deltaCols = Math.round(deltaX / colWidth);
       const newCols = Math.max(3, Math.min(12, resizingState.startCols + deltaCols));
-      const newHeight = Math.max(260, Math.min(900, Math.round(resizingState.startHeight + deltaY)));
+      const newHeight = Math.max(220, Math.min(900, Math.round(resizingState.startHeight + deltaY)));
 
       setResizingState((prev) =>
         prev
@@ -359,7 +359,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
       const colWidth = Math.max(40, resizingState.gridWidth / 12);
       const deltaCols = Math.round(deltaX / colWidth);
       const newCols = Math.max(3, Math.min(12, resizingState.startCols + deltaCols));
-      const newHeight = Math.max(260, Math.min(900, Math.round(resizingState.startHeight + deltaY)));
+      const newHeight = Math.max(220, Math.min(900, Math.round(resizingState.startHeight + deltaY)));
 
       setResizingState((prev) =>
         prev
@@ -442,7 +442,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
     exportTableToCSV(tableData, title);
   };
 
-  const formattedPrintDate = new Date().toLocaleDateString('id-ID', {
+  const formattedPrintDate = new Date().toLocaleDateString('en-US', {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
@@ -473,7 +473,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
           <div className="hidden md:flex items-center gap-2 font-mono text-xs text-slate-300 select-none bg-[#14223b]/50 px-3 py-1 rounded-full border border-white/[0.04]">
             <Clock className="w-3.5 h-3.5 text-sky-400" />
             <span className="font-semibold text-slate-100 tracking-wider">
-              {currentTime.toLocaleTimeString('id-ID', {
+              {currentTime.toLocaleTimeString('en-US', {
                 hour: '2-digit',
                 minute: '2-digit',
                 second: '2-digit',
@@ -481,7 +481,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
             </span>
             <span className="text-slate-500">•</span>
             <span className="text-slate-400 font-sans text-xs">
-              {currentTime.toLocaleDateString('id-ID', {
+              {currentTime.toLocaleDateString('en-US', {
                 weekday: 'short',
                 day: 'numeric',
                 month: 'short',
@@ -503,11 +503,11 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                   }}
                   disabled={isRefreshing}
                   className="flex items-center gap-1.5 px-2.5 py-1 text-slate-300 hover:text-white hover:bg-white/[0.05] rounded-md transition cursor-pointer"
-                  title={`Segarkan data sekarang (Pukul ${lastRefreshedAt.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })})${refreshIntervalSec > 0 ? ` (Auto: ${countdownSec}s)` : ''}`}
+                  title={`Refresh data now (${lastRefreshedAt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })})${refreshIntervalSec > 0 ? ` (Auto: ${countdownSec}s)` : ''}`}
                 >
                   <RefreshCw className={`w-3.5 h-3.5 text-sky-400 ${isRefreshing ? 'animate-spin' : ''}`} />
                   <span className="font-mono text-[11px] font-medium text-slate-200">
-                    {refreshIntervalSec > 0 ? `${countdownSec}s` : 'Segarkan'}
+                    {refreshIntervalSec > 0 ? `${countdownSec}s` : 'Refresh'}
                   </span>
                 </button>
                 <div className="h-3 w-px bg-white/[0.08]" />
@@ -515,7 +515,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                   type="button"
                   onClick={() => setIsRefreshMenuOpen((prev) => !prev)}
                   className="flex items-center gap-1 px-2 py-1 text-slate-400 hover:text-slate-200 hover:bg-white/[0.05] rounded-md transition cursor-pointer text-[11px] font-mono"
-                  title="Pilih interval auto-refresh"
+                  title="Select auto-refresh interval"
                 >
                   <span>
                     {refreshIntervalSec === 0
@@ -532,13 +532,13 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
               {isRefreshMenuOpen && (
                 <div className="absolute right-0 mt-1.5 w-40 bg-[#0f1b2d] border border-white/[0.1] rounded-lg shadow-2xl py-1 z-50 text-xs backdrop-blur-md">
                   <div className="px-2.5 py-1 text-[10px] uppercase tracking-wider text-slate-400 font-semibold border-b border-white/[0.06]">
-                    Interval Segarkan
+                    Refresh Interval
                   </div>
                   {[
-                    { label: 'Nonaktif (Off)', val: 0 },
-                    { label: 'Setiap 30 detik', val: 30 },
-                    { label: 'Setiap 60 detik', val: 60 },
-                    { label: 'Setiap 5 menit', val: 300 },
+                    { label: 'Off', val: 0 },
+                    { label: 'Every 30 seconds', val: 30 },
+                    { label: 'Every 60 seconds', val: 60 },
+                    { label: 'Every 5 minutes', val: 300 },
                   ].map((item) => (
                     <button
                       key={item.val}
@@ -570,10 +570,10 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                   ? 'bg-sky-500/20 text-sky-300 font-medium'
                   : 'text-slate-300 hover:text-white hover:bg-white/[0.05]'
                   }`}
-                title="Atur tata letak dan posisi widget"
+                title="Edit widget layout and positions"
               >
                 <SlidersHorizontal className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">{isTvEditLayout ? 'Selesai' : 'Layout'}</span>
+                <span className="hidden sm:inline">{isTvEditLayout ? 'Done' : 'Layout'}</span>
               </button>
 
               <div className="h-3 w-px bg-white/[0.08]" />
@@ -587,12 +587,12 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                   }`}
                 title={
                   isTvAutoFit
-                    ? 'Auto-Fit Layar Aktif: Tinggi kartu otomatis mengisi layar'
-                    : 'Mode Kustom: Klik untuk mengisi tinggi layar secara otomatis'
+                    ? 'Auto-Fit Viewport Active: Cards automatically fit screen height'
+                    : 'Custom Mode: Click to fit viewport automatically'
                 }
               >
                 <Maximize2 className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Fit Layar</span>
+                <span className="hidden sm:inline">Fit Screen</span>
               </button>
             </div>
 
@@ -602,7 +602,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                 type="button"
                 onClick={handleCopyTvLink}
                 className="p-1.5 rounded-md text-slate-300 hover:text-white hover:bg-white/[0.05] transition cursor-pointer"
-                title="Salin tautan TV Command Center untuk dibagikan"
+                title="Copy TV Command Center link to share"
               >
                 {copiedTvLink ? (
                   <Check className="w-3.5 h-3.5 text-emerald-400" />
@@ -615,7 +615,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                 type="button"
                 onClick={toggleFullscreen}
                 className="p-1.5 rounded-md text-slate-300 hover:text-white hover:bg-white/[0.05] transition cursor-pointer"
-                title="Toggle Fullscreen Layar Penuh"
+                title="Toggle Fullscreen"
               >
                 <Maximize className="w-3.5 h-3.5" />
               </button>
@@ -630,7 +630,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                       if (onExitTv) onExitTv();
                     }}
                     className="p-1.5 rounded-md text-slate-400 hover:text-rose-300 hover:bg-rose-500/10 transition cursor-pointer"
-                    title="Keluar dari mode TV (Esc)"
+                    title="Exit TV mode (Esc)"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
@@ -651,10 +651,10 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                 <Tv className="w-8 h-8 text-sky-400" />
               </div>
               <h2 className="text-lg font-semibold text-slate-100 font-sans">
-                Menunggu Komponen Dashboard Tersemat
+                Awaiting Pinned Dashboard Widgets
               </h2>
               <p className="text-xs text-slate-400 max-w-md">
-                Belum ada widget grafik atau tabel yang disematkan ke dashboard ini.
+                No chart or table widgets have been pinned to this dashboard yet.
               </p>
             </div>
           ) : (
@@ -684,7 +684,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                     ? getChartDescriptiveTitle(w.chart_spec, w.title)
                     : w.title && w.title.toLowerCase() !== 'table'
                       ? w.title
-                      : `Tabel Data (${w.table_data?.rows?.length || 0} baris)`;
+                      : `Data Table (${w.table_data?.rows?.length || 0} rows)`;
 
                 return (
                   <div
@@ -711,7 +711,13 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                             maxHeight: 'calc(100vh - 100px)',
                           }
                     }
-                    className={`relative rounded-2xl bg-[#0b1424] border border-white/[0.08] p-4 sm:p-5 shadow-xl flex flex-col justify-between ${isBeingResized
+                    className={`relative rounded-2xl bg-[#0b1424] border border-white/[0.08] ${
+                      effectiveHeight <= 300
+                        ? 'p-2.5 sm:p-3'
+                        : effectiveHeight <= 360
+                        ? 'p-3 sm:p-3.5'
+                        : 'p-4 sm:p-5'
+                    } shadow-xl flex flex-col justify-between ${isBeingResized
                       ? 'transition-none ring-2 ring-sky-500/80 shadow-2xl shadow-sky-950/50 z-30'
                       : 'transition-all duration-150'
                       } ${getSpanClass(effectiveCols)}`}
@@ -732,7 +738,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                               onClick={() => handleMoveWidget(w.widget_id, 'up')}
                               disabled={idx === 0}
                               className="p-1 rounded text-slate-400 hover:text-white disabled:opacity-25 transition cursor-pointer"
-                              title="Pindah ke atas"
+                              title="Move up"
                             >
                               <ArrowUp className="w-3 h-3" />
                             </button>
@@ -741,7 +747,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                               onClick={() => handleMoveWidget(w.widget_id, 'down')}
                               disabled={idx === localWidgets.length - 1}
                               className="p-1 rounded text-slate-400 hover:text-white disabled:opacity-25 transition cursor-pointer"
-                              title="Pindah ke bawah"
+                              title="Move down"
                             >
                               <ArrowDown className="w-3 h-3" />
                             </button>
@@ -749,17 +755,26 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
 
                           {/* Dimension Indicator Badge */}
                           <span className="text-[10px] font-mono text-slate-400 px-1.5 py-0.5 rounded bg-[#14223b] border border-white/[0.06]">
-                            {effectiveCols}k • {effectiveHeight}px
+                            {effectiveCols} cols • {effectiveHeight}px
                           </span>
                         </div>
                       )}
                     </div>
 
                     {/* Card Body */}
-                    <div className="flex-1 w-full min-h-0 flex flex-col items-center justify-center pt-2 overflow-hidden">
+                    <div className={`flex-1 w-full min-h-0 flex flex-col items-center justify-center overflow-hidden ${
+                      effectiveHeight <= 340 ? 'pt-1' : 'pt-2'
+                    }`}>
                       {isChart && (
                         <div className="w-full h-full flex-1 flex flex-col items-center justify-center min-h-0">
-                          <DataChart charts={[w.chart_spec as ChartSpec]} hideHeader={true} isKiosk={true} onDrillDown={onDrillDown} onPrefillChat={onPrefillChat} />
+                          <DataChart
+                            charts={[w.chart_spec as ChartSpec]}
+                            hideHeader={true}
+                            showToolbox={false}
+                            isKiosk={true}
+                            onDrillDown={onDrillDown}
+                            onPrefillChat={onPrefillChat}
+                          />
                         </div>
                       )}
                       {isTable && (
@@ -808,7 +823,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                         onMouseDown={(e) => handleStartResize(e, w.widget_id, effectiveCols, effectiveHeight, true)}
                         onTouchStart={(e) => handleStartResizeTouch(e, w.widget_id, effectiveCols, effectiveHeight, true)}
                         className="absolute bottom-1.5 right-1.5 w-6 h-6 rounded-md bg-[#14223b]/90 hover:bg-sky-600 text-slate-400 hover:text-white flex items-center justify-center cursor-se-resize transition-all border border-white/[0.08] hover:border-sky-400/50 z-30 group shadow-md select-none"
-                        title="Tarik sudut untuk mengatur lebar kolom dan tinggi pixel"
+                        title="Drag corner to adjust column width and pixel height"
                       >
                         <svg className="w-3.5 h-3.5 text-slate-400 group-hover:text-white" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round">
                           <line x1="6" y1="14" x2="14" y2="6" />
@@ -821,7 +836,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                     {/* Floating dimension tooltip badge during drag */}
                     {isBeingResized && (
                       <div className="absolute top-3 right-3 px-2.5 py-1 rounded-md bg-sky-600/95 text-white font-mono text-xs font-semibold shadow-lg backdrop-blur-sm border border-sky-400/50 pointer-events-none z-40 animate-pulse">
-                        {effectiveCols}/12 Kolom • {effectiveHeight}px
+                        {effectiveCols}/12 Cols • {effectiveHeight}px
                       </div>
                     )}
                   </div>
@@ -870,7 +885,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                 Ref: REP-{sessionId ? sessionId.slice(0, 8).toUpperCase() : 'LIVE-01'}
               </span>
               <span className="text-[10px] text-gray-500 font-mono">
-                Waktu Cetak: {formattedPrintDate}
+                Print Date: {formattedPrintDate}
               </span>
             </div>
           </div>
@@ -881,9 +896,9 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
           {/* Executive KPI & Governance Cards */}
           <div className="grid grid-cols-4 gap-3 text-xs">
             <div className="p-3.5 rounded-lg bg-gray-50 border border-gray-200">
-              <span className="text-[9px] text-gray-500 uppercase font-mono block">Topik Analisis</span>
+              <span className="text-[9px] text-gray-500 uppercase font-mono block">Analysis Subject</span>
               <span className="font-bold text-gray-900 text-[11px] truncate block mt-0.5">
-                {sessionTitle || 'Analisis Data Eksekutif'}
+                {sessionTitle || 'Executive Data Analysis'}
               </span>
             </div>
             <div className="p-3.5 rounded-lg bg-gray-50 border border-gray-200">
@@ -909,17 +924,17 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
 
           {/* Executive Overview Narrative */}
           <div className="p-3.5 rounded-xl bg-amber-50/70 border border-amber-200/90 text-[9.5pt] text-gray-800 leading-relaxed">
-            <strong className="text-gray-950 font-bold">Ringkasan Eksekutif: </strong>
-            Dokumen ini menyajikan wawasan analitik bisnis yang diekstraksi secara otonom dari data warehouse transaksional. Seluruh kueri SQL telah diverifikasi secara deterministik oleh sistem guardrail untuk menjamin integritas data dan kepatuhan read-only tanpa modifikasi manual.
+            <strong className="text-gray-950 font-bold">Executive Summary: </strong>
+            This document presents business intelligence insights autonomously extracted from transactional data warehouses. All SQL queries were deterministically validated by guardrail systems to guarantee data integrity and read-only compliance without manual modification.
           </div>
 
           {/* Section I Header for Print */}
           <div className="flex items-center justify-between pt-2 border-t border-gray-200">
             <h2 className="text-xs font-bold text-gray-900 uppercase tracking-wider font-sans">
-              I. Visualisasi & Komponen Analisis Kunci ({widgets.length} Komponen)
+              I. Key Visualizations & Analytical Components ({widgets.length} Components)
             </h2>
             <span className="text-[9px] font-mono text-gray-500">
-              Format Kertas: A4 Portrait
+              Paper Format: A4 Portrait
             </span>
           </div>
         </div>
@@ -936,13 +951,13 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                 {isSavingLayout && (
                   <span className="flex items-center gap-1 text-[11px] font-mono text-sky-300 bg-sky-500/15 px-2 py-0.5 rounded">
                     <RefreshCw className="w-2.5 h-2.5 animate-spin" />
-                    <span>Menyimpan layout...</span>
+                    <span>Saving layout...</span>
                   </span>
                 )}
               </h1>
             </div>
             <p className="text-xs text-[#94a3b8] leading-relaxed max-w-xl">
-              Papan visualisasi interaktif tersemat dari percakapan aktif. Data dapat disegarkan ulang secara berkala langsung ke database analitik atau diekspor sebagai dokumen eksekutif.
+              Interactive visualization canvas pinned from active conversations. Data can be refreshed in real time against analytical databases or exported as executive documents.
             </p>
           </div>
 
@@ -952,18 +967,18 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
               onClick={handleCopyTvLink}
               disabled={widgets.length === 0}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#14223b] hover:bg-[#182a47] disabled:opacity-40 text-[#94a3b8] hover:text-[#f8fafc] text-xs font-medium transition shadow-sm cursor-pointer disabled:cursor-not-allowed"
-              aria-label="Salin tautan TV Command Center untuk dibagikan"
-              title="Salin URL mode TV untuk dibuka di browser lain atau monitor kantor"
+              aria-label="Copy TV Command Center link to share"
+              title="Copy TV mode URL to open in another browser or office monitor"
             >
               {copiedTvLink ? (
                 <>
                   <Check className="w-3.5 h-3.5 text-emerald-400" />
-                  <span className="text-emerald-400 font-sans">Tersalin!</span>
+                  <span className="text-emerald-400 font-sans">Copied!</span>
                 </>
               ) : (
                 <>
                   <Share2 className="w-3.5 h-3.5 text-sky-400" />
-                  <span>Bagikan Link TV</span>
+                  <span>Share TV Link</span>
                 </>
               )}
             </button>
@@ -973,11 +988,11 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
               onClick={() => setIsTvMode(true)}
               disabled={widgets.length === 0}
               className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#14223b] hover:bg-[#1a2d4e] disabled:opacity-40 text-slate-100 border border-slate-700/60 text-xs font-medium transition shadow-sm cursor-pointer disabled:cursor-not-allowed"
-              aria-label="Buka Mode TV Kiosk"
-              title="Tampilkan dashboard dalam Mode TV Kiosk Layar Penuh"
+              aria-label="Open TV Kiosk Mode"
+              title="Display dashboard in Fullscreen TV Kiosk Mode"
             >
               <Tv className="w-3.5 h-3.5 text-sky-400" />
-              <span>Mode TV Kiosk</span>
+              <span>TV Kiosk Mode</span>
             </button>
 
             <button
@@ -985,11 +1000,11 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
               onClick={triggerExecutivePDFPrint}
               disabled={widgets.length === 0}
               className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#14223b] hover:bg-[#182a47] disabled:opacity-40 disabled:hover:bg-[#14223b] text-[#94a3b8] hover:text-[#f8fafc] text-xs font-medium transition shadow-sm cursor-pointer disabled:cursor-not-allowed"
-              aria-label="Ekspor dashboard sebagai dokumen laporan PDF"
-              title="Cetak atau simpan dashboard sebagai dokumen laporan PDF"
+              aria-label="Export dashboard as PDF report"
+              title="Print or export dashboard as executive PDF report"
             >
               <FileDown className="w-3.5 h-3.5 text-clay-400" />
-              <span>Ekspor PDF</span>
+              <span>Export PDF</span>
             </button>
 
             <button
@@ -997,11 +1012,11 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
               onClick={onRefresh}
               disabled={isRefreshing || widgets.length === 0}
               className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-clay-600 hover:bg-clay-500 disabled:opacity-40 disabled:hover:bg-clay-600 text-white text-xs font-medium transition shadow-sm cursor-pointer disabled:cursor-not-allowed"
-              aria-label="Segarkan data semua widget di dashboard"
-              title="Segarkan data semua widget"
+              aria-label="Refresh all dashboard widget data"
+              title="Refresh all widget data"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
-              <span>{isRefreshing ? 'Menyegarkan...' : 'Segarkan Data'}</span>
+              <span>{isRefreshing ? 'Refreshing...' : 'Refresh Data'}</span>
             </button>
           </div>
         </div>
@@ -1014,10 +1029,10 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
             </div>
             <div className="space-y-2 max-w-md mx-auto">
               <h3 className="text-sm font-semibold text-[#f8fafc]">
-                Belum Ada Widget yang Disematkan
+                No Dashboard Widgets Pinned
               </h3>
               <p className="text-xs text-[#94a3b8] leading-relaxed">
-                Anda dapat menyematkan grafik batang, diagram donat, atau tabel hasil analisis dari tab percakapan dengan menekan tombol <strong>Pin</strong> pada hasil analitik.
+                You can pin bar charts, donut charts, or data tables from the chat tab by clicking the <strong>Pin</strong> button on any analytical result.
               </p>
             </div>
             <div>
@@ -1027,7 +1042,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                 className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#14223b] hover:bg-[#182a47] text-xs font-medium text-clay-400 transition cursor-pointer shadow-sm"
               >
                 <MessageSquare className="w-3.5 h-3.5" />
-                <span>Buka Tab Percakapan</span>
+                <span>Open Chat Tab</span>
                 <ArrowRight className="w-3.5 h-3.5 ml-0.5" />
               </button>
             </div>
@@ -1055,22 +1070,28 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                   ? getChartDescriptiveTitle(w.chart_spec, w.title)
                   : w.title && w.title.toLowerCase() !== 'table'
                     ? w.title
-                    : `Tabel Data (${w.table_data?.rows?.length || 0} baris)`;
+                    : `Data Table (${w.table_data?.rows?.length || 0} rows)`;
 
               return (
                 <div
                   key={w.widget_id}
                   style={{ height: `${effectiveHeight}px`, minHeight: `${effectiveHeight}px` }}
-                  className={`print-widget-card relative rounded-2xl bg-[#0f1a2e] print:bg-white border border-white/[0.06] print:border-gray-300 p-4 sm:p-5 shadow-md shadow-black/20 flex flex-col justify-between ${isBeingResized
+                  className={`print-widget-card relative rounded-2xl bg-[#0f1a2e] print:bg-white border border-white/[0.06] print:border-gray-300 ${
+                    effectiveHeight <= 300
+                      ? 'p-2.5 sm:p-3 gap-1'
+                      : effectiveHeight <= 360
+                      ? 'p-3 sm:p-3.5 gap-1.5 sm:gap-2'
+                      : 'p-4 sm:p-5 gap-2.5 sm:gap-3'
+                  } shadow-md shadow-black/20 flex flex-col ${isBeingResized
                     ? 'transition-none ring-2 ring-sky-500/80 shadow-2xl shadow-sky-950/50 z-30'
                     : 'transition-all duration-150'
-                    } space-y-3 sm:space-y-4 print:space-y-3 print:rounded-xl print:p-0 print:overflow-hidden ${getSpanClass(
+                    } print:space-y-3 print:rounded-xl print:p-0 print:overflow-hidden ${getSpanClass(
                       effectiveCols
                     )}`}
                 >
                   {/* Card Header (Corporate Styled on Print) */}
-                  <div className="flex items-start justify-between gap-2.5 pb-2.5 border-b border-white/[0.04] print:bg-gray-50/80 print:p-4 print:pb-3 print:border-b print:border-gray-200 shrink-0">
-                    <div className="space-y-1 min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-2.5 pb-2 border-b border-white/[0.04] print:bg-gray-50/80 print:p-4 print:pb-3 print:border-b print:border-gray-200 shrink-0">
+                    <div className="space-y-0.5 min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <span className="print-only hidden inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-900 text-white font-mono text-[10px] font-bold shrink-0">
                           {idx + 1}
@@ -1085,37 +1106,37 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                       <div className="flex items-center gap-2 text-[10px] text-[#94a3b8] font-mono print:text-gray-500 truncate">
                         <span className="uppercase text-[9px] font-semibold tracking-wider px-1.5 py-0.5 rounded bg-[#14223b] text-clay-400 print:bg-white print:text-gray-700 print:border-gray-300 print:font-semibold">
                           {w.widget_type === 'chart'
-                            ? (w.chart_spec?.chart_type || 'grafik')
-                            : 'tabel'}
+                            ? (w.chart_spec?.chart_type || 'chart')
+                            : 'table'}
                         </span>
                         {w.updated_at && (
                           <span
                             className="text-slate-500 truncate"
-                            title={`Sinkronisasi: ${new Date(w.updated_at).toLocaleTimeString('id-ID')}`}
+                            title={`Synced: ${new Date(w.updated_at).toLocaleTimeString('en-US')}`}
                           >
-                            {new Date(w.updated_at).toLocaleTimeString('id-ID', {
+                            {new Date(w.updated_at).toLocaleTimeString('en-US', {
                               hour: '2-digit',
                               minute: '2-digit',
                             })}
                           </span>
                         )}
-                        <span className="text-slate-600 font-mono hidden sm:inline" title="Lebar kolom x tinggi pixel">
-                          {effectiveCols}k • {effectiveHeight}px
+                        <span className="text-slate-600 font-mono hidden sm:inline" title="Column width x pixel height">
+                          {effectiveCols} cols • {effectiveHeight}px
                         </span>
                       </div>
                     </div>
 
                     {/* Compact Icon Toolbar */}
                     <div className="flex items-center gap-1 shrink-0 no-print">
-                      {/* Urutan Posisi Ke Atas & Ke Bawah */}
+                      {/* Reorder Up & Down */}
                       <div className="flex items-center bg-[#14223b] rounded-lg p-0.5 border border-white/[0.06]">
                         <button
                           type="button"
                           onClick={() => handleMoveWidget(w.widget_id, 'up')}
                           disabled={idx === 0}
                           className="p-1 rounded text-slate-400 hover:text-white disabled:opacity-25 disabled:cursor-not-allowed transition cursor-pointer"
-                          aria-label="Pindahkan widget ke atas"
-                          title="Pindah ke atas"
+                          aria-label="Move widget up"
+                          title="Move up"
                         >
                           <ArrowUp className="w-3 h-3" />
                         </button>
@@ -1124,34 +1145,34 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                           onClick={() => handleMoveWidget(w.widget_id, 'down')}
                           disabled={idx === localWidgets.length - 1}
                           className="p-1 rounded text-slate-400 hover:text-white disabled:opacity-25 disabled:cursor-not-allowed transition cursor-pointer"
-                          aria-label="Pindahkan widget ke bawah"
-                          title="Pindah ke bawah"
+                          aria-label="Move widget down"
+                          title="Move down"
                         >
                           <ArrowDown className="w-3 h-3" />
                         </button>
                       </div>
 
-                      {/* Unduh CSV Button for Table Widget */}
+                      {/* Download CSV Button for Table Widget */}
                       {isTable && w.table_data && (
                         <button
                           type="button"
                           onClick={() => exportTableToCSV(w.table_data!, displayTitle)}
                           className="p-1.5 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-[#14223b] transition cursor-pointer"
-                          aria-label={`Unduh data ${displayTitle} sebagai CSV`}
-                          title="Unduh data tabel sebagai CSV"
+                          aria-label={`Download ${displayTitle} as CSV`}
+                          title="Download table data as CSV"
                         >
                           <Download className="w-3.5 h-3.5 text-sky-400" />
                         </button>
                       )}
 
-                      {/* Unduh CSV Button for Chart Widget if underlying data exists */}
+                      {/* Download CSV Button for Chart Widget if underlying data exists */}
                       {isChart && w.chart_spec?.data && w.chart_spec.data.length > 0 && (
                         <button
                           type="button"
                           onClick={() => handleExportChartData(w.chart_spec!, displayTitle)}
                           className="p-1.5 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-[#14223b] transition cursor-pointer"
-                          aria-label={`Unduh data ${displayTitle} sebagai CSV`}
-                          title="Unduh data grafik sebagai CSV"
+                          aria-label={`Download ${displayTitle} as CSV`}
+                          title="Download chart data as CSV"
                         >
                           <Download className="w-3.5 h-3.5 text-sky-400" />
                         </button>
@@ -1161,8 +1182,8 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                         type="button"
                         onClick={() => onDeleteWidget(w.widget_id)}
                         className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-950/30 transition shrink-0 cursor-pointer"
-                        aria-label={`Lepas widget ${displayTitle} dari dashboard`}
-                        title="Lepas widget dari dashboard"
+                        aria-label={`Remove widget ${displayTitle} from dashboard`}
+                        title="Remove widget from dashboard"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -1170,14 +1191,18 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                   </div>
 
                   {/* Card Body: Chart or Table */}
-                  <div className="flex-1 w-full min-h-0 flex flex-col items-center justify-center overflow-hidden print:bg-white print:p-4 print:pt-1">
+                  <div className="flex-1 w-full min-h-0 overflow-hidden flex flex-col print:bg-white print:p-4 print:pt-1">
                     {isChart && (
-                      <div className="w-full h-full flex-1 min-h-0 flex flex-col items-center justify-center print:bg-white">
-                        <div className="chart-wrapper w-full h-full flex-1 min-h-0 flex items-center justify-center print:h-[250px] print:max-w-xl print:mx-auto">
-                          <DataChart charts={[w.chart_spec as ChartSpec]} hideHeader={true} onDrillDown={onDrillDown} onPrefillChat={onPrefillChat} />
-                        </div>
+                      <div className="w-full h-full flex-1 min-h-0 flex flex-col print:bg-white">
+                        <DataChart
+                          charts={[w.chart_spec as ChartSpec]}
+                          hideHeader={true}
+                          showToolbox={false}
+                          onDrillDown={onDrillDown}
+                          onPrefillChat={onPrefillChat}
+                        />
                         <div className="print-only hidden text-center text-[8.5pt] text-gray-500 font-sans mt-3 italic">
-                          * Gambar {idx + 1}: {displayTitle} (Sumber: PostgreSQL warehouse).
+                          * Figure {idx + 1}: {displayTitle} (Source: PostgreSQL warehouse).
                         </div>
                       </div>
                     )}
@@ -1189,12 +1214,12 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                             <tr className="print:bg-gray-100">
                               {(w.table_data?.columns || []).map((col, cIdx) => (
                                 <th
-                                  key={cIdx}
-                                  scope="col"
-                                  className="p-2.5 text-[10px] font-mono uppercase bg-[#14223b] print:bg-gray-100 text-[#94a3b8] print:text-gray-900 border-b border-white/[0.04] print:border-gray-300 print:font-bold"
-                                >
-                                  {col}
-                                </th>
+                                    key={cIdx}
+                                    scope="col"
+                                    className="p-2.5 text-[10px] font-mono uppercase bg-[#14223b] print:bg-gray-100 text-[#94a3b8] print:text-gray-900 border-b border-white/[0.04] print:border-gray-300 print:font-bold"
+                                  >
+                                    {col}
+                                  </th>
                               ))}
                             </tr>
                           </thead>
@@ -1224,7 +1249,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                         </table>
                         {(w.table_data?.rows?.length || 0) > 50 && (
                           <div className="print-only hidden text-[8pt] text-gray-500 font-mono mt-1.5 italic">
-                            * Menampilkan 50 baris pertama dari total {w.table_data?.rows?.length} baris data.
+                            * Showing first 50 rows of {w.table_data?.rows?.length} total data rows.
                           </div>
                         )}
                       </div>
@@ -1239,19 +1264,19 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
 
                   {/* Card Footer: Collapsible SQL on screen only */}
                   {w.sql_query && (
-                    <div className="pt-2 border-t border-white/[0.04] no-print">
+                    <div className="pt-1.5 border-t border-white/[0.04] no-print shrink-0">
                       <button
                         type="button"
                         onClick={() => toggleSql(w.widget_id)}
                         aria-expanded={isSqlExpanded}
-                        className="flex items-center gap-1.5 text-[11px] font-mono text-[#94a3b8] hover:text-clay-400 transition cursor-pointer"
+                        className="flex items-center gap-1.5 text-[10px] font-mono text-[#94a3b8] hover:text-clay-400 transition cursor-pointer"
                       >
-                        <Code className="w-3.5 h-3.5" />
-                        <span>{isSqlExpanded ? 'Sembunyikan SQL' : 'Lihat SQL Kueri'}</span>
+                        <Code className="w-3 h-3" />
+                        <span>{isSqlExpanded ? 'Hide SQL' : 'View SQL Query'}</span>
                       </button>
 
                       {isSqlExpanded && (
-                        <div className="mt-2 p-2.5 rounded-lg bg-[#0b1322] border border-white/[0.06] text-[11px] font-mono text-clay-300 overflow-x-auto whitespace-pre">
+                        <div className="mt-1.5 p-2 rounded-lg bg-[#0b1322] border border-white/[0.06] text-[10px] font-mono text-clay-300 max-h-28 overflow-x-auto overflow-y-auto whitespace-pre">
                           {formatSQL(w.sql_query)}
                         </div>
                       )}
@@ -1263,7 +1288,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                     onMouseDown={(e) => handleStartResize(e, w.widget_id, effectiveCols, effectiveHeight, false)}
                     onTouchStart={(e) => handleStartResizeTouch(e, w.widget_id, effectiveCols, effectiveHeight, false)}
                     className="no-print absolute bottom-1.5 right-1.5 w-6 h-6 rounded-md bg-[#14223b]/90 hover:bg-sky-600 text-slate-400 hover:text-white flex items-center justify-center cursor-se-resize transition-all border border-white/[0.08] hover:border-sky-400/50 z-30 group shadow-md select-none"
-                    title="Tarik sudut untuk mengatur lebar kolom dan tinggi pixel"
+                    title="Drag corner to adjust column width and pixel height"
                   >
                     <svg className="w-3.5 h-3.5 text-slate-400 group-hover:text-white" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round">
                       <line x1="6" y1="14" x2="14" y2="6" />
@@ -1275,7 +1300,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                   {/* Floating dimension tooltip badge during drag */}
                   {isBeingResized && (
                     <div className="absolute top-3 right-3 px-2.5 py-1 rounded-md bg-sky-600/95 text-white font-mono text-xs font-semibold shadow-lg backdrop-blur-sm border border-sky-400/50 pointer-events-none z-40 animate-pulse">
-                      {effectiveCols}/12 Kolom • {effectiveHeight}px
+                      {effectiveCols}/12 Cols • {effectiveHeight}px
                     </div>
                   )}
                 </div>
@@ -1289,14 +1314,14 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
           <div className="print-only hidden pt-6 mt-8 border-t-2 border-gray-300 break-inside-avoid">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-xs font-bold tracking-tight text-gray-900 uppercase font-sans">
-                Lampiran: Tata Kelola Data & Jejak Audit (Data Lineage & Audit Trail)
+                Appendix: Data Governance & Audit Trail
               </h3>
               <span className="text-[9px] text-emerald-700 font-semibold px-2 py-0.5 rounded bg-emerald-50 border border-emerald-200">
                 Guardrail Certified: 100% Read-Only Safety
               </span>
             </div>
             <p className="text-[9.5pt] text-gray-500 mb-4 font-sans">
-              Kueri SQL berikut tervalidasi dieksekusi secara langsung ke PostgreSQL warehouse untuk menyusun visualisasi data di atas tanpa transformasi manual:
+              The following validated SQL queries were executed directly against PostgreSQL warehouse to generate the visualizations above without manual transformation:
             </p>
             <div className="space-y-3">
               {widgets.map((w, wIdx) => {
@@ -1304,7 +1329,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                 const widgetTitle =
                   w.widget_type === 'chart'
                     ? getChartDescriptiveTitle(w.chart_spec, w.title)
-                    : w.title || `Tabel Data #${wIdx + 1}`;
+                    : w.title || `Data Table #${wIdx + 1}`;
 
                 return (
                   <div
@@ -1313,9 +1338,9 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                   >
                     <div className="flex justify-between items-center text-gray-700 font-semibold mb-1">
                       <span>
-                        Bagian {wIdx + 1}: {widgetTitle}
+                        Section {wIdx + 1}: {widgetTitle}
                       </span>
-                      <span className="text-gray-500 font-normal">Dialek: PostgreSQL</span>
+                      <span className="text-gray-500 font-normal">Dialect: PostgreSQL</span>
                     </div>
                     <pre className="text-gray-800 whitespace-pre-wrap bg-white p-2 rounded border border-gray-200 text-[7.5pt] overflow-hidden">
                       {w.sql_query}
@@ -1329,7 +1354,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
 
         {/* Print-Only Document Footer & Sign-off */}
         <div className="print-only hidden mt-8 pt-4 border-t border-gray-200 text-center text-[9px] text-gray-400 font-mono">
-          Harmonix Autonomous Business Intelligence Platform • Dokumen Resmi Tanpa Tanda Tangan Basah • Tanggal Ekspor: {formattedPrintDate}
+          Harmonix Autonomous Business Intelligence Platform • Official Digital Report • Export Date: {formattedPrintDate}
         </div>
       </div>
     </div>

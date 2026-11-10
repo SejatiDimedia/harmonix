@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as echarts from 'echarts';
-import { Search, MapPin, CreditCard, Table, X, Sparkles, ExternalLink, Send, MessageSquare } from 'lucide-react';
+import { Search, MapPin, CreditCard, Table, X, Layers, ChevronRight, Send, ArrowUpRight } from 'lucide-react';
 import { ChartSpec, TableData } from '../types';
 import { Modal, Button } from './ui';
 
@@ -177,397 +177,427 @@ export const EChartsViewer: React.FC<EChartsViewerProps> = ({
     const isGauge = rawType === 'gauge' || rawType === 'kpi';
     const isScatter = rawType === 'scatter';
 
-    // 3. Assemble ECharts Configuration Option
-    const option: echarts.EChartsOption = {
-      backgroundColor: 'transparent',
-      color: PALETTE,
-      animation: true,
-      animationDuration: 800,
-      animationEasing: 'cubicOut',
-      textStyle: {
-        fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
-      },
-      tooltip: {
-        trigger: isPie || isDoughnut || isGauge ? 'item' : 'axis',
-        axisPointer: {
-          type: isLine ? 'cross' : 'shadow',
-          crossStyle: { color: '#94a3b8' },
-          shadowStyle: { color: 'rgba(0, 140, 208, 0.08)' },
-        },
-        backgroundColor: 'rgba(11, 20, 36, 0.95)',
-        borderColor: '#1e3557',
-        borderWidth: 1,
-        padding: [10, 14],
+    // 3. Assemble ECharts Configuration Option with Responsive Adapters
+    const buildOption = (isCompact: boolean, isUltraCompact: boolean): echarts.EChartsOption => {
+      const effectiveShowToolbox = showToolbox && !isKiosk && !isUltraCompact;
+
+      const option: echarts.EChartsOption = {
+        backgroundColor: 'transparent',
+        color: PALETTE,
+        animation: true,
+        animationDuration: 800,
+        animationEasing: 'cubicOut',
         textStyle: {
-          color: '#f8fafc',
-          fontSize: isKiosk ? 14 : 12,
+          fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
         },
-        formatter: (params: any) => {
-          if (isGauge) {
-            const val = params.value;
-            return `<div class="font-sans"><strong>${spec.title || 'Metrik'}</strong><br/><span style="color:#00d2ee;font-size:16px;font-weight:bold;">${val}%</span></div>`;
-          }
-          if (isPie || isDoughnut) {
-            return `
-              <div class="font-sans">
-                <div class="text-slate-400 text-xs mb-1">${params.name}</div>
-                <div class="flex items-center gap-2">
-                  <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background-color:${params.color};"></span>
-                  <span class="font-bold text-slate-100">${Number(params.value).toLocaleString('id-ID')}</span>
-                  <span class="text-slate-400 text-xs">(${params.percent}%)</span>
+        tooltip: {
+          trigger: isPie || isDoughnut || isGauge ? 'item' : 'axis',
+          axisPointer: {
+            type: isLine ? 'cross' : 'shadow',
+            crossStyle: { color: '#94a3b8' },
+            shadowStyle: { color: 'rgba(0, 140, 208, 0.08)' },
+          },
+          backgroundColor: 'rgba(11, 20, 36, 0.95)',
+          borderColor: '#1e3557',
+          borderWidth: 1,
+          padding: isCompact || isUltraCompact ? [6, 10] : [10, 14],
+          textStyle: {
+            color: '#f8fafc',
+            fontSize: isUltraCompact ? 10 : isCompact ? 11 : (isKiosk ? 14 : 12),
+          },
+          formatter: (params: any) => {
+            if (isGauge) {
+              const val = params.value;
+              return `<div class="font-sans"><strong>${spec.title || 'Metric'}</strong><br/><span style="color:#00d2ee;font-size:16px;font-weight:bold;">${val}%</span></div>`;
+            }
+            if (isPie || isDoughnut) {
+              return `
+                <div class="font-sans">
+                  <div class="text-slate-400 text-xs mb-1">${params.name}</div>
+                  <div class="flex items-center gap-2">
+                    <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background-color:${params.color};"></span>
+                    <span class="font-bold text-slate-100">${Number(params.value).toLocaleString('en-US')}</span>
+                    <span class="text-slate-400 text-xs">(${params.percent}%)</span>
+                  </div>
+                  <div class="text-[9.5px] text-sky-400 mt-1.5 border-t border-white/10 pt-1 font-sans flex items-center gap-1">
+                    <span>Click for drill-down ↗</span>
+                  </div>
                 </div>
-                <div class="text-[9.5px] text-sky-400 mt-1.5 border-t border-white/10 pt-1 font-sans flex items-center gap-1">
-                  <span>Klik untuk drill-down ↗</span>
+              `;
+            }
+            if (Array.isArray(params)) {
+              const p = params[0];
+              if (!p) return '';
+              const num = Number(p.value);
+              const formatted = isNaN(num) ? p.value : num.toLocaleString('en-US');
+              return `
+                <div class="font-sans">
+                  <div class="text-slate-400 text-xs mb-1 font-mono">${p.axisValueLabel}</div>
+                  <div class="flex items-center gap-2">
+                    <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background-color:${p.color};"></span>
+                    <span class="text-slate-300 text-xs">${spec.y_axis || 'Value'}:</span>
+                    <span class="font-bold text-slate-100 font-mono">${formatted}</span>
+                  </div>
+                  <div class="text-[9.5px] text-sky-400 mt-1.5 border-t border-white/10 pt-1 font-sans flex items-center gap-1">
+                    <span>Click for drill-down ↗</span>
+                  </div>
                 </div>
-              </div>
-            `;
-          }
-          if (Array.isArray(params)) {
-            const p = params[0];
-            if (!p) return '';
-            const num = Number(p.value);
-            const formatted = isNaN(num) ? p.value : num.toLocaleString('id-ID');
-            return `
-              <div class="font-sans">
-                <div class="text-slate-400 text-xs mb-1 font-mono">${p.axisValueLabel}</div>
-                <div class="flex items-center gap-2">
-                  <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background-color:${p.color};"></span>
-                  <span class="text-slate-300 text-xs">${spec.y_axis || 'Nilai'}:</span>
-                  <span class="font-bold text-slate-100 font-mono">${formatted}</span>
-                </div>
-                <div class="text-[9.5px] text-sky-400 mt-1.5 border-t border-white/10 pt-1 font-sans flex items-center gap-1">
-                  <span>Klik untuk drill-down ↗</span>
-                </div>
-              </div>
-            `;
-          }
-          return '';
+              `;
+            }
+            return '';
+          },
         },
-      },
-    };
+      };
 
-    // Toolbox (Simpan Gambar, Zoom, Data View)
-    if (showToolbox && !isKiosk) {
-      option.toolbox = {
-        show: true,
-        right: 12,
-        top: 2,
-        itemSize: 13,
-        itemGap: 10,
-        iconStyle: {
-          borderColor: '#64748b',
-        },
-        emphasis: {
+      // Toolbox (Simpan Gambar, Zoom, Data View)
+      if (effectiveShowToolbox) {
+        option.toolbox = {
+          show: true,
+          right: isCompact ? 6 : 12,
+          top: 2,
+          itemSize: isCompact ? 11 : 13,
+          itemGap: isCompact ? 8 : 10,
           iconStyle: {
-            borderColor: '#00d2ee',
-          },
-        },
-        feature: {
-          saveAsImage: {
-            title: 'Unduh PNG',
-            pixelRatio: 2,
-            backgroundColor: '#080f1d',
-          },
-          dataView: {
-            title: 'Lihat Data',
-            readOnly: true,
-            lang: ['Data Tabel', 'Tutup', 'Segarkan'],
-            textareaColor: '#0b1322',
-            textareaBorderColor: '#1e3557',
-            textColor: '#f8fafc',
-            buttonColor: '#008cd0',
-            buttonTextColor: '#ffffff',
-          },
-          restore: { title: 'Reset' },
-        },
-      };
-    }
-
-    // Specific Configurations per Chart Type
-    if (isPie || isDoughnut) {
-      const pieData = labels.map((name, i) => ({
-        name,
-        value: rawValues[i],
-      }));
-
-      option.legend = {
-        orient: 'horizontal',
-        bottom: 10,
-        textStyle: { color: '#94a3b8', fontSize: 11 },
-        type: labels.length > 5 ? 'scroll' : 'plain',
-        pageTextStyle: { color: '#94a3b8' },
-        pageIconColor: '#008cd0',
-        pageIconInactiveColor: '#334155',
-      };
-
-      const showCalloutLabels = labels.length <= 6;
-
-      option.series = [
-        {
-          name: spec.title || spec.y_axis,
-          type: 'pie',
-          cursor: 'pointer',
-          radius: isDoughnut ? ['40%', '65%'] : ['0%', '65%'],
-          center: ['50%', '44%'],
-          avoidLabelOverlap: true,
-          minShowLabelAngle: 12,
-          itemStyle: {
-            borderRadius: isDoughnut ? 6 : 4,
-            borderColor: '#0b1424',
-            borderWidth: 2,
-          },
-          label: {
-            show: showCalloutLabels,
-            color: '#94a3b8',
-            fontSize: 11,
-            formatter: '{b}: {d}%',
-          },
-          labelLine: {
-            show: showCalloutLabels,
-            length: 8,
-            length2: 10,
-            lineStyle: {
-              color: '#334155',
-            },
+            borderColor: '#64748b',
           },
           emphasis: {
-            label: {
-              show: true,
-              fontSize: 13,
-              fontWeight: 'bold',
-              color: '#ffffff',
-              formatter: '{b}\n{d}%',
-            },
-            itemStyle: {
-              shadowBlur: 14,
-              shadowOffsetX: 0,
-              shadowColor: 'rgba(0, 0, 0, 0.5)',
+            iconStyle: {
+              borderColor: '#00d2ee',
             },
           },
-          data: pieData,
-        },
-      ];
-    } else if (isGauge) {
-      const gaugeVal = rawValues.length > 0 ? rawValues[0] : 0;
-      option.series = [
-        {
-          type: 'gauge',
-          center: ['50%', '55%'],
-          radius: '85%',
-          startAngle: 200,
-          endAngle: -20,
-          min: 0,
-          max: 100,
-          splitNumber: 5,
-          itemStyle: {
-            color: '#00d2ee',
-          },
-          progress: {
-            show: true,
-            width: 14,
-            roundCap: true,
-            itemStyle: {
-              color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
-                { offset: 0, color: '#008cd0' },
-                { offset: 1, color: '#00d2ee' },
-              ]),
+          feature: {
+            saveAsImage: {
+              title: 'Download PNG',
+              pixelRatio: 2,
+              backgroundColor: '#080f1d',
             },
-          },
-          pointer: {
-            show: true,
-            length: '65%',
-            width: 4,
-            itemStyle: { color: '#ffffff' },
-          },
-          axisLine: {
-            lineStyle: {
-              width: 14,
-              color: [[1, '#14223b']],
+            dataView: {
+              title: 'View Data',
+              readOnly: true,
+              lang: ['Data Table', 'Close', 'Refresh'],
+              textareaColor: '#0b1322',
+              textareaBorderColor: '#1e3557',
+              textColor: '#f8fafc',
+              buttonColor: '#008cd0',
+              buttonTextColor: '#ffffff',
             },
-            roundCap: true,
+            restore: { title: 'Reset' },
           },
-          axisTick: {
-            distance: -20,
-            splitNumber: 2,
-            lineStyle: { width: 1, color: '#475569' },
-          },
-          splitLine: {
-            distance: -24,
-            length: 8,
-            lineStyle: { width: 1.5, color: '#64748b' },
-          },
-          axisLabel: {
-            distance: -36,
-            color: '#94a3b8',
-            fontSize: 10,
-          },
-          title: {
-            show: true,
-            offsetCenter: [0, '75%'],
-            fontSize: isKiosk ? 14 : 12,
-            color: '#94a3b8',
-          },
-          detail: {
-            valueAnimation: true,
-            fontSize: isKiosk ? 28 : 22,
-            offsetCenter: [0, '40%'],
-            formatter: '{value}%',
-            color: '#f8fafc',
-            fontWeight: 'bold',
-          },
-          data: [{ value: gaugeVal, name: spec.title || spec.y_axis }],
-        },
-      ];
-    } else {
-      // Cartesian (Bar, Line, Area, Scatter)
-      option.grid = {
-        left: '2%',
-        right: '3%',
-        bottom: labels.length > 8 ? 44 : 28,
-        top: showToolbox && !isKiosk ? 36 : 24,
-        containLabel: true,
-      };
-
-      option.xAxis = {
-        type: 'category',
-        data: labels,
-        axisLine: { lineStyle: { color: '#1e3557' } },
-        axisTick: { alignWithLabel: true, lineStyle: { color: '#1e3557' } },
-        axisLabel: {
-          color: '#94a3b8',
-          fontSize: isKiosk ? 12 : 11,
-          rotate: labels.length > 7 ? 25 : 0,
-          interval: labels.length > 15 ? 'auto' : 0,
-          formatter: (val: string) => (val.length > 16 ? `${val.slice(0, 14)}...` : val),
-        },
-      };
-
-      option.yAxis = {
-        type: 'value',
-        name: spec.y_axis,
-        nameTextStyle: {
-          color: '#64748b',
-          fontSize: 10,
-          align: 'left',
-          padding: [0, 0, 4, 0],
-        },
-        axisLine: { show: false },
-        axisTick: { show: false },
-        splitLine: {
-          lineStyle: {
-            color: 'rgba(255, 255, 255, 0.05)',
-            type: 'dashed',
-          },
-        },
-        axisLabel: {
-          color: '#94a3b8',
-          fontSize: isKiosk ? 12 : 11,
-          formatter: (val: number) => {
-            if (val >= 1_000_000_000) return `${(val / 1_000_000_000).toFixed(1)}B`;
-            if (val >= 1_000_000) return `${(val / 1_000_000).toFixed(1)}M`;
-            if (val >= 1_000) return `${(val / 1_000).toFixed(1)}k`;
-            return String(val);
-          },
-        },
-      };
-
-      // Zoom slider if many data points
-      if (labels.length > 12 && !isKiosk) {
-        option.dataZoom = [
-          {
-            type: 'inside',
-            start: 0,
-            end: Math.min(100, Math.round((10 / labels.length) * 100)),
-          },
-          {
-            type: 'slider',
-            show: true,
-            height: 12,
-            bottom: 2,
-            borderColor: '#1e3557',
-            backgroundColor: '#0b1322',
-            fillerColor: 'rgba(0, 140, 208, 0.2)',
-            handleStyle: { color: '#008cd0' },
-            textStyle: { color: '#64748b', fontSize: 9 },
-          },
-        ];
+        };
       }
 
-      if (isScatter) {
+      // Specific Configurations per Chart Type
+      if (isPie || isDoughnut) {
+        const pieData = labels.map((name, i) => ({
+          name,
+          value: rawValues[i],
+        }));
+
+        option.legend = {
+          orient: 'horizontal',
+          bottom: isUltraCompact ? 0 : 2,
+          textStyle: { color: '#94a3b8', fontSize: isUltraCompact ? 8.5 : isCompact ? 9.5 : 11 },
+          itemWidth: isUltraCompact ? 8 : isCompact ? 12 : 20,
+          itemHeight: isUltraCompact ? 6 : isCompact ? 8 : 12,
+          itemGap: isCompact ? 6 : 10,
+          type: labels.length > (isUltraCompact ? 2 : isCompact ? 3 : 5) ? 'scroll' : 'plain',
+          pageTextStyle: { color: '#94a3b8', fontSize: 9 },
+          pageIconColor: '#008cd0',
+          pageIconInactiveColor: '#334155',
+        };
+
+        // Calibrated radius so doughnut/pie fills the card with balanced breathing room
+        // and doesn't overlap the bottom legend.
         option.series = [
           {
-            name: spec.y_axis,
-            type: 'scatter',
+            name: spec.title || spec.y_axis,
+            type: 'pie',
             cursor: 'pointer',
-            symbolSize: isKiosk ? 14 : 10,
-            data: rawValues.map((v, i) => [i, v]),
+            radius: isUltraCompact
+              ? (isDoughnut ? ['36%', '66%'] : ['0%', '66%'])
+              : isCompact
+              ? (isDoughnut ? ['40%', '72%'] : ['0%', '72%'])
+              : (isDoughnut ? ['44%', '78%'] : ['0%', '78%']),
+            center: ['50%', isUltraCompact ? '42%' : isCompact ? '44%' : '46%'],
+            avoidLabelOverlap: true,
+            minShowLabelAngle: 10,
             itemStyle: {
-              color: '#00d2ee',
-              shadowBlur: 8,
-              shadowColor: 'rgba(0, 210, 238, 0.4)',
-            },
-          },
-        ];
-      } else if (isLine) {
-        option.series = [
-          {
-            name: spec.y_axis,
-            type: 'line',
-            cursor: 'pointer',
-            data: rawValues,
-            smooth: true,
-            showSymbol: rawValues.length <= 25,
-            symbolSize: isKiosk ? 8 : 6,
-            symbol: 'circle',
-            itemStyle: {
-              color: '#00d2ee',
-              borderColor: '#080f1d',
+              borderRadius: isDoughnut ? 4 : 2,
+              borderColor: '#0b1424',
               borderWidth: 2,
             },
-            lineStyle: {
-              width: isKiosk ? 3.5 : 2.5,
-              color: '#008cd0',
+            label: {
+              show: false,
             },
-            areaStyle: isArea
-              ? {
-                  color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                    { offset: 0, color: 'rgba(0, 140, 208, 0.35)' },
-                    { offset: 1, color: 'rgba(0, 140, 208, 0.02)' },
-                  ]),
-                }
-              : undefined,
-          },
-        ];
-      } else {
-        // Standard Bar Chart
-        option.series = [
-          {
-            name: spec.y_axis,
-            type: 'bar',
-            cursor: 'pointer',
-            data: rawValues,
-            barMaxWidth: isKiosk ? 48 : 36,
-            itemStyle: {
-              borderRadius: [4, 4, 0, 0],
-              color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                { offset: 0, color: '#00d2ee' },
-                { offset: 1, color: '#008cd0' },
-              ]),
+            labelLine: {
+              show: false,
             },
             emphasis: {
+              label: {
+                show: true,
+                fontSize: isUltraCompact ? 11 : isCompact ? 12 : 13,
+                fontWeight: 'bold',
+                color: '#ffffff',
+                formatter: '{b}\n{d}%',
+              },
               itemStyle: {
-                color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                  { offset: 0, color: '#38bdf8' },
-                  { offset: 1, color: '#0284c7' },
+                shadowBlur: 10,
+                shadowOffsetX: 0,
+                shadowColor: 'rgba(0, 0, 0, 0.5)',
+              },
+            },
+            data: pieData,
+          },
+        ];
+      } else if (isGauge) {
+        const gaugeVal = rawValues.length > 0 ? rawValues[0] : 0;
+        option.series = [
+          {
+            type: 'gauge',
+            center: ['50%', '54%'],
+            radius: isUltraCompact ? '60%' : isCompact ? '68%' : '75%',
+            startAngle: 200,
+            endAngle: -20,
+            min: 0,
+            max: 100,
+            splitNumber: 5,
+            itemStyle: {
+              color: '#00d2ee',
+            },
+            progress: {
+              show: true,
+              width: isUltraCompact ? 7 : isCompact ? 9 : 12,
+              roundCap: true,
+              itemStyle: {
+                color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+                  { offset: 0, color: '#008cd0' },
+                  { offset: 1, color: '#00d2ee' },
                 ]),
               },
             },
+            pointer: {
+              show: true,
+              length: '60%',
+              width: isCompact ? 3 : 4,
+              itemStyle: { color: '#ffffff' },
+            },
+            axisLine: {
+              lineStyle: {
+                width: isUltraCompact ? 7 : isCompact ? 9 : 12,
+                color: [[1, '#14223b']],
+              },
+              roundCap: true,
+            },
+            axisTick: {
+              distance: isCompact ? -14 : -18,
+              splitNumber: 2,
+              lineStyle: { width: 1, color: '#475569' },
+            },
+            splitLine: {
+              distance: isCompact ? -18 : -22,
+              length: isCompact ? 5 : 7,
+              lineStyle: { width: 1.5, color: '#64748b' },
+            },
+            axisLabel: {
+              distance: isCompact ? -24 : -30,
+              color: '#94a3b8',
+              fontSize: isUltraCompact ? 8 : isCompact ? 9 : 10,
+            },
+            title: {
+              show: true,
+              offsetCenter: [0, '65%'],
+              fontSize: isUltraCompact ? 9.5 : isCompact ? 10.5 : (isKiosk ? 14 : 12),
+              color: '#94a3b8',
+            },
+            detail: {
+              valueAnimation: true,
+              fontSize: isUltraCompact ? 15 : isCompact ? 18 : (isKiosk ? 28 : 22),
+              offsetCenter: [0, '32%'],
+              formatter: '{value}%',
+              color: '#f8fafc',
+              fontWeight: 'bold',
+            },
+            data: [{ value: gaugeVal, name: spec.title || spec.y_axis }],
           },
         ];
-      }
-    }
+      } else {
+        // Cartesian (Bar, Line, Area, Scatter)
+        option.grid = {
+          left: isUltraCompact ? 6 : 10,
+          right: isUltraCompact ? 8 : 14,
+          bottom: isUltraCompact ? 8 : isCompact ? 12 : (labels.length > 8 ? 20 : 12),
+          top: isUltraCompact ? 18 : isCompact ? 22 : (effectiveShowToolbox ? 32 : 20),
+          containLabel: true,
+        };
 
-    chartInstance.setOption(option, true);
+        option.xAxis = {
+          type: 'category',
+          data: labels,
+          axisLine: { lineStyle: { color: '#1e3557' } },
+          axisTick: { alignWithLabel: true, lineStyle: { color: '#1e3557' } },
+          axisLabel: {
+            color: '#94a3b8',
+            fontSize: isUltraCompact ? 8.5 : isCompact ? 9.5 : (isKiosk ? 12 : 11),
+            rotate: isUltraCompact ? (labels.length > 4 ? 18 : 0) : isCompact ? (labels.length > 6 ? 20 : 0) : (labels.length > 8 ? 25 : 0),
+            interval: isUltraCompact && labels.length > 5 ? 'auto' : (isCompact && labels.length > 8 ? 'auto' : (labels.length > 14 ? 'auto' : 0)),
+            overflow: 'truncate',
+            width: isUltraCompact ? 45 : isCompact ? 60 : 75,
+            ellipsis: '...',
+            hideOverlap: true,
+            formatter: (val: string) => {
+              const maxLen = isUltraCompact ? 7 : isCompact ? 10 : 15;
+              return val.length > maxLen ? `${val.slice(0, maxLen - 2)}...` : val;
+            },
+          },
+        };
+
+        option.yAxis = {
+          type: 'value',
+          name: undefined, // Omit yAxis title inside canvas to prevent top clipping; widget header already shows it
+          axisLine: { show: false },
+          axisTick: { show: false },
+          splitNumber: isUltraCompact ? 2 : isCompact ? 3 : 4,
+          splitLine: {
+            lineStyle: {
+              color: 'rgba(255, 255, 255, 0.05)',
+              type: 'dashed',
+            },
+          },
+          axisLabel: {
+            color: '#94a3b8',
+            fontSize: isUltraCompact ? 8.5 : isCompact ? 9.5 : (isKiosk ? 12 : 11),
+            margin: isUltraCompact ? 4 : 6,
+            showMinLabel: true,
+            showMaxLabel: true,
+            hideOverlap: true,
+            formatter: (val: number) => {
+              const abs = Math.abs(val);
+              const sign = val < 0 ? '-' : '';
+              if (abs >= 1_000_000_000) {
+                const formatted = (abs / 1_000_000_000).toFixed(1).replace(/\.0$/, '');
+                return `${sign}${formatted}B`;
+              }
+              if (abs >= 1_000_000) {
+                const formatted = (abs / 1_000_000).toFixed(1).replace(/\.0$/, '');
+                return `${sign}${formatted}M`;
+              }
+              if (abs >= 1_000) {
+                const formatted = (abs / 1_000).toFixed(1).replace(/\.0$/, '');
+                return `${sign}${formatted}k`;
+              }
+              return `${sign}${abs}`;
+            },
+          },
+        };
+
+        // Zoom slider if many data points
+        if (labels.length > 12 && !isKiosk) {
+          option.dataZoom = [
+            {
+              type: 'inside',
+              start: 0,
+              end: Math.min(100, Math.round((10 / labels.length) * 100)),
+            },
+            ...(!isCompact && !isUltraCompact
+              ? [
+                  {
+                    type: 'slider' as const,
+                    show: true,
+                    height: 12,
+                    bottom: 2,
+                    borderColor: '#1e3557',
+                    backgroundColor: '#0b1322',
+                    fillerColor: 'rgba(0, 140, 208, 0.2)',
+                    handleStyle: { color: '#008cd0' },
+                    textStyle: { color: '#64748b', fontSize: 9 },
+                  },
+                ]
+              : []),
+          ];
+        }
+
+        if (isScatter) {
+          option.series = [
+            {
+              name: spec.y_axis,
+              type: 'scatter',
+              cursor: 'pointer',
+              symbolSize: isUltraCompact ? 7 : isCompact ? 8 : (isKiosk ? 14 : 10),
+              data: rawValues.map((v, i) => [i, v]),
+              itemStyle: {
+                color: '#00d2ee',
+                shadowBlur: 8,
+                shadowColor: 'rgba(0, 210, 238, 0.4)',
+              },
+            },
+          ];
+        } else if (isLine) {
+          option.series = [
+            {
+              name: spec.y_axis,
+              type: 'line',
+              cursor: 'pointer',
+              data: rawValues,
+              smooth: true,
+              showSymbol: rawValues.length <= 25,
+              symbolSize: isUltraCompact ? 5 : isCompact ? 6 : (isKiosk ? 8 : 6),
+              symbol: 'circle',
+              itemStyle: {
+                color: '#00d2ee',
+                borderColor: '#080f1d',
+                borderWidth: 2,
+              },
+              lineStyle: {
+                width: isCompact || isUltraCompact ? 2 : (isKiosk ? 3.5 : 2.5),
+                color: '#008cd0',
+              },
+              areaStyle: isArea
+                ? {
+                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                      { offset: 0, color: 'rgba(0, 140, 208, 0.35)' },
+                      { offset: 1, color: 'rgba(0, 140, 208, 0.02)' },
+                    ]),
+                  }
+                : undefined,
+            },
+          ];
+        } else {
+          // Standard Bar Chart
+          option.series = [
+            {
+              name: spec.y_axis,
+              type: 'bar',
+              cursor: 'pointer',
+              data: rawValues,
+              barMaxWidth: isUltraCompact ? 24 : isCompact ? 30 : (isKiosk ? 48 : 36),
+              itemStyle: {
+                borderRadius: [4, 4, 0, 0],
+                color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                  { offset: 0, color: '#00d2ee' },
+                  { offset: 1, color: '#008cd0' },
+                ]),
+              },
+              emphasis: {
+                itemStyle: {
+                  color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                    { offset: 0, color: '#38bdf8' },
+                    { offset: 1, color: '#0284c7' },
+                  ]),
+                },
+              },
+            },
+          ];
+        }
+      }
+
+      return option;
+    };
+
+    const initialH = containerRef.current.clientHeight || (typeof height === 'number' ? height : 300);
+    let lastIsUltraCompact = initialH > 0 && initialH < 210;
+    let lastIsCompact = initialH >= 210 && initialH < 310;
+
+    chartInstance.setOption(buildOption(lastIsCompact, lastIsUltraCompact), true);
 
     // 4. Click event listener for interactive Drill-Down (FR-48)
     const handleChartClick = (params: any) => {
@@ -593,9 +623,18 @@ export const EChartsViewer: React.FC<EChartsViewerProps> = ({
 
     chartInstance.on('click', handleChartClick);
 
-    // 5. Auto-Resize on element resize
-    const resizeObserver = new ResizeObserver(() => {
+    // 5. Auto-Resize & Responsive Re-layout on element resize
+    const resizeObserver = new ResizeObserver((entries) => {
       chartInstance.resize();
+      const entryH = entries[0]?.contentRect?.height ?? containerRef.current?.clientHeight ?? 0;
+      if (entryH <= 0) return;
+      const nowUltraCompact = entryH < 210;
+      const nowCompact = entryH >= 210 && entryH < 310;
+      if (nowUltraCompact !== lastIsUltraCompact || nowCompact !== lastIsCompact) {
+        lastIsUltraCompact = nowUltraCompact;
+        lastIsCompact = nowCompact;
+        chartInstance.setOption(buildOption(nowCompact, nowUltraCompact), true);
+      }
     });
     resizeObserver.observe(containerRef.current);
 
@@ -663,18 +702,14 @@ export const EChartsViewer: React.FC<EChartsViewerProps> = ({
     const { dimension, metricName, metricValue } = drilldownState;
     const formattedVal =
       typeof metricValue === 'number'
-        ? metricValue.toLocaleString('id-ID')
+        ? metricValue.toLocaleString('en-US')
         : String(metricValue);
 
-    const isEn = Boolean(
-      (spec.title && /\b(sales|revenue|orders|trend|top|monthly|average|breakdown|category|product|customer|distribution|count|total)\b/i.test(spec.title)) ||
-      (metricName && /\b(sales|revenue|orders|trend|top|monthly|average|breakdown|category|product|customer|distribution|count|total|value|price)\b/i.test(metricName)) ||
-      /\b(what|how|why|which|can|could|show|is|are|the)\b/i.test(customQuestion)
-    );
+    const isId = Boolean(/\b(apa|berapa|bagaimana|mengapa|kenapa|tolong|tampilkan|faktor|penyebab|pada|data)\b/i.test(customQuestion));
 
-    const prompt = isEn
-      ? `Regarding ${metricName} for '${dimension}' (Value: ${formattedVal}): ${customQuestion.trim()}`
-      : `Mengenai data ${metricName} pada '${dimension}' (Nilai: ${formattedVal}): ${customQuestion.trim()}`;
+    const prompt = isId
+      ? `Mengenai data ${metricName} pada '${dimension}' (Nilai: ${formattedVal}): ${customQuestion.trim()}`
+      : `Regarding ${metricName} for '${dimension}' (Value: ${formattedVal}): ${customQuestion.trim()}`;
     setDrilldownState(null);
     setCustomQuestion('');
     if (onDrillDown) {
@@ -687,22 +722,18 @@ export const EChartsViewer: React.FC<EChartsViewerProps> = ({
     const { dimension, metricName, metricValue } = drilldownState;
     const formattedVal =
       typeof metricValue === 'number'
-        ? metricValue.toLocaleString('id-ID')
+        ? metricValue.toLocaleString('en-US')
         : String(metricValue);
 
-    const isEn = Boolean(
-      (spec.title && /\b(sales|revenue|orders|trend|top|monthly|average|breakdown|category|product|customer|distribution|count|total)\b/i.test(spec.title)) ||
-      (metricName && /\b(sales|revenue|orders|trend|top|monthly|average|breakdown|category|product|customer|distribution|count|total|value|price)\b/i.test(metricName)) ||
-      /\b(what|how|why|which|can|could|show|is|are|the)\b/i.test(customQuestion)
-    );
+    const isId = Boolean(/\b(apa|berapa|bagaimana|mengapa|kenapa|tolong|tampilkan|faktor|penyebab|pada|data)\b/i.test(customQuestion));
 
     const basePrompt = customQuestion.trim()
-      ? (isEn
-          ? `Regarding ${metricName} for '${dimension}' (Value: ${formattedVal}): ${customQuestion.trim()}`
-          : `Mengenai data ${metricName} pada '${dimension}' (Nilai: ${formattedVal}): ${customQuestion.trim()}`)
-      : (isEn
-          ? `Regarding ${metricName} for '${dimension}' (Value: ${formattedVal}), please analyze `
-          : `Mengenai data ${metricName} pada '${dimension}' (Nilai: ${formattedVal}), tolong analisis `);
+      ? (isId
+          ? `Mengenai data ${metricName} pada '${dimension}' (Nilai: ${formattedVal}): ${customQuestion.trim()}`
+          : `Regarding ${metricName} for '${dimension}' (Value: ${formattedVal}): ${customQuestion.trim()}`)
+      : (isId
+          ? `Mengenai data ${metricName} pada '${dimension}' (Nilai: ${formattedVal}), tolong analisis `
+          : `Regarding ${metricName} for '${dimension}' (Value: ${formattedVal}), please analyze `);
 
     setDrilldownState(null);
     setCustomQuestion('');
@@ -750,7 +781,7 @@ export const EChartsViewer: React.FC<EChartsViewerProps> = ({
     <>
       <div
         ref={containerRef}
-        style={{ height, width: '100%', minHeight: typeof height === 'number' ? height : (isKiosk ? 0 : 200) }}
+        style={{ height, width: '100%', minHeight: typeof height === 'number' ? height : 0 }}
         className={`relative select-none ${className}`}
       />
 
@@ -767,22 +798,22 @@ export const EChartsViewer: React.FC<EChartsViewerProps> = ({
               left: `${Math.min(window.innerWidth - 330, Math.max(16, drilldownState.x - 150))}px`,
               top: `${Math.min(window.innerHeight - 440, Math.max(60, drilldownState.y - 20))}px`,
             }}
-            className="z-50 w-80 max-w-[calc(100vw-32px)] rounded-xl bg-[#0b1424] border border-sky-500/40 p-3.5 shadow-2xl shadow-black/80 font-sans text-slate-100 animate-in fade-in zoom-in-95 duration-150"
+            className="z-50 w-80 max-w-[calc(100vw-32px)] rounded-xl bg-[#0b1424] border border-white/[0.12] p-3.5 shadow-2xl shadow-black/90 font-sans text-slate-100 animate-in fade-in zoom-in-95 duration-150"
           >
             <div className="flex items-start justify-between gap-2 pb-2.5 border-b border-white/[0.08]">
               <div className="min-w-0">
-                <div className="flex items-center gap-1.5 text-[10px] font-mono uppercase text-sky-400 font-semibold tracking-wider">
-                  <Sparkles className="w-3 h-3 text-sky-400" />
-                  <span>Eksplorasi Drill-Down</span>
+                <div className="flex items-center gap-1.5 text-[10px] font-mono uppercase text-slate-400 font-semibold tracking-wider">
+                  <Layers className="w-3 h-3 text-[#008cd0]" />
+                  <span>Analytical Drill-Down</span>
                 </div>
                 <h4 className="text-sm font-semibold text-white truncate mt-0.5" title={drilldownState.dimension}>
                   {drilldownState.dimension}
                 </h4>
                 <p className="text-xs text-slate-400 font-mono mt-0.5">
                   {drilldownState.metricName}:{' '}
-                  <span className="text-sky-300 font-semibold">
+                  <span className="text-[#38bdf8] font-semibold">
                     {typeof drilldownState.metricValue === 'number'
-                      ? drilldownState.metricValue.toLocaleString('id-ID')
+                      ? drilldownState.metricValue.toLocaleString('en-US')
                       : String(drilldownState.metricValue)}
                   </span>
                 </p>
@@ -791,7 +822,7 @@ export const EChartsViewer: React.FC<EChartsViewerProps> = ({
                 type="button"
                 onClick={() => setDrilldownState(null)}
                 className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition cursor-pointer"
-                title="Tutup"
+                title="Close"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -801,70 +832,70 @@ export const EChartsViewer: React.FC<EChartsViewerProps> = ({
               <button
                 type="button"
                 onClick={() => handleTriggerDrillDown('root_cause')}
-                className="w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg bg-[#14223b]/80 hover:bg-sky-600/30 hover:border-sky-500/50 text-slate-200 hover:text-white border border-white/[0.06] transition text-left group cursor-pointer"
+                className="w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg bg-[#14223b]/80 hover:bg-[#1a2c4e] text-slate-200 hover:text-white border border-white/[0.06] hover:border-sky-500/30 transition text-left group cursor-pointer"
               >
                 <div className="flex items-center gap-2 truncate">
-                  <Search className="w-3.5 h-3.5 text-sky-400 shrink-0" />
-                  <span className="truncate">Selidiki Penyebab & Anomali</span>
+                  <Search className="w-3.5 h-3.5 text-slate-400 group-hover:text-sky-300 shrink-0 transition-colors" />
+                  <span className="truncate">Analyze Factors & Anomalies</span>
                 </div>
-                <ExternalLink className="w-3 h-3 text-slate-500 group-hover:text-sky-300 shrink-0" />
+                <ChevronRight className="w-3.5 h-3.5 text-slate-500 group-hover:text-sky-300 group-hover:translate-x-0.5 transition-all shrink-0" />
               </button>
 
               <button
                 type="button"
                 onClick={() => handleTriggerDrillDown('geo')}
-                className="w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg bg-[#14223b]/80 hover:bg-emerald-600/30 hover:border-emerald-500/50 text-slate-200 hover:text-white border border-white/[0.06] transition text-left group cursor-pointer"
+                className="w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg bg-[#14223b]/80 hover:bg-[#1a2c4e] text-slate-200 hover:text-white border border-white/[0.06] hover:border-sky-500/30 transition text-left group cursor-pointer"
               >
                 <div className="flex items-center gap-2 truncate">
-                  <MapPin className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                  <span className="truncate">Bedah Berdasarkan Wilayah</span>
+                  <MapPin className="w-3.5 h-3.5 text-slate-400 group-hover:text-sky-300 shrink-0 transition-colors" />
+                  <span className="truncate">Break Down by Region</span>
                 </div>
-                <ExternalLink className="w-3 h-3 text-slate-500 group-hover:text-emerald-300 shrink-0" />
+                <ChevronRight className="w-3.5 h-3.5 text-slate-500 group-hover:text-sky-300 group-hover:translate-x-0.5 transition-all shrink-0" />
               </button>
 
               <button
                 type="button"
                 onClick={() => handleTriggerDrillDown('payment')}
-                className="w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg bg-[#14223b]/80 hover:bg-amber-600/30 hover:border-amber-500/50 text-slate-200 hover:text-white border border-white/[0.06] transition text-left group cursor-pointer"
+                className="w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg bg-[#14223b]/80 hover:bg-[#1a2c4e] text-slate-200 hover:text-white border border-white/[0.06] hover:border-sky-500/30 transition text-left group cursor-pointer"
               >
                 <div className="flex items-center gap-2 truncate">
-                  <CreditCard className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                  <span className="truncate">Bedah Metode Pembayaran</span>
+                  <CreditCard className="w-3.5 h-3.5 text-slate-400 group-hover:text-sky-300 shrink-0 transition-colors" />
+                  <span className="truncate">Break Down by Payment Method</span>
                 </div>
-                <ExternalLink className="w-3 h-3 text-slate-500 group-hover:text-amber-300 shrink-0" />
+                <ChevronRight className="w-3.5 h-3.5 text-slate-500 group-hover:text-sky-300 group-hover:translate-x-0.5 transition-all shrink-0" />
               </button>
 
               <button
                 type="button"
                 onClick={handleOpenRawRows}
-                className="w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg bg-[#14223b]/80 hover:bg-purple-600/30 hover:border-purple-500/50 text-slate-200 hover:text-white border border-white/[0.06] transition text-left group cursor-pointer"
+                className="w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg bg-[#14223b]/80 hover:bg-[#1a2c4e] text-slate-200 hover:text-white border border-white/[0.06] hover:border-sky-500/30 transition text-left group cursor-pointer"
               >
                 <div className="flex items-center gap-2 truncate">
-                  <Table className="w-3.5 h-3.5 text-purple-400 shrink-0" />
-                  <span className="truncate">Lihat Baris Data Mentah</span>
+                  <Table className="w-3.5 h-3.5 text-slate-400 group-hover:text-sky-300 shrink-0 transition-colors" />
+                  <span className="truncate">View Raw Data Rows</span>
                 </div>
-                <ExternalLink className="w-3 h-3 text-slate-500 group-hover:text-purple-300 shrink-0" />
+                <ChevronRight className="w-3.5 h-3.5 text-slate-500 group-hover:text-sky-300 group-hover:translate-x-0.5 transition-all shrink-0" />
               </button>
             </div>
 
             {/* Custom Question Form Section */}
             <div className="pt-2.5 mt-2.5 border-t border-white/[0.08]">
               <div className="text-[10px] font-mono uppercase text-slate-400 font-semibold mb-1.5 flex items-center justify-between">
-                <span>Atau Ajukan Pertanyaan Sendiri</span>
+                <span>Specific Question</span>
               </div>
               <form onSubmit={handleCustomQuestionSubmit} className="flex items-center gap-1.5">
                 <input
                   type="text"
                   value={customQuestion}
                   onChange={(e) => setCustomQuestion(e.target.value)}
-                  placeholder="Ketik pertanyaan kustom..."
-                  className="flex-1 px-2.5 py-1.5 rounded-lg bg-[#070e1b] border border-white/[0.1] text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-sky-500 font-sans"
+                  placeholder="Ask about anomalies, trends, or drivers..."
+                  className="flex-1 px-2.5 py-1.5 rounded-lg bg-[#070e1b] border border-white/[0.1] text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-sky-500 font-sans transition-colors"
                 />
                 <button
                   type="submit"
                   disabled={!customQuestion.trim()}
-                  className="p-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white disabled:opacity-40 transition cursor-pointer shrink-0"
-                  title="Kirim pertanyaan kustom ke chat analitik"
+                  className="p-1.5 rounded-lg bg-[#0074b7] hover:bg-[#008cd0] text-white disabled:opacity-40 transition cursor-pointer shrink-0"
+                  title="Send question to analytics"
                 >
                   <Send className="w-3.5 h-3.5" />
                 </button>
@@ -873,10 +904,10 @@ export const EChartsViewer: React.FC<EChartsViewerProps> = ({
                 <button
                   type="button"
                   onClick={handlePrefillToChat}
-                  className="text-[10.5px] text-sky-400 hover:text-sky-300 transition cursor-pointer flex items-center gap-1"
+                  className="text-[10.5px] text-slate-400 hover:text-sky-300 transition cursor-pointer flex items-center gap-1 font-sans"
                 >
-                  <MessageSquare className="w-3 h-3" />
-                  <span>Ketik lebih leluasa di kolom chat</span>
+                  <span>Open in main chat conversation</span>
+                  <ArrowUpRight className="w-3 h-3" />
                 </button>
               </div>
             </div>
@@ -890,13 +921,13 @@ export const EChartsViewer: React.FC<EChartsViewerProps> = ({
           isOpen={!!rawRowsModal}
           onClose={() => setRawRowsModal(null)}
           size="2xl"
-          title={`Baris Data Mentah: ${rawRowsModal.dimension}`}
-          description={`Menampilkan ${rawRowsModal.rows.length} baris data terkait`}
+          title={`Raw Data Rows: ${rawRowsModal.dimension}`}
+          description={`Showing ${rawRowsModal.rows.length} relevant data rows`}
           icon={<Table className="w-5 h-5 text-purple-400" />}
           footer={
             <div className="flex justify-end w-full">
               <Button variant="secondary" size="sm" onClick={() => setRawRowsModal(null)}>
-                Tutup
+                Close
               </Button>
             </div>
           }
@@ -919,7 +950,7 @@ export const EChartsViewer: React.FC<EChartsViewerProps> = ({
                     <tr key={rIdx} className="hover:bg-white/[0.02] transition">
                       {cells.map((val, cellIdx) => (
                         <td key={cellIdx} className="p-2.5 text-slate-300 font-mono text-[11px]">
-                          {typeof val === 'number' ? val.toLocaleString('id-ID') : String(val ?? '')}
+                          {typeof val === 'number' ? val.toLocaleString('en-US') : String(val ?? '')}
                         </td>
                       ))}
                     </tr>

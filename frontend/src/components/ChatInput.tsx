@@ -75,9 +75,9 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
   const handleDeleteSingleTable = async (tableName: string, displayName: string) => {
     try {
       await deleteTableMutation.mutateAsync(tableName);
-      showToast?.(`Dataset "${displayName}" berhasil dihapus.`);
+      showToast?.(`Dataset "${displayName}" successfully removed.`);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Gagal menghapus dataset';
+      const msg = err instanceof Error ? err.message : 'Failed to remove dataset';
       showToast?.(msg);
     }
   };
@@ -126,14 +126,14 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
 
       const fileList = Array.from(files);
       if (fileList.length > 10) {
-        showToast?.('Maksimal 10 file yang dapat diunggah sekaligus.');
+        showToast?.('Maximum 10 files can be uploaded at once.');
         e.target.value = '';
         return;
       }
 
       const oversized = fileList.find((f) => f.size > 15 * 1024 * 1024);
       if (oversized) {
-        showToast?.(`File "${oversized.name}" melebihi batas ukuran maksimal (15 MB).`);
+        showToast?.(`File "${oversized.name}" exceeds the maximum size limit (15 MB).`);
         e.target.value = '';
         return;
       }
@@ -147,10 +147,10 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
           queryKey: ['session-uploaded-tables', targetSessionId],
         });
         showToast?.(
-          `Berhasil memuat ${result.total_tables_created} tabel dari ${result.total_files} file.`
+          `Successfully loaded ${result.total_tables_created} tables from ${result.total_files} files.`
         );
       } catch (err: unknown) {
-        const errorMsg = err instanceof Error ? err.message : 'Gagal mengunggah file data.';
+        const errorMsg = err instanceof Error ? err.message : 'Failed to upload data files.';
         showToast?.(errorMsg);
       } finally {
         setIsUploading(false);
@@ -179,7 +179,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
             <div className="px-3.5 pt-2.5 pb-2 flex items-center gap-1.5 overflow-x-auto text-xs font-mono scrollbar-none border-b border-white/[0.04]">
               <span className="text-[#94a3b8] text-[11px] flex items-center gap-1 shrink-0 mr-1 select-none">
                 <FileSpreadsheet className="w-3.5 h-3.5 text-clay-400" />
-                <span className="font-sans font-medium text-[#f8fafc]">Dataset Aktif:</span>
+                <span className="font-sans font-medium text-[#f8fafc]">Active Datasets:</span>
               </span>
               {uploadedTables.map((tbl) => {
                 const displayName =
@@ -196,13 +196,13 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
                       type="button"
                       onClick={() => setSelectedTableForModal(tbl)}
                       className="flex items-center gap-1.5 cursor-pointer text-left focus:outline-none"
-                      title={`Klik untuk melihat detail kesehatan data & skema kolom (${tbl.columns.length} kolom)`}
+                      title={`Click to view data health & column schema (${tbl.columns.length} columns)`}
                     >
                       <span className="text-[#f8fafc] font-medium font-sans truncate max-w-[120px] sm:max-w-[180px]">
                         {displayName}
                       </span>
                       <span className="text-[10px] text-[#94a3b8] font-mono">
-                        {tbl.row_count.toLocaleString()} baris
+                        {tbl.row_count.toLocaleString()} rows
                       </span>
                     </button>
                     <button
@@ -212,8 +212,8 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
                         handleDeleteSingleTable(tbl.table_name, displayName);
                       }}
                       className="p-1 rounded-md text-[#94a3b8] hover:text-rose-300 hover:bg-rose-500/25 transition cursor-pointer shrink-0 ml-0.5"
-                      title={`Hapus dataset "${displayName}"`}
-                      aria-label={`Hapus dataset "${displayName}"`}
+                      title={`Remove dataset "${displayName}"`}
+                      aria-label={`Remove dataset "${displayName}"`}
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
@@ -230,11 +230,11 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
-            aria-label="Pertanyaan analisis data"
+            aria-label="Data analytics prompt"
             placeholder={
               uploadedTables.length > 0
-                ? "Tanyakan analisis dataset Anda atau gabungkan dengan data warehouse..."
-                : "Tanyakan analisis data... (contoh: 'Tampilkan tren penjualan bulanan dalam grafik bar')"
+                ? "Ask questions about your dataset or join with data warehouse..."
+                : "Ask any data question... (e.g., 'Show monthly sales trend in a bar chart')"
             }
             className="w-full bg-transparent px-4 pt-3.5 pb-2 text-sm text-[#f8fafc] placeholder-[#94a3b8] focus:outline-none resize-none leading-relaxed font-sans max-h-44"
           />
@@ -247,7 +247,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
               <button
                 type="button"
                 onClick={() => setIsPopoverOpen(!isPopoverOpen)}
-                aria-label={`Pilih model dan engine analitik. Model: ${shortModelName}, Engine: ${engine}`}
+                aria-label={`Select model and analytics engine. Model: ${shortModelName}, Engine: ${engine}`}
                 aria-haspopup="dialog"
                 aria-expanded={isPopoverOpen}
                 className={`group flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-xs font-sans transition cursor-pointer border ${isPopoverOpen
@@ -297,7 +297,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
                 multiple
                 accept=".csv, .xlsx, .xls"
                 onChange={handleFileChange}
-                aria-label="Pilih file spreadsheet CSV atau Excel untuk diunggah"
+                aria-label="Select CSV or Excel spreadsheet files to upload"
                 className="hidden"
               />
 
@@ -306,9 +306,9 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
                 type="button"
                 disabled={isUploading || isLoading}
                 onClick={() => fileInputRef.current?.click()}
-                aria-label="Unggah file data CSV atau Excel"
+                aria-label="Upload CSV or Excel data files"
                 className="group p-2 rounded-xl text-slate-400 hover:text-slate-100 hover:bg-[#14223b] border border-transparent hover:border-slate-800/80 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
-                title="Unggah CSV atau Excel (.xlsx, .xls) untuk dianalisis bersama database warehouse (Maks 10 file, 15MB/file)"
+                title="Upload CSV or Excel (.xlsx, .xls) files to analyze alongside database warehouse (Max 10 files, 15MB/file)"
               >
                 {isUploading ? (
                   <Loader2 className="w-4 h-4 animate-spin text-sky-400" />
@@ -319,27 +319,27 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
 
               {isLoading && (
                 <span className="hidden sm:inline-flex text-[11px] font-mono text-slate-400 select-none mr-0.5">
-                  Tekan <kbd className="px-1 py-0.5 text-[10px] bg-slate-800 rounded border border-slate-700 text-slate-300">Esc</kbd>
+                  Press <kbd className="px-1 py-0.5 text-[10px] bg-slate-800 rounded border border-slate-700 text-slate-300">Esc</kbd>
                 </span>
               )}
               {isLoading ? (
                 <button
                   type="button"
                   onClick={onCancel}
-                  aria-label="Batalkan proses analitik (Esc)"
+                  aria-label="Cancel analytical process (Esc)"
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 active:bg-slate-900 text-slate-200 hover:text-white transition-all shadow-sm cursor-pointer border border-slate-700/80 active:scale-95 shrink-0"
-                  title="Batalkan proses analitik ini jika salah ketik atau salah kirim (Esc)"
+                  title="Cancel analytical process (Esc)"
                 >
                   <Square className="w-3 h-3 fill-rose-400 text-rose-400" />
-                  <span className="text-xs font-medium font-sans">Batalkan</span>
+                  <span className="text-xs font-medium font-sans">Cancel</span>
                 </button>
               ) : (
                 <button
                   type="submit"
                   disabled={isUploading || !query.trim()}
-                  aria-label="Kirim pertanyaan (Enter)"
+                  aria-label="Send query (Enter)"
                   className="p-2 rounded-xl bg-clay-600 hover:bg-clay-500 disabled:opacity-30 disabled:hover:bg-clay-600 text-white transition shadow-sm cursor-pointer disabled:cursor-not-allowed shrink-0"
-                  title="Kirim (Enter)"
+                  title="Send (Enter)"
                 >
                   <ArrowUp className="w-4 h-4 stroke-[2.5]" />
                 </button>
@@ -350,7 +350,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
 
         {/* AI Disclaimer / Safety Notice */}
         <p className="mt-2 text-center text-[11px] text-slate-500 font-sans select-none tracking-normal">
-          Harmonix dapat membuat kesalahan. Selalu verifikasi data dan kalkulasi analitik penting.
+          Harmonix can make mistakes. Always verify critical data and analytical calculations.
         </p>
       </div>
 

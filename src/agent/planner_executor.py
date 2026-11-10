@@ -139,7 +139,10 @@ CHART_SPECIALIST_PROMPT = """Anda adalah Business Intelligence Visualization Sub
 Tugas Anda adalah merancang visualisasi grafik yang tepat menggunakan tool `make_chart`.
 ATURAN:
 1. Pilih `chart_type` yang tepat: 'pie'/'doughnut' untuk proporsi, 'line' untuk tren waktu, 'bar' untuk perbandingan.
-2. Gunakan baris data nyata yang telah diekstrak sebelumnya. Argumen `data` wajib berupa list of dict `[{"x": ..., "y": ...}]`.
+2. Gunakan baris data nyata yang telah diekstrak sebelumnya. Argumen `data` berupa list of dict.
+3. Untuk perbandingan multi-series (misalnya membandingkan dua atau lebih klien/kategori/entitas dari waktu ke waktu):
+   - Pastikan data memuat seluruh seri yang dibandingkan (baik dalam format kolom berbeda per entitas seperti {"month": ..., "ORG-101": ..., "ORG-104": ...} maupun dengan kolom kategori pembeda seperti {"month": ..., "client_id": "ORG-101", ...}).
+   - Sertakan seluruh titik data perbandingan agar grafik multi-line/multi-bar terbentuk lengkap dengan legenda jelas.
 """
 
 SYNTHESIZER_SYSTEM_PROMPT = """Anda adalah Senior Analytics Synthesizer & Lead Consultant.
@@ -433,10 +436,12 @@ class PlannerExecutorAgent:
 
         first_tbl = tables[0]
         # Auto synthesize or call MakeChartTool
-        sample_records = [
+        # Full records (up to 100 rows) so multi-series comparison is not truncated
+        all_records = [
             dict(zip(first_tbl.columns, row))
-            for row in first_tbl.rows[:15]
+            for row in first_tbl.rows[:100]
         ]
+        sample_records = all_records[:15]
 
         tools = [self.chart_tool.to_openai_schema()]
         messages = [
@@ -459,7 +464,7 @@ class PlannerExecutorAgent:
                     if tc.name == "make_chart":
                         c_args = dict(tc.arguments)
                         if not c_args.get("data"):
-                            c_args["data"] = sample_records
+                            c_args["data"] = all_records
                         obs = await self.chart_tool.execute(**c_args)
                         if isinstance(obs, dict) and obs.get("status") == "success":
                             cs = obs.get("chart", {})
@@ -469,7 +474,7 @@ class PlannerExecutorAgent:
                                     title=cs.get("title", "Visualisasi Data"),
                                     x_axis=cs.get("x_axis", "x"),
                                     y_axis=cs.get("y_axis", "y"),
-                                    data=cs.get("data", sample_records),
+                                    data=cs.get("data", all_records),
                                     sql_query=first_tbl.sql_query if first_tbl else None,
                                 )
                             )

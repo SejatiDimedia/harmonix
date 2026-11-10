@@ -15,7 +15,7 @@ export const AuditorGate: React.FC<AuditorGateProps> = ({ verdict }) => {
   const rawBadge = verdict.badge || 'Verified by Data Auditor';
   let badgeText = rawBadge.replace(/\s*\(Heuristic\)/gi, '').trim();
   if (badgeText.toLowerCase().includes('unverified')) {
-    badgeText = 'Verifikasi Auditor (Eksekusi Langsung)';
+    badgeText = 'Auditor Verified (Direct Execution)';
   }
   const critique = verdict.critique || '';
   const issues = verdict.issues || [];
@@ -43,7 +43,7 @@ export const AuditorGate: React.FC<AuditorGateProps> = ({ verdict }) => {
         <button
           type="button"
           aria-expanded={isExpanded}
-          aria-label={`Detail verifikasi auditor: ${badgeText} (Tingkat Kepercayaan: ${confidence}%). Klik untuk buka atau tutup.`}
+          aria-label={`Auditor verification details: ${badgeText} (Confidence: ${confidence}%). Click to expand or collapse.`}
           onClick={() => setIsExpanded(!isExpanded)}
           className="w-full flex items-center justify-between cursor-pointer select-none text-left"
         >
@@ -51,12 +51,12 @@ export const AuditorGate: React.FC<AuditorGateProps> = ({ verdict }) => {
             <Icon className={`w-4 h-4 ${iconColor} shrink-0`} />
             <span className="font-semibold text-[#f8fafc] font-sans tracking-tight">{badgeText}</span>
             <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono ${confidenceBg}`}>
-              Kepercayaan {confidence}%
+              Confidence {confidence}%
             </span>
           </div>
 
           <div className="flex items-center gap-1.5 text-[#94a3b8] hover:text-[#f8fafc] transition text-[11px]">
-            <span className="font-mono text-[10px]">Detail Audit</span>
+            <span className="font-mono text-[10px]">Audit Details</span>
             <ChevronDown
               className={`w-3.5 h-3.5 transition-transform duration-200 transform ${
                 isExpanded ? 'rotate-180' : ''
@@ -69,14 +69,14 @@ export const AuditorGate: React.FC<AuditorGateProps> = ({ verdict }) => {
           <div className="mt-2.5 pt-2.5 border-t border-white/10 text-[11px] leading-relaxed space-y-2.5">
             <div className="text-[10px] font-mono text-sky-300 bg-[#0c192e] px-2.5 py-1.5 rounded-lg border border-sky-800/40 flex items-center gap-1.5">
               <CheckCircle2 className="w-3.5 h-3.5 text-sky-400 shrink-0" />
-              <span>Audit Maker-Checker: Logika SQL valid, konsistensi numerik diverifikasi, dan bebas pelanggaran guardrail.</span>
+              <span>Maker-Checker Audit: SQL logic validated, numeric consistency verified, and free of guardrail violations.</span>
             </div>
             <div className="text-[#cbd5e1]">{critique}</div>
 
             {issues.length > 0 && (
               <div className="mt-2 space-y-1.5">
                 <div className="font-mono font-semibold text-[10px] uppercase text-[#94a3b8]">
-                  Temuan Kritis Auditor:
+                  Auditor Findings:
                 </div>
                 {issues.map((iss, idx) => (
                   <div
@@ -95,7 +95,7 @@ export const AuditorGate: React.FC<AuditorGateProps> = ({ verdict }) => {
                     {iss.suggested_fix && (
                       <div className="mt-1.5 text-sky-300 font-mono text-[10px] flex items-center gap-1">
                         <Lightbulb className="w-3 h-3 text-sky-400 shrink-0" />
-                        <span>Saran: {iss.suggested_fix}</span>
+                        <span>Recommendation: {iss.suggested_fix}</span>
                       </div>
                     )}
                   </div>

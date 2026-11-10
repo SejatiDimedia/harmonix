@@ -80,18 +80,18 @@ export const DesignSystemCatalog: React.FC<DesignSystemCatalogProps> = ({ showTo
   }, []);
 
   const colorTokens = [
-    { name: 'Canvas Base', hex: '#080f1d', tailwind: 'bg-[#080f1d]', role: 'Latar belakang dasar seluruh aplikasi' },
-    { name: 'Nav / Header', hex: '#0b1424', tailwind: 'bg-[#0b1424]', role: 'Navbar sticky, header TV command center' },
-    { name: 'Container Surface', hex: '#0f1a2e', tailwind: 'bg-[#0f1a2e]', role: 'Kartu canvas, kontainer panel utama' },
-    { name: 'Elevated Surface', hex: '#14223b', tailwind: 'bg-[#14223b]', role: 'Pill segmented, popover model, active items' },
-    { name: 'Surface Hover', hex: '#1a2d4e', tailwind: 'hover:bg-[#1a2d4e]', role: 'Status hover pada elemen interaktif' },
-    { name: 'Primary Action', hex: '#0277bd', tailwind: 'bg-clay-600', role: 'Tombol aksi utama (Submit, Eksekusi)' },
-    { name: 'Primary Hover', hex: '#0284c7', tailwind: 'hover:bg-clay-500', role: 'Status hover tombol utama' },
-    { name: 'Accent / Focus', hex: '#38bdf8', tailwind: 'text-sky-400 / #38bdf8', role: 'Ring fokus aksesibilitas & ikon aktif' },
-    { name: 'Inline Code / Link', hex: '#7dd3fc', tailwind: 'text-sky-300', role: 'Teks sintaks kode dan tautan aksen' },
-    { name: 'Semantic Success', hex: '#34d399', tailwind: 'text-emerald-400', role: 'Database sehat, verifikasi read-only' },
-    { name: 'Semantic Warning', hex: '#fbbf24', tailwind: 'text-amber-400', role: 'Peringatan kuota, status degraded' },
-    { name: 'Semantic Danger', hex: '#f87171', tailwind: 'text-rose-400', role: 'Hapus sesi, batalkan proses, galat' },
+    { name: 'Canvas Base', hex: '#080f1d', tailwind: 'bg-[#080f1d]', role: 'Base application canvas background' },
+    { name: 'Nav / Header', hex: '#0b1424', tailwind: 'bg-[#0b1424]', role: 'Sticky navbar, TV command center header' },
+    { name: 'Container Surface', hex: '#0f1a2e', tailwind: 'bg-[#0f1a2e]', role: 'Canvas card, main panel container' },
+    { name: 'Elevated Surface', hex: '#14223b', tailwind: 'bg-[#14223b]', role: 'Segmented pill, model popover, active items' },
+    { name: 'Surface Hover', hex: '#1a2d4e', tailwind: 'hover:bg-[#1a2d4e]', role: 'Hover state for interactive elements' },
+    { name: 'Primary Action', hex: '#0277bd', tailwind: 'bg-clay-600', role: 'Primary action button (Submit, Execute)' },
+    { name: 'Primary Hover', hex: '#0284c7', tailwind: 'hover:bg-clay-500', role: 'Primary button hover state' },
+    { name: 'Accent / Focus', hex: '#38bdf8', tailwind: 'text-sky-400 / #38bdf8', role: 'Accessibility focus ring and active icons' },
+    { name: 'Inline Code / Link', hex: '#7dd3fc', tailwind: 'text-sky-300', role: 'Syntax code text and accent links' },
+    { name: 'Semantic Success', hex: '#34d399', tailwind: 'text-emerald-400', role: 'Healthy database, read-only verification' },
+    { name: 'Semantic Warning', hex: '#fbbf24', tailwind: 'text-amber-400', role: 'Quota warning, degraded status' },
+    { name: 'Semantic Danger', hex: '#f87171', tailwind: 'text-rose-400', role: 'Delete session, cancel process, errors' },
   ];
 
   return (
@@ -107,7 +107,7 @@ export const DesignSystemCatalog: React.FC<DesignSystemCatalogProps> = ({ showTo
                 className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#14223b] hover:bg-[#1a2d4e] text-slate-300 hover:text-white border border-white/[0.06] text-xs font-sans transition cursor-pointer shadow-sm"
               >
                 <ArrowRight className="w-3.5 h-3.5 rotate-180 text-sky-400" />
-                <span>Kembali ke Aplikasi Utama</span>
+                <span>Return to Main App</span>
               </button>
             </div>
           )}
@@ -125,7 +125,7 @@ export const DesignSystemCatalog: React.FC<DesignSystemCatalogProps> = ({ showTo
                 </span>
               </div>
               <p className="text-xs sm:text-sm text-slate-300 font-sans leading-relaxed max-w-3xl">
-                Katalog token desain, palet warna, tipografi, dan komponen antarmuka resmi Harmonix. Dibuat dengan standar ketat <strong>Anti-Slop Craftsmanship (C-1 sampai C-5)</strong> untuk memastikan seluruh antarmuka terasa tenang, berbobot, konsisten, dan bebas dari AI slop.
+                Official Harmonix design tokens, color palette, typography, and interface components catalog. Built with strict <strong>Anti-Slop Craftsmanship (C-1 to C-5)</strong> standards to ensure the interface feels calm, authoritative, consistent, and free from AI slop.
               </p>
             </div>
 
@@ -146,12 +146,12 @@ export const DesignSystemCatalog: React.FC<DesignSystemCatalogProps> = ({ showTo
           {/* Navigation Category Filters */}
           <div className="flex items-center gap-1.5 mt-6 pt-4 border-t border-white/[0.06] overflow-x-auto pb-1 text-xs select-none">
             {[
-              { id: 'all', label: 'Semua Komponen' },
-              { id: 'colors', label: 'Palet Warna' },
-              { id: 'buttons', label: 'Tombol & Aksi' },
-              { id: 'cards', label: 'Kartu & Kontainer' },
-              { id: 'modals', label: 'Modal & Popover' },
-              { id: 'forms', label: 'Form & Input' },
+              { id: 'all', label: 'All Components' },
+              { id: 'colors', label: 'Color Palette' },
+              { id: 'buttons', label: 'Buttons & Actions' },
+              { id: 'cards', label: 'Cards & Surfaces' },
+              { id: 'modals', label: 'Modals & Popovers' },
+              { id: 'forms', label: 'Forms & Inputs' },
               { id: 'states', label: 'UI States (R-27)' },
             ].map((cat) => (
               <button
@@ -176,14 +176,14 @@ export const DesignSystemCatalog: React.FC<DesignSystemCatalogProps> = ({ showTo
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-base font-semibold font-sans text-slate-100 flex items-center gap-2">
-                  <span>1. Palet Warna & Token Permukaan</span>
+                  <span>1. Color Palette & Surface Tokens</span>
                 </h2>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Palet midnight navy yang tenang dengan rasio kontras tinggi, menolak gradien pelangi dan neon berlebihan.
+                  Calm midnight navy palette with high contrast ratios, rejecting rainbow gradients and neon clutter.
                 </p>
               </div>
               <span className="text-[11px] font-mono text-slate-500 hidden sm:inline">
-                Klik kartu untuk menyalin Hex
+                Click card to copy Hex
               </span>
             </div>
 
@@ -193,7 +193,7 @@ export const DesignSystemCatalog: React.FC<DesignSystemCatalogProps> = ({ showTo
                   key={c.name}
                   onClick={() => handleCopy(c.hex, c.name)}
                   className="group relative p-3.5 rounded-xl bg-[#0f1a2e] border border-white/[0.06] hover:border-white/[0.15] transition-all cursor-pointer shadow-sm flex flex-col justify-between"
-                  title="Klik untuk menyalin kode Hex"
+                  title="Click to copy Hex code"
                 >
                   <div className="flex items-center justify-between mb-3">
                     <div
@@ -202,7 +202,7 @@ export const DesignSystemCatalog: React.FC<DesignSystemCatalogProps> = ({ showTo
                     />
                     <button
                       type="button"
-                      aria-label={`Salin kode hex ${c.name}`}
+                      aria-label={`Copy hex code ${c.name}`}
                       className="p-1 rounded text-slate-400 hover:text-white opacity-0 group-hover:opacity-100 transition"
                     >
                       {copiedToken === c.name ? (
@@ -235,10 +235,10 @@ export const DesignSystemCatalog: React.FC<DesignSystemCatalogProps> = ({ showTo
           <section className="space-y-4">
             <div>
               <h2 className="text-base font-semibold font-sans text-slate-100 flex items-center gap-2">
-                <span>2. Sistem Tombol & Segmented Control</span>
+                <span>2. Button System & Segmented Controls</span>
               </h2>
               <p className="text-xs text-slate-400 mt-0.5">
-                Hirarki tombol deterministik dengan status aktif, loading, dan fokus aksesibilitas.
+                Deterministic button hierarchy with active, loading, and accessibility focus states.
               </p>
             </div>
 
@@ -246,7 +246,7 @@ export const DesignSystemCatalog: React.FC<DesignSystemCatalogProps> = ({ showTo
               {/* Row A: Action Buttons */}
               <div className="space-y-2">
                 <span className="text-[11px] font-mono uppercase text-slate-400 font-semibold tracking-wider">
-                  A. Tingkatan Tombol Aksi (Button Variants)
+                  A. Action Button Variants
                 </span>
                 <div className="flex flex-wrap items-center gap-3 pt-1">
                   {/* Primary CTA */}
@@ -255,7 +255,7 @@ export const DesignSystemCatalog: React.FC<DesignSystemCatalogProps> = ({ showTo
                     onClick={() => {
                       setButtonLoading(true);
                       setTimeout(() => setButtonLoading(false), 1200);
-                      if (showToast) showToast('Aksi Utama dieksekusi');
+                      if (showToast) showToast('Primary Action executed');
                     }}
                     disabled={buttonLoading}
                     className="flex items-center gap-2 px-4 py-2 rounded-xl bg-clay-600 hover:bg-clay-500 active:bg-clay-700 text-white font-medium text-xs shadow-sm transition cursor-pointer disabled:opacity-50"
@@ -271,7 +271,7 @@ export const DesignSystemCatalog: React.FC<DesignSystemCatalogProps> = ({ showTo
                   {/* Secondary Outline */}
                   <button
                     type="button"
-                    onClick={() => showToast?.('Secondary Button diklik')}
+                    onClick={() => showToast?.('Secondary Button clicked')}
                     className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-800/90 hover:bg-slate-700/90 text-slate-200 hover:text-white font-medium text-xs border border-slate-700/80 transition cursor-pointer"
                   >
                     <Sliders className="w-3.5 h-3.5 text-slate-300" />
@@ -281,7 +281,7 @@ export const DesignSystemCatalog: React.FC<DesignSystemCatalogProps> = ({ showTo
                   {/* Subtle / Ghost */}
                   <button
                     type="button"
-                    onClick={() => showToast?.('Ghost Button diklik')}
+                    onClick={() => showToast?.('Ghost Button clicked')}
                     className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-slate-400 hover:text-white hover:bg-[#14223b] border border-transparent hover:border-slate-800/80 text-xs font-sans transition cursor-pointer"
                   >
                     <Eye className="w-3.5 h-3.5" />
@@ -291,7 +291,7 @@ export const DesignSystemCatalog: React.FC<DesignSystemCatalogProps> = ({ showTo
                   {/* Destructive */}
                   <button
                     type="button"
-                    onClick={() => showToast?.('Destructive Button diklik')}
+                    onClick={() => showToast?.('Destructive Button clicked')}
                     className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 font-medium text-xs font-sans transition cursor-pointer"
                   >
                     <Trash2 className="w-3.5 h-3.5 text-rose-400" />
@@ -316,7 +316,7 @@ export const DesignSystemCatalog: React.FC<DesignSystemCatalogProps> = ({ showTo
                     B. Unified Segmented Capsule (TV & Kiosk Toolbar)
                   </span>
                   <span className="text-[11px] text-slate-400 font-sans">
-                    Solusi anti "box soup": menggabungkan tombol terkait dalam satu pill
+                    Anti-"box soup" solution: consolidates related buttons into a unified capsule
                   </span>
                 </div>
 
@@ -333,7 +333,7 @@ export const DesignSystemCatalog: React.FC<DesignSystemCatalogProps> = ({ showTo
                       }`}
                     >
                       <Maximize2 className="w-3.5 h-3.5" />
-                      <span>Fit Layar</span>
+                      <span>Fit Screen</span>
                     </button>
                     <div className="h-3 w-px bg-white/[0.08]" />
                     <button
@@ -346,7 +346,7 @@ export const DesignSystemCatalog: React.FC<DesignSystemCatalogProps> = ({ showTo
                       }`}
                     >
                       <SlidersHorizontal className="w-3.5 h-3.5" />
-                      <span>Tata Letak</span>
+                      <span>Layout</span>
                     </button>
                   </div>
 
@@ -355,18 +355,18 @@ export const DesignSystemCatalog: React.FC<DesignSystemCatalogProps> = ({ showTo
                     <button
                       type="button"
                       onClick={() => showToast?.('Icon action 1')}
-                      aria-label="Contoh aksi ikon 1"
+                      aria-label="Example icon action 1"
                       className="p-1.5 rounded-md text-slate-300 hover:text-white hover:bg-white/[0.05] transition cursor-pointer"
-                      title="Contoh tombol utilitas"
+                      title="Utility button sample"
                     >
                       <FileText className="w-3.5 h-3.5" />
                     </button>
                     <button
                       type="button"
                       onClick={() => showToast?.('Icon action 2')}
-                      aria-label="Contoh aksi ikon 2"
+                      aria-label="Example icon action 2"
                       className="p-1.5 rounded-md text-slate-300 hover:text-white hover:bg-white/[0.05] transition cursor-pointer"
-                      title="Contoh tombol utilitas"
+                      title="Utility button sample"
                     >
                       <RefreshCw className="w-3.5 h-3.5 text-sky-400" />
                     </button>
@@ -374,9 +374,9 @@ export const DesignSystemCatalog: React.FC<DesignSystemCatalogProps> = ({ showTo
                     <button
                       type="button"
                       onClick={() => showToast?.('Close button')}
-                      aria-label="Tutup utilitas"
+                      aria-label="Close utility"
                       className="p-1.5 rounded-md text-slate-400 hover:text-rose-300 hover:bg-rose-500/10 transition cursor-pointer"
-                      title="Tutup"
+                      title="Close"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
@@ -392,10 +392,10 @@ export const DesignSystemCatalog: React.FC<DesignSystemCatalogProps> = ({ showTo
           <section className="space-y-4">
             <div>
               <h2 className="text-base font-semibold font-sans text-slate-100 flex items-center gap-2">
-                <span>3. Kartu & Permukaan Analitik (Cards & Surfaces)</span>
+                <span>3. Analytical Cards & Surfaces</span>
               </h2>
               <p className="text-xs text-slate-400 mt-0.5">
-                Elevasi terukur tanpa bayangan besar melayang atau garis border ganda yang kacau.
+                Calibrated elevation without floaty drop shadows or messy double borders.
               </p>
             </div>
 
@@ -403,9 +403,9 @@ export const DesignSystemCatalog: React.FC<DesignSystemCatalogProps> = ({ showTo
               {/* KPI Executive Card */}
               <div className="kpi-summary-card">
                 <div>
-                  <span className="kpi-summary-label">Total Pendapatan Q3</span>
+                  <span className="kpi-summary-label">Total Q3 Revenue</span>
                   <div className="kpi-summary-value text-slate-100 mt-1">
-                    Rp 4,82 Miliar
+                    $4.82 Million
                   </div>
                 </div>
                 <div className="flex items-center justify-between text-xs pt-3 mt-3 border-t border-white/[0.04]">
@@ -423,12 +423,12 @@ export const DesignSystemCatalog: React.FC<DesignSystemCatalogProps> = ({ showTo
                 <div>
                   <div className="flex items-center justify-between pb-2 mb-2 border-b border-white/[0.04]">
                     <span className="text-xs font-semibold text-slate-200 font-sans">
-                      Panel Container Standard
+                      Standard Panel Container
                     </span>
                     <span className="w-2 h-2 rounded-full bg-sky-400" />
                   </div>
                   <p className="text-xs text-slate-400 leading-relaxed">
-                    Struktur kartu dasar untuk membungkus tabel, daftar data, atau rangkuman naratif analitik.
+                    Basic container structure to wrap tables, data records, or analytical narrative summaries.
                   </p>
                 </div>
                 <div className="mt-4 pt-2 text-[11px] font-mono text-slate-500">
@@ -441,7 +441,7 @@ export const DesignSystemCatalog: React.FC<DesignSystemCatalogProps> = ({ showTo
                 <div>
                   <div className="flex items-center justify-between pb-2 mb-3 border-b border-white/[0.06]">
                     <span className="text-xs font-semibold text-slate-100 font-sans truncate">
-                      Widget Visualisasi
+                      Visualization Widget
                     </span>
                     <div className="flex items-center gap-1">
                       <span className="text-[10px] font-mono text-slate-400 px-1.5 py-0.5 rounded bg-[#14223b]">
@@ -450,12 +450,12 @@ export const DesignSystemCatalog: React.FC<DesignSystemCatalogProps> = ({ showTo
                     </div>
                   </div>
                   <div className="h-20 rounded-lg bg-[#080f1d] border border-white/[0.04] flex items-center justify-center text-slate-500 text-xs font-mono">
-                    [Area Rendering Grafik]
+                    [Chart Rendering Surface]
                   </div>
                 </div>
                 <div className="mt-3 flex items-center justify-between text-[11px] text-slate-400">
-                  <span>12 Kolom Responsive</span>
-                  <span className="text-sky-400">Interaktif</span>
+                  <span>12 Responsive Columns</span>
+                  <span className="text-sky-400">Interactive</span>
                 </div>
               </div>
             </div>
@@ -467,10 +467,10 @@ export const DesignSystemCatalog: React.FC<DesignSystemCatalogProps> = ({ showTo
           <section className="space-y-4">
             <div>
               <h2 className="text-base font-semibold font-sans text-slate-100 flex items-center gap-2">
-                <span>4. Modal, Popover & Dialog Interaktif</span>
+                <span>4. Modals, Popovers & Interactive Dialogs</span>
               </h2>
               <p className="text-xs text-slate-400 mt-0.5">
-                Komponen overlay dengan backdrop blur terukur, fokus keyboard, dan penutupan dengan tombol Escape.
+                Overlay components with calibrated backdrop blur, keyboard trap, and Escape key dismissal.
               </p>
             </div>
 
@@ -482,7 +482,7 @@ export const DesignSystemCatalog: React.FC<DesignSystemCatalogProps> = ({ showTo
                 className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700/80 text-xs font-medium transition cursor-pointer"
               >
                 <Layers className="w-3.5 h-3.5 text-sky-400" />
-                <span>Uji Standard Modal</span>
+                <span>Test Standard Modal</span>
               </button>
 
               {/* Trigger Confirmation Modal */}
@@ -492,7 +492,7 @@ export const DesignSystemCatalog: React.FC<DesignSystemCatalogProps> = ({ showTo
                 className="flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 text-xs font-medium transition cursor-pointer"
               >
                 <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
-                <span>Uji Confirmation Modal</span>
+                <span>Test Confirmation Modal</span>
               </button>
 
               {/* Popover Dropdown Demo */}
@@ -502,23 +502,23 @@ export const DesignSystemCatalog: React.FC<DesignSystemCatalogProps> = ({ showTo
                   onClick={() => setIsDemoPopoverOpen((prev) => !prev)}
                   className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#14223b] hover:bg-[#1a2d4e] text-slate-200 border border-white/[0.08] text-xs font-medium transition cursor-pointer shadow-sm"
                 >
-                  <span>Pilihan: {demoPopoverValue}</span>
+                  <span>Interval: {demoPopoverValue}</span>
                   <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${isDemoPopoverOpen ? 'rotate-180' : ''}`} />
                 </button>
 
                 {isDemoPopoverOpen && (
                   <div className="absolute left-0 mt-2 w-44 bg-[#0f1b2d] border border-white/[0.1] rounded-xl shadow-2xl py-1 z-50 text-xs backdrop-blur-md animate-in fade-in zoom-in-95 duration-100">
                     <div className="px-3 py-1.5 text-[10px] uppercase font-mono text-slate-400 font-semibold border-b border-white/[0.06]">
-                      Opsi Popover
+                      Popover Options
                     </div>
-                    {['Nonaktif (Off)', '30 detik', '60 detik', '5 menit'].map((item) => (
+                    {['Off', '30s', '60s', '5m'].map((item) => (
                       <button
                         key={item}
                         type="button"
                         onClick={() => {
                           setDemoPopoverValue(item);
                           setIsDemoPopoverOpen(false);
-                          showToast?.(`Memilih: ${item}`);
+                          showToast?.(`Selected: ${item}`);
                         }}
                         className={`w-full px-3 py-2 text-left flex items-center justify-between text-xs transition cursor-pointer hover:bg-sky-500/10 ${
                           demoPopoverValue === item ? 'text-sky-400 font-medium bg-sky-500/5' : 'text-slate-300'
@@ -554,11 +554,11 @@ export const DesignSystemCatalog: React.FC<DesignSystemCatalogProps> = ({ showTo
                   </div>
 
                   <p className="text-xs text-slate-300 leading-relaxed font-sans">
-                    Ini adalah cetak biru dialog modal standar Harmonix. Menggunakan latar belakang gelap solid <code>#0f1b2d</code>, padding <code>p-6</code>, tombol penutup keyboard (Escape), dan pembatas halus <code>border-white/[0.06]</code>.
+                    This is the standard Harmonix modal dialog blueprint. Built with solid dark background <code>#0f1b2d</code>, padding <code>p-6</code>, keyboard Escape dismissal, and subtle <code>border-white/[0.06]</code>.
                   </p>
 
                   <div className="p-3 rounded-xl bg-[#080f1d] border border-white/[0.04] text-xs font-mono text-slate-400">
-                    ESC untuk menutup • Fokus otomatis terperangkap di dalam modal
+                    ESC to close • Focus automatically trapped within modal
                   </div>
 
                   <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-white/[0.06]">
@@ -567,17 +567,17 @@ export const DesignSystemCatalog: React.FC<DesignSystemCatalogProps> = ({ showTo
                       onClick={() => setIsDemoModalOpen(false)}
                       className="px-3.5 py-1.5 rounded-xl bg-slate-800 text-slate-300 hover:text-white text-xs font-sans transition"
                     >
-                      Tutup
+                      Close
                     </button>
                     <button
                       type="button"
                       onClick={() => {
                         setIsDemoModalOpen(false);
-                        showToast?.('Aksi modal berhasil dieksekusi');
+                        showToast?.('Modal action confirmed');
                       }}
                       className="px-4 py-1.5 rounded-xl bg-clay-600 hover:bg-clay-500 text-white text-xs font-medium font-sans transition"
                     >
-                      Konfirmasi
+                      Confirm
                     </button>
                   </div>
                 </div>
@@ -594,16 +594,16 @@ export const DesignSystemCatalog: React.FC<DesignSystemCatalogProps> = ({ showTo
                     </div>
                     <div>
                       <h3 className="text-base font-semibold text-slate-100 font-sans">
-                        Konfirmasi Tindakan Kritis
+                        Confirm Critical Action
                       </h3>
                       <p className="text-xs text-slate-400 mt-0.5">
-                        Tindakan ini tidak dapat dibatalkan.
+                        This action cannot be undone.
                       </p>
                     </div>
                   </div>
 
                   <p className="text-xs text-slate-300 leading-relaxed font-sans">
-                    Apakah Anda yakin ingin menghapus data atau sesi ini secara permanen dari sistem?
+                    Are you sure you want to permanently delete this data or session from the system?
                   </p>
 
                   <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-white/[0.06]">
@@ -612,17 +612,17 @@ export const DesignSystemCatalog: React.FC<DesignSystemCatalogProps> = ({ showTo
                       onClick={() => setIsDemoConfirmOpen(false)}
                       className="px-3.5 py-1.5 rounded-xl bg-slate-800 text-slate-300 hover:text-white text-xs font-sans transition"
                     >
-                      Batal
+                      Cancel
                     </button>
                     <button
                       type="button"
                       onClick={() => {
                         setIsDemoConfirmOpen(false);
-                        showToast?.('Tindakan kritis disetujui');
+                        showToast?.('Critical action confirmed');
                       }}
                       className="px-4 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-medium font-sans transition shadow-sm"
                     >
-                      Ya, Lanjutkan
+                      Yes, Proceed
                     </button>
                   </div>
                 </div>
@@ -636,10 +636,10 @@ export const DesignSystemCatalog: React.FC<DesignSystemCatalogProps> = ({ showTo
           <section className="space-y-4">
             <div>
               <h2 className="text-base font-semibold font-sans text-slate-100 flex items-center gap-2">
-                <span>5. Kontrol Formulir & Input Data</span>
+                <span>5. Form Controls & Data Inputs</span>
               </h2>
               <p className="text-xs text-slate-400 mt-0.5">
-                Input teks, area teks, dan dropdown dengan focus ring WCAG 2.1 AA (#38bdf8).
+                Text inputs, textareas, and select dropdowns with WCAG 2.1 AA (#38bdf8) focus ring.
               </p>
             </div>
 
@@ -647,14 +647,14 @@ export const DesignSystemCatalog: React.FC<DesignSystemCatalogProps> = ({ showTo
               {/* Text Input */}
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-slate-300 font-sans block">
-                  Input Teks Standar
+                  Standard Text Input
                 </label>
                 <div className="relative">
                   <input
                     type="text"
                     value={demoInputText}
                     onChange={(e) => setDemoInputText(e.target.value)}
-                    placeholder="Ketik pertanyaan atau parameter analitik..."
+                    placeholder="Type an analytical question or parameter..."
                     className="w-full bg-[#080f1d] border border-slate-700/80 rounded-xl px-3.5 py-2 text-xs text-[#f8fafc] placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-sky-400 transition"
                   />
                   {demoInputText && (
@@ -668,14 +668,14 @@ export const DesignSystemCatalog: React.FC<DesignSystemCatalogProps> = ({ showTo
                   )}
                 </div>
                 <span className="text-[10px] text-slate-500 font-mono">
-                  Helper teks atau instruksi input
+                  Helper text or input guidance
                 </span>
               </div>
 
               {/* Select Dropdown */}
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-slate-300 font-sans block">
-                  Dropdown Pilihan Model / Provider
+                  Model / Provider Dropdown
                 </label>
                 <select
                   value={demoSelect}
@@ -688,7 +688,7 @@ export const DesignSystemCatalog: React.FC<DesignSystemCatalogProps> = ({ showTo
                   <option value="anthropic">Anthropic • Claude 3.5 Sonnet</option>
                 </select>
                 <span className="text-[10px] text-slate-500 font-mono">
-                  State terpilih: {demoSelect.toUpperCase()}
+                  Selected state: {demoSelect.toUpperCase()}
                 </span>
               </div>
             </div>
@@ -700,10 +700,10 @@ export const DesignSystemCatalog: React.FC<DesignSystemCatalogProps> = ({ showTo
           <section className="space-y-4">
             <div>
               <h2 className="text-base font-semibold font-sans text-slate-100 flex items-center gap-2">
-                <span>6. Tiga State Wajib UI (Antislop R-27 Compliance)</span>
+                <span>6. Mandatory UI States (Antislop R-27 Compliance)</span>
               </h2>
               <p className="text-xs text-slate-400 mt-0.5">
-                Antislop R-27 mewajibkan setiap komponen data memiliki Empty State, Loading State, dan Error State yang jujur dan informatif.
+                Antislop R-27 mandates that every data surface provides honest, informative Empty, Loading, and Error states.
               </p>
             </div>
 
@@ -715,18 +715,18 @@ export const DesignSystemCatalog: React.FC<DesignSystemCatalogProps> = ({ showTo
                 </div>
                 <div className="space-y-1">
                   <span className="text-xs font-semibold text-slate-200 block font-sans">
-                    Belum Ada Widget Tersemat
+                    No Pinned Widgets Yet
                   </span>
                   <p className="text-[11px] text-slate-400 leading-relaxed max-w-xs">
-                    Mulai percakapan data di tab chat, lalu sematkan grafik kunci ke dashboard ini.
+                    Start an analytical conversation in the chat tab, then pin key charts to this live dashboard.
                   </p>
                 </div>
                 <button
                   type="button"
-                  onClick={() => showToast?.('Navigasi ke Chat')}
+                  onClick={() => showToast?.('Navigate to Chat')}
                   className="px-3.5 py-1.5 rounded-lg bg-sky-500/20 text-sky-300 hover:bg-sky-500/30 font-medium text-xs font-sans transition cursor-pointer"
                 >
-                  Buka Chat Sekarang
+                  Open Chat Now
                 </button>
               </div>
 
@@ -735,10 +735,10 @@ export const DesignSystemCatalog: React.FC<DesignSystemCatalogProps> = ({ showTo
                 <Loader2 className="w-8 h-8 text-sky-400 animate-spin" />
                 <div className="space-y-1">
                   <span className="text-xs font-semibold text-slate-200 block font-sans">
-                    Menghubungkan ke Data Warehouse
+                    Connecting to Data Warehouse
                   </span>
                   <p className="text-[11px] text-slate-400 leading-relaxed max-w-xs">
-                    Memverifikasi skema tabel dan integritas read-only PostgreSQL...
+                    Verifying schema catalog and read-only PostgreSQL integrity...
                   </p>
                 </div>
                 <span className="text-[10px] font-mono text-slate-500 px-2 py-0.5 rounded bg-[#14223b]">
@@ -753,18 +753,18 @@ export const DesignSystemCatalog: React.FC<DesignSystemCatalogProps> = ({ showTo
                 </div>
                 <div className="space-y-1">
                   <span className="text-xs font-semibold text-rose-200 block font-sans">
-                    Gagal Mengeksekusi Analitik
+                    Analytics Execution Failed
                   </span>
                   <p className="text-[11px] text-slate-400 leading-relaxed max-w-xs">
-                    Koneksi database terputus atau batas kuota model terlampaui.
+                    Database connection lost or model rate limit exceeded.
                   </p>
                 </div>
                 <button
                   type="button"
-                  onClick={() => showToast?.('Mencoba menyambungkan kembali...')}
+                  onClick={() => showToast?.('Retrying connection...')}
                   className="px-3.5 py-1.5 rounded-lg bg-rose-500/20 text-rose-300 font-medium text-xs font-sans hover:bg-rose-500/30 transition cursor-pointer"
                 >
-                  Coba Ulang
+                  Retry
                 </button>
               </div>
             </div>

@@ -101,11 +101,11 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
 
   const formatMemoryKey = (rawKey: string) => {
     const map: Record<string, string> = {
-      swarm_plan: 'Rencana Eksekusi',
-      sql_specialist_result: 'Hasil Eksekusi SQL',
-      calc_specialist_result: 'Hasil Perhitungan Kalkulator',
-      chart_specialist_result: 'Hasil Desain Visualisasi',
-      general_analyst_result: 'Hasil Sintesis Analis',
+      swarm_plan: 'Execution Plan',
+      sql_specialist_result: 'SQL Execution Result',
+      calc_specialist_result: 'Quantitative Calculation Result',
+      chart_specialist_result: 'Visualization Design Result',
+      general_analyst_result: 'Analyst Synthesis Result',
     };
     const k = rawKey.toLowerCase().trim();
     return map[k] || rawKey.replace(/_/g, ' ');
@@ -163,13 +163,13 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
               <button
                 type="button"
                 onClick={() => onSelectSuggestion(turn.user_query!)}
-                aria-label="Ajukan ulang pertanyaan"
-                title="Ajukan ulang pertanyaan ini langsung ke agent"
+                aria-label="Resend question"
+                title="Resend this question directly to the agent"
                 className="relative group/btn p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.08] transition cursor-pointer"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
                 <span className="pointer-events-none absolute -top-7 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-md text-[10px] font-sans bg-slate-900/95 border border-slate-700/80 text-slate-200 whitespace-nowrap shadow-lg opacity-0 group-hover/btn:opacity-100 transition-opacity duration-150 z-30">
-                  Ajukan Ulang
+                  Resend
                 </span>
               </button>
             )}
@@ -178,8 +178,8 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
               <button
                 type="button"
                 onClick={() => onEditQuery(turn.user_query!)}
-                aria-label="Edit pertanyaan"
-                title="Salin pertanyaan ke kolom pesan untuk diedit"
+                aria-label="Edit question"
+                title="Copy question to input field for editing"
                 className="relative group/btn p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.08] transition cursor-pointer"
               >
                 <Pencil className="w-3.5 h-3.5" />
@@ -192,8 +192,8 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
             <button
               type="button"
               onClick={handleCopyQuery}
-              aria-label={copiedQuery ? 'Tersalin ke clipboard' : 'Salin pertanyaan'}
-              title={copiedQuery ? 'Tersalin ke clipboard' : 'Salin pertanyaan'}
+              aria-label={copiedQuery ? 'Copied to clipboard' : 'Copy question'}
+              title={copiedQuery ? 'Copied to clipboard' : 'Copy question'}
               className="relative group/btn p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.08] transition cursor-pointer"
             >
               {copiedQuery ? (
@@ -202,7 +202,7 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
                 <Copy className="w-3.5 h-3.5" />
               )}
               <span className="pointer-events-none absolute -top-7 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-md text-[10px] font-sans bg-slate-900/95 border border-slate-700/80 text-slate-200 whitespace-nowrap shadow-lg opacity-0 group-hover/btn:opacity-100 transition-opacity duration-150 z-30">
-                {copiedQuery ? 'Tersalin!' : 'Salin'}
+                {copiedQuery ? 'Copied!' : 'Copy'}
               </span>
             </button>
           </div>
@@ -223,17 +223,17 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
             <div role="status" aria-live="polite" className="text-xs font-mono flex items-center justify-between gap-2 select-none pb-1">
               <span className="text-slate-400 font-mono text-[11px] flex items-center gap-1.5">
                 <Loader2 className="w-3.5 h-3.5 animate-spin text-sky-400 shrink-0" />
-                <span>{streamingStatus || 'Merancang rencana analitik...'}</span>
+                <span>{streamingStatus || 'Formulating analytics plan...'}</span>
               </span>
               {onCancel && (
                 <button
                   type="button"
                   onClick={onCancel}
                   className="px-2.5 py-1 rounded-lg text-[11px] font-mono text-slate-300 hover:text-white bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/60 transition cursor-pointer flex items-center gap-1.5 shadow-sm shrink-0"
-                  title="Batalkan proses saat ini (Esc)"
+                  title="Cancel current process (Esc)"
                 >
                   <Square className="w-2.5 h-2.5 fill-rose-400 text-rose-400" />
-                  <span>Batalkan</span>
+                  <span>Cancel</span>
                 </button>
               )}
             </div>
@@ -245,10 +245,10 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
               <div className="flex items-center gap-2.5">
                 <span className="w-2 h-2 rounded-full bg-slate-500 shrink-0" />
                 <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-mono text-[10px] font-medium tracking-wide border border-slate-700/60">
-                  Dibatalkan
+                  Cancelled
                 </span>
                 <span className="text-slate-400 font-sans text-xs">
-                  Proses analitik dihentikan atas permintaan pengguna.
+                  Analytical process stopped upon user request.
                 </span>
               </div>
               {turn.user_query && onEditQuery && (
@@ -256,10 +256,10 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
                   type="button"
                   onClick={() => onEditQuery(turn.user_query)}
                   className="px-2.5 py-1 rounded-lg text-xs font-mono bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 hover:text-white border border-white/[0.08] transition cursor-pointer flex items-center gap-1.5 shrink-0"
-                  title="Kembalikan kueri ke kolom input untuk diperbaiki"
+                  title="Restore query to input field for editing"
                 >
                   <Pencil className="w-3 h-3 text-slate-400" />
-                  <span>Edit Pesan</span>
+                  <span>Edit Query</span>
                 </button>
               )}
             </div>
@@ -275,7 +275,7 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
 
           {/* Charts (Visualisasi Grafik Utama - Ditampilkan Langsung Bersama Jawaban Inti) */}
           {turn.charts && turn.charts.length > 0 && (
-            <ErrorBoundary fallbackTitle="Gagal memuat visualisasi grafik">
+            <ErrorBoundary fallbackTitle="Failed to render chart visualization">
               <DataChart
                 charts={turn.charts}
                 tables={turn.tables}
@@ -309,7 +309,7 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
                 <div className="flex items-center gap-2 min-w-0">
                   <Database className="w-3.5 h-3.5 text-clay-400 shrink-0 group-hover:text-clay-300 transition" />
                   <span className="font-medium text-[#cbd5e1] group-hover:text-white transition truncate">
-                    {showDataFlow ? 'Sembunyikan Flow Pengambilan Data' : 'Lihat Flow Pengambilan Data'}
+                    {showDataFlow ? 'Hide Data Retrieval Flow' : 'View Data Retrieval Flow'}
                   </span>
                   <div className="hidden sm:flex items-center gap-1.5 shrink-0 ml-1">
                     {turn.sql_queries && turn.sql_queries.length > 0 && (
@@ -319,32 +319,32 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
                     )}
                     {turn.tables && turn.tables.length > 0 && (
                       <span className="text-[10px] text-slate-300 bg-slate-800/80 px-2.5 py-0.5 rounded-full font-mono border border-slate-700/40">
-                        {turn.tables.length} Tabel
+                        {turn.tables.length} {turn.tables.length === 1 ? 'Table' : 'Tables'}
                       </span>
                     )}
                     {turn.memories_recalled && turn.memories_recalled.length > 0 && (
                       <span className="text-[10px] text-slate-300 bg-slate-800/80 px-2.5 py-0.5 rounded-full font-mono border border-slate-700/40 flex items-center gap-1">
                         <Brain className="w-2.5 h-2.5 text-slate-400" />
-                        Memori
+                        Memory
                       </span>
                     )}
                     {workingMemoryKeys.length > 0 && (
                       <span className="text-[10px] text-slate-300 bg-slate-800/80 px-2.5 py-0.5 rounded-full font-mono border border-slate-700/40 flex items-center gap-1">
                         <FileText className="w-2.5 h-2.5 text-slate-400" />
-                        {workingMemoryKeys.length} Catatan
+                        {workingMemoryKeys.length} {workingMemoryKeys.length === 1 ? 'Note' : 'Notes'}
                       </span>
                     )}
                     {hasPlan && (
                       <span className="text-[10px] text-slate-300 bg-slate-800/80 px-2.5 py-0.5 rounded-full font-mono border border-slate-700/40 flex items-center gap-1">
                         <Layers className="w-2.5 h-2.5 text-slate-400" />
-                        {turn.execution_plan?.tasks.length} Sub-Agent
+                        {turn.execution_plan?.tasks.length} {turn.execution_plan?.tasks.length === 1 ? 'Sub-Agent' : 'Sub-Agents'}
                       </span>
                     )}
                   </div>
                 </div>
 
                 <div className="flex items-center gap-1.5 text-[11px] text-[#64748b] group-hover:text-[#94a3b8] shrink-0 ml-2">
-                  <span>{showDataFlow ? 'Tutup' : 'Buka'}</span>
+                  <span>{showDataFlow ? 'Close' : 'Open'}</span>
                   <ChevronDown
                     className={`w-3.5 h-3.5 transition-transform duration-200 ${
                       showDataFlow ? 'rotate-180' : ''
@@ -361,14 +361,14 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2 text-slate-200 font-semibold font-sans">
                           <Layers className="w-3.5 h-3.5 text-clay-400" />
-                          <span>Rencana & Delegasi Sub-Agent</span>
+                          <span>Sub-Agent Plan & Delegation</span>
                         </div>
                         <span className="text-[10px] text-slate-400 bg-slate-800/80 px-2 py-0.5 rounded border border-slate-700/40 uppercase font-mono">
                           {turn.execution_plan?.complexity_level || 'multi-agent'}
                         </span>
                       </div>
                       <div className="text-[11px] text-slate-400 font-sans">
-                        Sasaran: "{turn.execution_plan?.goal}"
+                        Target Goal: "{turn.execution_plan?.goal}"
                       </div>
                       <div className="grid grid-cols-1 gap-2 mt-1">
                         {turn.execution_plan?.tasks.map((task) => {
@@ -412,7 +412,7 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
                       <div className="flex items-center gap-2 text-slate-200 font-semibold font-sans">
                         <Brain className="w-3.5 h-3.5 text-clay-400 shrink-0" />
                         <span>
-                          Memori Analisis Terkait ({turn.memories_recalled.length} kueri terverifikasi)
+                          Relevant Analysis Memories ({turn.memories_recalled.length} verified queries)
                         </span>
                       </div>
                       <div className="pl-5 text-[11px] text-slate-300 flex flex-col gap-1.5">
@@ -423,7 +423,7 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
                               "{m.question_text}"
                             </span>
                             <span className="text-slate-400 text-[10px] ml-auto shrink-0 font-mono">
-                              {Math.round((m.similarity || 0.8) * 100)}% relevan
+                              {Math.round((m.similarity || 0.8) * 100)}% relevant
                             </span>
                           </div>
                         ))}
@@ -437,10 +437,10 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2 text-slate-200 font-semibold font-sans">
                           <FileText className="w-3.5 h-3.5 text-clay-400" />
-                          <span>Catatan Pemikiran Analisis</span>
+                          <span>Analytical Scratchpad</span>
                         </div>
                         <span className="text-[10px] text-slate-400 bg-slate-800/80 px-2 py-0.5 rounded border border-slate-700/40 font-mono">
-                          {workingMemoryKeys.length} catatan
+                          {workingMemoryKeys.length} {workingMemoryKeys.length === 1 ? 'note' : 'notes'}
                         </span>
                       </div>
                       <div className="space-y-2 mt-1">
@@ -490,7 +490,7 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
             <div className="flex items-center gap-3">
               {turn.metrics && (
                 <span className="flex items-center gap-1.5 text-slate-400">
-                  <span>Latensi: {formatLatency(turn.metrics.total_latency_ms)}</span>
+                  <span>Latency: {formatLatency(turn.metrics.total_latency_ms)}</span>
                   {turn.metrics.ttft_ms ? (
                     <span className="text-[10px] text-slate-500">
                       (TTFT: {formatLatency(turn.metrics.ttft_ms)})
@@ -502,8 +502,8 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
                 <button
                   type="button"
                   onClick={handleCopyAnswer}
-                  aria-label={copiedAnswer ? 'Tersalin!' : 'Salin jawaban'}
-                  title={copiedAnswer ? 'Tersalin!' : 'Salin jawaban analitik lengkap'}
+                  aria-label={copiedAnswer ? 'Copied!' : 'Copy response'}
+                  title={copiedAnswer ? 'Copied!' : 'Copy full analytical response'}
                   className="relative group/btn p-1.5 rounded-lg hover:bg-white/[0.08] text-slate-400 hover:text-white transition cursor-pointer"
                 >
                   {copiedAnswer ? (
@@ -512,7 +512,7 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
                     <Copy className="w-3.5 h-3.5" />
                   )}
                   <span className="pointer-events-none absolute -top-7 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-md text-[10px] font-sans bg-slate-900/95 border border-slate-700/80 text-slate-200 whitespace-nowrap shadow-lg opacity-0 group-hover/btn:opacity-100 transition-opacity duration-150 z-30">
-                    {copiedAnswer ? 'Tersalin!' : 'Salin'}
+                    {copiedAnswer ? 'Copied!' : 'Copy'}
                   </span>
                 </button>
               )}
@@ -522,23 +522,23 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
                 className="flex items-center gap-1.5 text-slate-400 select-text"
                 title={
                   turn.metrics.prompt_tokens || turn.metrics.completion_tokens
-                    ? `Input (Prompt): ${(turn.metrics.prompt_tokens || 0).toLocaleString('id-ID')} token\nOutput (Completion): ${(turn.metrics.completion_tokens || 0).toLocaleString('id-ID')} token`
+                    ? `Input (Prompt): ${(turn.metrics.prompt_tokens || 0).toLocaleString('en-US')} tokens\nOutput (Completion): ${(turn.metrics.completion_tokens || 0).toLocaleString('en-US')} tokens`
                     : undefined
                 }
               >
-                <span>{turn.metrics.total_tokens?.toLocaleString('id-ID') || 0} token</span>
+                <span>{(turn.metrics.total_tokens || 0).toLocaleString('en-US')} tokens</span>
                 {turn.metrics.prompt_tokens && turn.metrics.completion_tokens ? (
                   <span className="text-[10px] text-slate-500 font-mono">
-                    ({turn.metrics.prompt_tokens.toLocaleString('id-ID')} in / {turn.metrics.completion_tokens.toLocaleString('id-ID')} out)
+                    ({turn.metrics.prompt_tokens.toLocaleString('en-US')} in / {turn.metrics.completion_tokens.toLocaleString('en-US')} out)
                   </span>
                 ) : null}
                 {turn.metrics.cached_tokens && turn.metrics.cached_tokens > 0 ? (
                   <span
                     className="inline-flex items-center gap-1 text-[10px] text-emerald-300 bg-emerald-500/15 px-1.5 py-0.5 rounded font-medium"
-                    title={`Prompt Caching: ${turn.metrics.cached_tokens.toLocaleString('id-ID')} token dibaca langsung dari cache`}
+                    title={`Prompt Caching: ${turn.metrics.cached_tokens.toLocaleString('en-US')} tokens read directly from cache`}
                   >
                     <Zap className="w-2.5 h-2.5" />
-                    <span>{turn.metrics.cached_tokens.toLocaleString('id-ID')} cached</span>
+                    <span>{turn.metrics.cached_tokens.toLocaleString('en-US')} cached</span>
                   </span>
                 ) : null}
               </span>

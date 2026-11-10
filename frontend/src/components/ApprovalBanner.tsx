@@ -41,12 +41,12 @@ export const ApprovalBanner: React.FC<ApprovalBannerProps> = ({
   if (isMinimized) {
     return (
       <aside
-        aria-label="Pemberitahuan persetujuan kueri tertunda"
+        aria-label="Pending query authorization notice"
         className="fixed bottom-6 right-6 z-40 bg-[#0c1524] border border-slate-700/80 shadow-2xl rounded-xl p-3 flex items-center gap-3 animate-fade-in font-sans no-print print:hidden select-none"
       >
         <div className="flex items-center gap-2 text-xs">
           <Shield className="w-4 h-4 text-slate-300" />
-          <span className="font-medium text-slate-200">1 Kueri Menunggu Otorisasi</span>
+          <span className="font-medium text-slate-200">1 Query Awaiting Authorization</span>
         </div>
         <Button
           variant="secondary"
@@ -54,7 +54,7 @@ export const ApprovalBanner: React.FC<ApprovalBannerProps> = ({
           onClick={() => setIsMinimized(false)}
           rightIcon={<ChevronUp className="w-3.5 h-3.5" />}
         >
-          Buka
+          Review
         </Button>
       </aside>
     );
@@ -67,14 +67,14 @@ export const ApprovalBanner: React.FC<ApprovalBannerProps> = ({
       onClose={() => setIsMinimized(true)}
       size="lg"
       icon={<Shield className="w-4 h-4 text-slate-300" />}
-      title="Otorisasi Kueri Database"
-      subtitle="Kueri ini memerlukan konfirmasi karena mengakses data sensitif atau berisiko tinggi"
+      title="Database Query Authorization"
+      subtitle="This query requires authorization because it accesses sensitive or restricted data"
       headerRight={
         <Button
           variant="ghost"
           size="xs"
           onClick={() => setIsMinimized(true)}
-          title="Perkecil ke pojok kanan bawah"
+          title="Minimize to bottom right"
           leftIcon={<Minimize2 className="w-3.5 h-3.5" />}
         />
       }
@@ -82,7 +82,7 @@ export const ApprovalBanner: React.FC<ApprovalBannerProps> = ({
       footer={
         <div className="flex items-center justify-between w-full">
           <Button variant="ghost" size="sm" onClick={onReject}>
-            Tolak Kueri
+            Reject Query
           </Button>
           <Button
             variant="primary"
@@ -90,7 +90,7 @@ export const ApprovalBanner: React.FC<ApprovalBannerProps> = ({
             onClick={onApprove}
             leftIcon={<Check className="w-3.5 h-3.5" />}
           >
-            Izinkan &amp; Eksekusi
+            Authorize &amp; Execute
           </Button>
         </div>
       }
@@ -101,7 +101,7 @@ export const ApprovalBanner: React.FC<ApprovalBannerProps> = ({
           {payload.user_query && (
             <div>
               <span className="text-[10px] font-mono uppercase text-slate-400 tracking-wider block">
-                Permintaan Pengguna
+                User Request
               </span>
               <p className="text-slate-200 font-medium mt-0.5 leading-relaxed text-xs">
                 &quot;{payload.user_query}&quot;
@@ -111,7 +111,7 @@ export const ApprovalBanner: React.FC<ApprovalBannerProps> = ({
 
           <div className="pt-2 border-t border-slate-800/70 space-y-1.5">
             <span className="text-[10px] font-mono uppercase text-slate-400 tracking-wider block">
-              Catatan Keamanan
+              Security Notes
             </span>
             <p className="text-slate-300 leading-relaxed text-xs">
               {(payload.risk_reasons || []).join('; ')}
@@ -119,7 +119,7 @@ export const ApprovalBanner: React.FC<ApprovalBannerProps> = ({
 
             {payload.sensitive_columns && payload.sensitive_columns.length > 0 && (
               <div className="pt-1.5 flex items-center gap-1.5 flex-wrap">
-                <span className="text-[10px] text-slate-400 font-mono">Kolom PII:</span>
+                <span className="text-[10px] text-slate-400 font-mono">PII Columns:</span>
                 {payload.sensitive_columns.map((col, idx) => (
                   <Badge key={idx} variant="neutral">
                     {col}
@@ -134,7 +134,7 @@ export const ApprovalBanner: React.FC<ApprovalBannerProps> = ({
         <div className="space-y-1.5">
           <div className="flex items-center justify-between text-xs px-1">
             <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400">
-              Kueri SQL yang Diajukan
+              Proposed SQL Query
             </span>
             <Button
               variant="ghost"
@@ -149,7 +149,7 @@ export const ApprovalBanner: React.FC<ApprovalBannerProps> = ({
               }
             >
               <span className={copied ? 'text-emerald-400 font-medium' : ''}>
-                {copied ? 'Tersalin' : 'Salin'}
+                {copied ? 'Copied' : 'Copy'}
               </span>
             </Button>
           </div>

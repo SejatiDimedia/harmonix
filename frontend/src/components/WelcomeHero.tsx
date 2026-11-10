@@ -6,10 +6,10 @@ interface WelcomeHeroProps {
 }
 
 const QUICK_PROMPTS = [
-  'Berapa total GMV dan jumlah pesanan di kuartal terakhir?',
-  'Tampilkan 5 pelanggan teratas berdasarkan total belanja',
-  'Buatkan grafik batang penjualan per kategori produk',
-  'Analisis tren status pengiriman pesanan (delivered, shipped, canceled)',
+  'What is the total revenue and order volume in the latest quarter?',
+  'Show top 5 customers by total transaction amount',
+  'Compare sales revenue per product category in a bar chart',
+  'Analyze order fulfillment status trends (delivered, shipped, canceled)',
 ];
 
 const WelcomeHeroComponent: React.FC<WelcomeHeroProps> = ({ onSelectPrompt }) => {
@@ -25,10 +25,10 @@ const WelcomeHeroComponent: React.FC<WelcomeHeroProps> = ({ onSelectPrompt }) =>
 
       <div className="space-y-2.5">
         <h2 className="text-2xl md:text-3xl font-serif italic text-[#f8fafc] tracking-tight">
-          Asisten Analitik Data Enterprise
+          Enterprise Data Analytics Intelligence
         </h2>
         <p className="text-xs md:text-sm text-[#94a3b8] leading-relaxed max-w-lg mx-auto font-sans">
-          Ajukan pertanyaan bisnis dalam bahasa alami. Sistem mengeksekusi Text-to-SQL dengan proteksi privasi ketat, verifikasi akurasi data otomatis, dan visualisasi interaktif.
+          Ask business questions in natural language. Powered by secure Text-to-SQL execution, strict privacy protection, automated audit verification, and interactive visualizations.
         </p>
       </div>
 

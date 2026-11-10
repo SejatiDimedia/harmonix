@@ -34,7 +34,7 @@ const NavbarComponent: React.FC<NavbarProps> = ({
         return 'Design System';
       case 'chat':
       default:
-        return 'Percakapan Analitik';
+        return 'Analytics Chat';
     }
   };
 
@@ -47,8 +47,8 @@ const NavbarComponent: React.FC<NavbarProps> = ({
             variant="ghost"
             size="sm"
             onClick={onToggleSidebar}
-            aria-label="Buka menu samping"
-            title="Buka Menu Samping"
+            aria-label="Open sidebar"
+            title="Open Sidebar"
             leftIcon={<PanelLeft className="w-4 h-4" />}
           />
         )}
@@ -71,13 +71,13 @@ const NavbarComponent: React.FC<NavbarProps> = ({
             onClick={onOpenWatchdog}
             aria-label={
               triggeredWatchdogCount > 0
-                ? `${triggeredWatchdogCount} Anomali Terdeteksi di Data Warehouse`
-                : 'Pemantauan Anomali Data (Watchdog)'
+                ? `${triggeredWatchdogCount} Anomalies Detected in Data Warehouse`
+                : 'Data Anomaly Monitor (Watchdog)'
             }
             title={
               triggeredWatchdogCount > 0
-                ? `Peringatan: ${triggeredWatchdogCount} anomali data terpicu.`
-                : 'Pemantauan Anomali (Watchdog): Normal'
+                ? `Warning: ${triggeredWatchdogCount} data anomalies triggered.`
+                : 'Watchdog Monitor: Normal'
             }
             leftIcon={<ShieldAlert className={`w-4 h-4 ${triggeredWatchdogCount > 0 ? 'text-rose-400' : 'text-slate-400'}`} />}
           >
@@ -93,12 +93,12 @@ const NavbarComponent: React.FC<NavbarProps> = ({
           variant={isMetricsOpen ? 'secondary' : 'ghost'}
           size="sm"
           onClick={onOpenMetrics}
-          aria-label="Buka metrik observabilitas sistem"
+          aria-label="Open system observability metrics"
           aria-expanded={isMetricsOpen}
-          title="Observabilitas & Latensi Sistem (OB-02)"
+          title="System Observability & Latency (OB-02)"
           leftIcon={<Activity className={`w-3.5 h-3.5 ${isMetricsOpen ? 'text-sky-400' : 'text-slate-400'}`} />}
         >
-          <span className="hidden sm:inline font-sans text-xs">Metrik</span>
+          <span className="hidden sm:inline font-sans text-xs">Metrics</span>
         </Button>
       </div>
     </header>
