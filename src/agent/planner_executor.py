@@ -32,7 +32,7 @@ from src.agent.prompts import BASE_ANALYST_SYSTEM_PROMPT, build_analyst_system_p
 from src.agent.scratchpad import WorkingMemoryManager
 from src.agent.cancellation import clear_task_cancellation, is_task_cancelled
 from src.agent.state import get_session_history, save_task_checkpoint
-from src.agent.suggestions import get_smart_suggestions
+from src.agent.suggestions import get_smart_suggestions, strip_ascii_charts
 from src.config import settings
 from src.llm.provider import BaseLLMProvider, MockLLMProvider, ToolCall, get_llm_provider
 from src.observability.models import SpanStatus, SpanType
@@ -143,6 +143,10 @@ ATURAN:
 3. Untuk perbandingan multi-series (misalnya membandingkan dua atau lebih klien/kategori/entitas dari waktu ke waktu):
    - Pastikan data memuat seluruh seri yang dibandingkan (baik dalam format kolom berbeda per entitas seperti {"month": ..., "ORG-101": ..., "ORG-104": ...} maupun dengan kolom kategori pembeda seperti {"month": ..., "client_id": "ORG-101", ...}).
    - Sertakan seluruh titik data perbandingan agar grafik multi-line/multi-bar terbentuk lengkap dengan legenda jelas.
+4. PENTING UNTUK GROUPED BAR CHART:
+   - DILARANG menggabungkan dimensi X dengan nama entitas (JANGAN PERNAH membuat kolom gabungan seperti month_org: "2025-06 (ORG-101)").
+   - Sumbu `x_axis` WAJIB murni kolom kategori waktu/utama (misal: `month_period` atau `month`).
+   - Biarkan kolom entitas/klien (misal: `org_id`) tetap sebagai kolom tersendiri di dalam data. Mesin chart kami otomatis mengelompokkan batang (*grouped bar chart*) berdampingan per bulan, memberikan warna berbeda per klien, dan menyertakan legenda interaktif.
 """
 
 SYNTHESIZER_SYSTEM_PROMPT = """Anda adalah Senior Analytics Synthesizer & Lead Consultant.
@@ -153,6 +157,9 @@ PEDOMAN LAPORAN:
 2. Jika ada data komparasi atau peringkat, WAJIB sajikan dalam tabel Markdown standar (| Kolom 1 | Kolom 2 |).
 3. Format angka mata uang dan persentase dengan rapi (misal: Rp 1.500.000, 24,5%).
 4. DILARANG menggunakan format LaTeX ($...$ atau \\times). Gunakan simbol teks alami (×, %, →).
+5. DILARANG KERAS membuat grafik teks / ASCII chart / diagram manual di dalam teks markdown (misal menggunakan titik-titik ●, garis | -, sumbu └─, atau legenda teks buatan [-] ORG-xxx).
+6. DILARANG menulis catatan meta visual seperti "(Note: The interactive chart has been rendered...)" atau "(Catatan: Grafik interaktif telah ditambahkan...)".
+7. Seluruh visualisasi grafik sudah otomatis dirender oleh sistem dalam widget visual interaktif tersendiri. Cukup sajikan narasi analitik mendalam dan tabel data Markdown resmi.
 """
 
 
@@ -796,7 +803,8 @@ class PlannerExecutorAgent:
         ]
 
         synth_resp = await self.llm.chat(messages=synth_messages, tools=None)
-        final_answer_text = synth_resp.content or "Analisis data selesai."
+        raw_answer_text = synth_resp.content or "Analisis data selesai."
+        final_answer_text = strip_ascii_charts(raw_answer_text)
         total_tokens += synth_resp.usage.total_tokens
 
         # Stream synthesis token

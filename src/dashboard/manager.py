@@ -106,6 +106,28 @@ async def pin_widget(payload: PinWidgetInput) -> DashboardWidgetModel:
     widget_id = f"wgt_{uuid.uuid4().hex[:12]}"
     now = datetime.now(timezone.utc)
 
+    # Guard against raw schema probe tables being pinned as chart data
+    sanitized_table_data = payload.table_data
+    if sanitized_table_data and isinstance(sanitized_table_data, dict):
+        cols = sanitized_table_data.get("columns", [])
+        if any(c == "_row_id" or str(c).startswith("unnamed_") for c in cols):
+            sanitized_table_data = None
+
+    resolved_sql = payload.sql_query
+    # Defensive guard: if sql_query is missing or is an exploratory probe SELECT * ... LIMIT 5/10
+    is_probe_sql = False
+    if resolved_sql:
+        r_lower = resolved_sql.lower()
+        if "select *" in r_lower and ("limit 5" in r_lower or "limit 10" in r_lower) and "group by" not in r_lower and "join" not in r_lower:
+            is_probe_sql = True
+
+    if (not resolved_sql or is_probe_sql) and payload.chart_spec and isinstance(payload.chart_spec, dict):
+        cs_sql = payload.chart_spec.get("sql_query")
+        if cs_sql:
+            cs_lower = cs_sql.lower()
+            if not ("select *" in cs_lower and ("limit 5" in cs_lower or "limit 10" in cs_lower) and "group by" not in cs_lower and "join" not in cs_lower):
+                resolved_sql = cs_sql
+
     async with get_db_session() as session:
         max_pos_res = await session.execute(
             text("SELECT COALESCE(MAX(layout_position), -1) FROM analytics.dashboard_widgets WHERE session_id = :session_id;"),
@@ -154,9 +176,9 @@ async def pin_widget(payload: PinWidgetInput) -> DashboardWidgetModel:
                 "session_id": payload.session_id,
                 "widget_type": payload.widget_type,
                 "title": payload.title,
-                "sql_query": payload.sql_query,
+                "sql_query": resolved_sql,
                 "chart_spec": json.dumps(payload.chart_spec) if payload.chart_spec else None,
-                "table_data": json.dumps(payload.table_data) if payload.table_data else None,
+                "table_data": json.dumps(sanitized_table_data) if sanitized_table_data else None,
                 "metric_summary": payload.metric_summary,
                 "layout_position": assigned_pos,
                 "layout_span": payload.layout_span,
@@ -172,7 +194,7 @@ async def pin_widget(payload: PinWidgetInput) -> DashboardWidgetModel:
         session_id=payload.session_id,
         widget_type=payload.widget_type,
         title=payload.title,
-        sql_query=payload.sql_query,
+        sql_query=resolved_sql,
         chart_spec=payload.chart_spec,
         table_data=payload.table_data,
         metric_summary=payload.metric_summary,
@@ -325,30 +347,71 @@ async def refresh_dashboard_widgets(session_id: str) -> list[DashboardWidgetMode
 
                 # If this widget has a chart_spec, refresh its data rows based on x_axis and y_axis
                 if widget.chart_spec and isinstance(widget.chart_spec, dict):
-                    x_col_orig = widget.chart_spec.get("x_axis")
-                    y_col_orig = widget.chart_spec.get("y_axis")
+                    x_col_orig = str(widget.chart_spec.get("x_axis") or "")
+                    y_col_orig = str(widget.chart_spec.get("y_axis") or "")
+                    chart_type = (widget.chart_spec.get("chart_type") or "bar").lower()
+
+                    # Determine numeric vs non-numeric columns from sample rows
+                    num_cols: list[str] = []
+                    cat_cols: list[str] = []
+                    for c_idx, col in enumerate(columns):
+                        valid_vals = [r[c_idx] for r in rows if r[c_idx] is not None and r[c_idx] != ""]
+                        is_num = False
+                        if valid_vals:
+                            num_count = sum(
+                                1 for v in valid_vals
+                                if isinstance(v, (int, float)) or (isinstance(v, str) and v.strip().replace(".", "", 1).replace("-", "", 1).isdigit())
+                            )
+                            if num_count / len(valid_vals) >= 0.6:
+                                is_num = True
+                        if is_num:
+                            num_cols.append(col)
+                        else:
+                            cat_cols.append(col)
 
                     col_lookup = {c.lower(): c for c in columns}
-                    matched_x = col_lookup.get(x_col_orig.lower()) if x_col_orig else None
-                    matched_y = col_lookup.get(y_col_orig.lower()) if y_col_orig else None
+                    num_lookup = {c.lower(): c for c in num_cols}
+                    cat_lookup = {c.lower(): c for c in cat_cols}
 
-                    if matched_x and matched_y:
-                        target_x = matched_x
-                        target_y = matched_y
-                    elif matched_x and len(columns) >= 2:
-                        other_cols = [c for c in columns if c != matched_x]
-                        target_x = matched_x
-                        target_y = other_cols[0] if other_cols else matched_x
-                    elif matched_y and len(columns) >= 2:
-                        other_cols = [c for c in columns if c != matched_y]
-                        target_x = other_cols[0] if other_cols else matched_y
-                        target_y = matched_y
-                    elif len(columns) >= 2:
-                        target_x = columns[0]
-                        target_y = columns[1]
+                    # Resolve X-axis (prefer temporal/category column)
+                    target_x: str = ""
+                    if x_col_orig.lower() in cat_lookup:
+                        target_x = cat_lookup[x_col_orig.lower()]
+                    elif x_col_orig.lower() in col_lookup:
+                        target_x = col_lookup[x_col_orig.lower()]
                     else:
-                        target_x = columns[0] if columns else (x_col_orig or "x")
-                        target_y = columns[0] if columns else (y_col_orig or "y")
+                        for c in cat_cols:
+                            if x_col_orig.lower() in c.lower() or c.lower() in x_col_orig.lower():
+                                target_x = c
+                                break
+
+                    # Match title dimension keywords if target_x still unassigned
+                    if not target_x:
+                        title_lower = (widget.title or "").lower()
+                        for c in cat_cols:
+                            if c.lower() in title_lower:
+                                target_x = c
+                                break
+
+                    # For trend/line charts or multi-series comparisons, prefer temporal column for X
+                    temporal_keywords = ("month", "date", "period", "time", "year", "quarter", "day", "hari", "bulan", "tahun", "tanggal")
+                    temporal_candidate = next((c for c in cat_cols if any(k in c.lower() for k in temporal_keywords)), None)
+                    if (chart_type == "line" or not target_x) and temporal_candidate:
+                        target_x = temporal_candidate
+                    elif not target_x:
+                        target_x = cat_cols[0] if cat_cols else (columns[0] if columns else (x_col_orig or "x"))
+
+                    # Resolve Y-axis (MUST be a numeric metric column)
+                    target_y: str = ""
+                    if y_col_orig.lower() in num_lookup:
+                        target_y = num_lookup[y_col_orig.lower()]
+                    else:
+                        for c in num_cols:
+                            if y_col_orig.lower() in c.lower() or c.lower() in y_col_orig.lower():
+                                target_y = c
+                                break
+                    if not target_y:
+                        target_y = num_cols[0] if num_cols else (columns[1] if len(columns) >= 2 else (columns[0] if columns else (y_col_orig or "y")))
 
                     widget.chart_spec["x_axis"] = target_x
                     widget.chart_spec["y_axis"] = target_y

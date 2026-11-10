@@ -28,7 +28,7 @@ from src.agent.guardrail_evaluator import GuardrailEvaluator
 from src.agent.observation_processor import ObservationProcessor
 from src.agent.prompts import BASE_ANALYST_SYSTEM_PROMPT, build_analyst_system_prompt
 from src.agent.state import get_session_history, save_task_checkpoint
-from src.agent.suggestions import get_smart_suggestions
+from src.agent.suggestions import get_smart_suggestions, strip_ascii_charts
 from src.config import settings
 from src.llm.provider import BaseLLMProvider, MockLLMProvider, ToolCall, get_llm_provider
 from src.observability.models import SpanStatus, SpanType
@@ -716,14 +716,14 @@ class ManualAgentLoop:
                 )
                 tracer.end_span(synth_span.span_id)
                 if synth_resp and synth_resp.content:
-                    final_answer_text = synth_resp.content
+                    final_answer_text = strip_ascii_charts(synth_resp.content)
                     total_tokens += synth_resp.usage.total_tokens
                     prompt_tokens += synth_resp.usage.prompt_tokens
                     completion_tokens += synth_resp.usage.completion_tokens
                     cached_tokens += getattr(synth_resp.usage, "cached_tokens", 0)
                     yield {
                         "event": "token",
-                        "data": {"delta": synth_resp.content},
+                        "data": {"delta": final_answer_text},
                     }
             except Exception as e:
                 logger.warning("Final emergency synthesis failed: %s", e)

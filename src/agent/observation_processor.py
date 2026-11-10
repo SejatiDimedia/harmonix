@@ -2,6 +2,7 @@
 
 import json
 import logging
+import re
 from typing import Any
 from src.agent.models import ChartSpec, Citation, TableData
 
@@ -70,6 +71,98 @@ class ObservationProcessor:
             captured_tables.append(TableData(columns=cols, rows=rows, row_count=len(rows), sql_query=sanitized or None))
 
     @staticmethod
+    def find_best_table_for_chart(
+        chart_spec: dict[str, Any] | ChartSpec,
+        captured_tables: list[TableData],
+    ) -> TableData | None:
+        """Find the table that most accurately produced or matches the chart specification."""
+        if not captured_tables:
+            return None
+
+        c_spec = chart_spec if isinstance(chart_spec, dict) else chart_spec.model_dump()
+        x_col = str(c_spec.get("x_axis") or "").lower()
+        y_col = str(c_spec.get("y_axis") or "").lower()
+        c_title = str(c_spec.get("title") or "").lower()
+        c_data = c_spec.get("data") or []
+        sample_keys = [str(k).lower() for k in (c_data[0].keys() if c_data else [])]
+
+        # Extract meaningful tokens from chart title (>= 4 chars)
+        title_tokens = [
+            t for t in re.split(r"[_\s\-–,:]+", c_title)
+            if len(t) >= 4 and t not in ("chart", "grafik", "perbandingan", "analisis", "total", "nilai")
+        ]
+
+        best_tbl: TableData | None = None
+        max_score = -1
+
+        for tbl in captured_tables:
+            if not tbl.columns or not tbl.rows:
+                continue
+
+            # Skip raw schema file probe tables (e.g. SELECT * FROM tbl LIMIT 10 with _row_id or unnamed_)
+            is_raw_probe = any(c == "_row_id" or str(c).startswith("unnamed_") for c in tbl.columns)
+            if is_raw_probe:
+                continue
+
+            cols = [str(c).lower() for c in tbl.columns]
+            score = 0
+
+            # 1. Exact or substring match on x_axis
+            if x_col and x_col in cols:
+                score += 10
+            elif x_col and any(x_col in c or c in x_col for c in cols):
+                score += 5
+            elif x_col:
+                tokens = [t for t in re.split(r"[_\s\-]+", x_col) if len(t) >= 3]
+                score += sum(3 for t in tokens if any(t in c for c in cols))
+
+            # 2. Exact or substring match on y_axis
+            if y_col and y_col in cols:
+                score += 10
+            elif y_col and any(y_col in c or c in y_col for c in cols):
+                score += 5
+            elif y_col:
+                tokens = [t for t in re.split(r"[_\s\-]+", y_col) if len(t) >= 3]
+                score += sum(3 for t in tokens if any(t in c for c in cols))
+
+            # 3. Match keys in chart data rows
+            for k in sample_keys:
+                if k in cols:
+                    score += 4
+                elif any(k in c or c in k for c in cols):
+                    score += 2
+
+            # 4. Match tokens from chart title
+            matched_title_dims = 0
+            for tt in title_tokens:
+                if any(tt in c or c in tt for c in cols):
+                    score += 4
+                    matched_title_dims += 1
+
+            if matched_title_dims >= 2:
+                score += 12
+
+            # 5. Row count proximity and dimensionality penalty
+            if c_data:
+                if len(tbl.rows) == len(c_data):
+                    score += 12
+                elif abs(len(tbl.rows) - len(c_data)) <= 2:
+                    score += 6
+                elif len(c_data) >= 4 and len(tbl.rows) <= len(c_data) // 2:
+                    # Penalize collapsed single-dimension aggregations when detailed multi-dimension chart is rendered
+                    score -= 15
+
+            if score > max_score:
+                max_score = score
+                best_tbl = tbl
+
+        if best_tbl and max_score > 0:
+            return best_tbl
+
+        non_raw = [t for t in captured_tables if not any(c == "_row_id" or str(c).startswith("unnamed_") for c in t.columns)]
+        return non_raw[-1] if non_raw else captured_tables[-1]
+
+    @staticmethod
     def process_chart_observation(
         observation: dict[str, Any],
         captured_charts: list[ChartSpec],
@@ -86,26 +179,23 @@ class ObservationProcessor:
         # Match source table and auto-fill from captured_tables if c_data is empty
         matched_sql = None
         if captured_tables:
-            matching_tbl = None
-            t_x_candidate = c_spec.get("x_axis")
-            t_y_candidate = c_spec.get("y_axis")
-            for tbl in reversed(captured_tables):
-                if (t_x_candidate and t_x_candidate in tbl.columns) or (t_y_candidate and t_y_candidate in tbl.columns):
-                    matching_tbl = tbl
-                    break
-            if not matching_tbl:
-                matching_tbl = captured_tables[-1]
-
-            matched_sql = matching_tbl.sql_query
-            if not c_data and len(matching_tbl.columns) >= 2 and matching_tbl.rows:
-                t_x = t_x_candidate if t_x_candidate in matching_tbl.columns else matching_tbl.columns[0]
-                t_y = t_y_candidate if t_y_candidate in matching_tbl.columns else matching_tbl.columns[1]
-                c_data = [
-                    dict(zip(matching_tbl.columns, r))
-                    for r in matching_tbl.rows
-                ]
-                c_spec["x_axis"] = t_x
-                c_spec["y_axis"] = t_y
+            matching_tbl = ObservationProcessor.find_best_table_for_chart(c_spec, captured_tables)
+            if matching_tbl:
+                matched_sql = matching_tbl.sql_query
+                if not c_data and len(matching_tbl.columns) >= 2 and matching_tbl.rows:
+                    t_x_candidate = c_spec.get("x_axis")
+                    t_y_candidate = c_spec.get("y_axis")
+                    t_x = t_x_candidate if t_x_candidate in matching_tbl.columns else matching_tbl.columns[0]
+                    t_y = t_y_candidate if t_y_candidate in matching_tbl.columns else matching_tbl.columns[1]
+                    c_data = [
+                        {
+                            col: val if val is not None else "(NULL)"
+                            for col, val in zip(matching_tbl.columns, r)
+                        }
+                        for r in matching_tbl.rows
+                    ]
+                    c_spec["x_axis"] = t_x
+                    c_spec["y_axis"] = t_y
 
         raw_c_type = c_spec.get("chart_type", "bar")
         uq_lower = user_query.lower()
@@ -165,26 +255,23 @@ class ObservationProcessor:
         # 2. Ensure existing charts have data and sql_query if tables exist
         for ch in final_charts:
             if captured_tables and (not ch.data or not ch.sql_query):
-                matching_tbl = None
-                for tbl in reversed(captured_tables):
-                    if (ch.x_axis and ch.x_axis in tbl.columns) or (ch.y_axis and ch.y_axis in tbl.columns):
-                        matching_tbl = tbl
-                        break
-                if not matching_tbl:
-                    matching_tbl = captured_tables[-1]
+                matching_tbl = ObservationProcessor.find_best_table_for_chart(ch, captured_tables)
+                if matching_tbl:
+                    if not ch.sql_query:
+                        ch.sql_query = matching_tbl.sql_query
 
-                if not ch.sql_query:
-                    ch.sql_query = matching_tbl.sql_query
-
-                if not ch.data and len(matching_tbl.columns) >= 2 and matching_tbl.rows:
-                    t_x = ch.x_axis if ch.x_axis in matching_tbl.columns else matching_tbl.columns[0]
-                    t_y = ch.y_axis if ch.y_axis in matching_tbl.columns else matching_tbl.columns[1]
-                    ch.x_axis = t_x
-                    ch.y_axis = t_y
-                    ch.data = [
-                        dict(zip(matching_tbl.columns, r))
-                        for r in matching_tbl.rows
-                    ]
+                    if not ch.data and len(matching_tbl.columns) >= 2 and matching_tbl.rows:
+                        t_x = ch.x_axis if ch.x_axis in matching_tbl.columns else matching_tbl.columns[0]
+                        t_y = ch.y_axis if ch.y_axis in matching_tbl.columns else matching_tbl.columns[1]
+                        ch.x_axis = t_x
+                        ch.y_axis = t_y
+                        ch.data = [
+                            {
+                                col: val if val is not None else "(NULL)"
+                                for col, val in zip(matching_tbl.columns, r)
+                            }
+                            for r in matching_tbl.rows
+                        ]
             if any(w in uq_lower for w in ("donat", "donut", "doughnut")):
                 ch.chart_type = "doughnut"
             elif any(w in uq_lower for w in ("pie", "lingkaran", "proporsi", "porsi")) and not any(w in uq_lower for w in ("batang", "bar")):

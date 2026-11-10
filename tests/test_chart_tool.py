@@ -333,4 +333,31 @@ async def test_auto_synthesize_pie_chart_from_sql_only():
     assert len(final_charts[0]["data"]) > 0
 
 
+@pytest.mark.asyncio
+async def test_make_chart_multi_series_preservation():
+    """Verify MakeChartTool and ObservationProcessor preserve all series for multi-entity comparison."""
+    tool = MakeChartTool()
+    multi_data = [
+        {"month": "2025-06", "client_id": "ORG-101", "total_api_calls": 5000},
+        {"month": "2025-06", "client_id": "ORG-104", "total_api_calls": 4200},
+        {"month": "2025-07", "client_id": "ORG-101", "total_api_calls": 5300},
+        {"month": "2025-07", "client_id": "ORG-104", "total_api_calls": 4400},
+    ]
+    res = await tool.execute(
+        chart_type="line",
+        title="Monthly API Calls: ORG-101 vs ORG-104",
+        x_axis="month",
+        y_axis="total_api_calls",
+        data=multi_data,
+    )
+    assert res["status"] == "success"
+    chart = res["chart"]
+    assert chart["chart_type"] == "line"
+    assert len(chart["data"]) == 4
+    # All rows and keys are preserved
+    assert any(d.get("client_id") == "ORG-101" for d in chart["data"])
+    assert any(d.get("client_id") == "ORG-104" for d in chart["data"])
+
+
+
 

@@ -354,12 +354,107 @@ export function convertSmallTwoColTableToKpiCards(markdown: string): string {
 }
 
 /**
+ * Strips raw ASCII art pseudo-graphs, character plots, text legends, and
+ * chart placement notes from markdown so only clean narrative and tables render.
+ */
+export function stripAsciiCharts(text?: string): string {
+  if (!text) return '';
+  let s = text;
+
+  // 1. Remove parenthesized or italicized notes about interactive charts
+  s = s.replace(
+    /(?:^|\n)\s*[\*_]*\s*\(?\s*(?:Note|Catatan)\s*:[^\n]*?(?:interactive|dashboard|chart|grafik)[^\n]*?(?:\)|[\*_])*\.?\s*(?=\n|$)/gi,
+    '\n\n'
+  );
+
+  // 2. Remove fenced code blocks that contain pseudo-charts
+  const isPseudoChart = (block: string): boolean => {
+    const hasSymbols = /[●■▲◆▼★]/.test(block);
+    const hasBoxDraw = /[└┘┌┐│─—+|_~-]{4,}/.test(block);
+    const hasTicks = /[\d\.,]+[kKmMbB%]?\s*[-|:]/.test(block);
+    const hasLegend = /(?:Legend|Legenda)\s*:/i.test(block);
+    if (hasSymbols && (hasBoxDraw || hasTicks || hasLegend)) return true;
+    if (hasTicks && hasBoxDraw) return true;
+    if (hasLegend && (hasSymbols || hasBoxDraw)) return true;
+    return false;
+  };
+
+  s = s.replace(/```[a-zA-Z0-9_-]*[ \t]*\r?\n[\s\S]*?```/g, (match) => {
+    if (isPseudoChart(match)) return '';
+    return match;
+  });
+
+  // 3. Line-by-line filtering of bare ASCII/text charts
+  const lines = s.split('\n');
+  const filtered: string[] = [];
+  let inChartBlock = false;
+  let inLegendBlock = false;
+
+  for (const line of lines) {
+    const stripped = line.trim();
+
+    // Line matching Y-axis tick or point marker in ASCII plot
+    const isPlotLine =
+      /^[\d\.,]+[kKmMbB%]?\s*[-|:]/.test(stripped) ||
+      /^[\|\+\-]+\s*[\d\.,]+[kKmMbB%]/.test(stripped) ||
+      (/[●■▲◆▼★]/.test(stripped) && /[|\-+─]/.test(stripped));
+
+    const isAxisLine = /^[└┘┌┐│─—+|_~=\-]{4,}$/.test(stripped);
+    const isLegendHeader = /^(?:Legend|Legenda)\s*:\s*$/i.test(stripped);
+    const isLegendItem = /^\[(?:[-—~.:*·•\s]+|[A-Za-z0-9_-]+)\]\s*/.test(stripped);
+
+    if (isLegendHeader) {
+      inChartBlock = false;
+      inLegendBlock = true;
+      continue;
+    }
+
+    if (inLegendBlock) {
+      if (isLegendItem || !stripped) continue;
+      inLegendBlock = false;
+    }
+
+    if (isPlotLine) {
+      inChartBlock = true;
+      // Strip preceding standalone chart title if present
+      if (
+        filtered.length > 0 &&
+        /^(?:Monthly|Total|Weekly|Daily|Tren|Grafik|Chart|Distribusi|Perbandingan|[A-Za-z0-9_-]+(?:\s+[A-Za-z0-9_-]+){1,3})\s*$/i.test(
+          filtered[filtered.length - 1].trim()
+        )
+      ) {
+        filtered.pop();
+      }
+      continue;
+    }
+
+    if (inChartBlock) {
+      if (isAxisLine || isPlotLine) continue;
+      // X-axis coordinate labels (e.g. 2025-06  2025-07 ...)
+      if (
+        /^(?:20\d\d[-/]\d\d|\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b|[A-Za-z0-9_-]+)(?:\s{2,}(?:20\d\d[-/]\d\d|\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b|[A-Za-z0-9_-]+))+\s*$/i.test(
+          stripped
+        )
+      ) {
+        continue;
+      }
+      if (!stripped) continue;
+      inChartBlock = false;
+    }
+
+    filtered.push(line);
+  }
+
+  return filtered.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+}
+
+/**
  * Normalizes pseudo-table text (space-separated column blocks) into standard
  * GitHub-Flavored Markdown tables so they render as rich, accessible HTML tables.
  */
 export function formatPseudoTableToMarkdown(content?: string): string {
   if (!content) return '';
-  const cleanedContent = cleanLatexMathToUnicode(content);
+  const cleanedContent = stripAsciiCharts(cleanLatexMathToUnicode(content));
   const lines = cleanedContent.split('\n');
   const output: string[] = [];
   let inCodeBlock = false;

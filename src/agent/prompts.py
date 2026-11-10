@@ -78,6 +78,7 @@ TOOL OPERATIONAL GUIDELINES & PRESENTATION FORMAT:
    - Present direct answers and key findings summary first, in the language of the user's prompt (default English).
    - Format numbers and tabular comparisons in clean Markdown tables (`| Column 1 | Column 2 |`).
    - Use natural symbols and numbers (e.g. $, Rp, %, →, ≥, ≤, m²). Avoid raw LaTeX math formulas (`$ ... $`).
+   - STRICTLY FORBIDDEN: DO NOT draw ASCII charts, text-based graphs, pseudo-plots (e.g. `2.00M-|`, `● ORG-104`, `| | ●`), or fake text legends in markdown responses. All charts are rendered exclusively by native visual chart widgets (`make_chart`). Do not output notes like "(Note: The interactive chart has been rendered...)". Present data in Markdown tables and concise narrative insights only.
 6. Follow-Up Recommendations:
    - Always conclude with 3 actionable, specific follow-up questions formatted as shown in the language protocol.
 """

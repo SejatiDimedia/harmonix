@@ -745,7 +745,7 @@ export const App: React.FC = () => {
 
   // Feature #3: Pinning to Dashboard Handlers
   const handlePinChart = useCallback(
-    (spec: ChartSpec, sqlQuery?: string) => {
+    (spec: ChartSpec, sqlQuery?: string, tableData?: TableData) => {
       const sid = ensureSession();
       const resolvedTitle = getChartDescriptiveTitle(spec);
       pinWidgetMutation.mutate(
@@ -755,6 +755,7 @@ export const App: React.FC = () => {
           title: resolvedTitle,
           sql_query: sqlQuery || null,
           chart_spec: { ...spec, title: resolvedTitle },
+          table_data: tableData || null,
         },
         {
           onSuccess: () => {

@@ -17,7 +17,7 @@ interface ChatMessageProps {
   streamingStatus?: string;
   onSelectSuggestion: (text: string) => void;
   onEditQuery?: (text: string) => void;
-  onPinChart?: (spec: ChartSpec, sqlQuery?: string) => void;
+  onPinChart?: (spec: ChartSpec, sqlQuery?: string, tableData?: TableData) => void;
   onPinTable?: (table: TableData, title: string, sqlQuery?: string) => void;
   onDrillDown?: (prompt: string) => void;
   onPrefillChat?: (text: string) => void;
@@ -25,25 +25,88 @@ interface ChatMessageProps {
 }
 
 function findBestQueryForChart(spec: ChartSpec, queries?: string[]): string | undefined {
-  if (spec.sql_query) return spec.sql_query;
-  if (!queries || queries.length === 0) return undefined;
-  if (queries.length === 1) return queries[0];
+  const candidates: string[] = [];
+  if (spec.sql_query && spec.sql_query.trim()) {
+    candidates.push(spec.sql_query.trim());
+  }
+  if (queries && queries.length > 0) {
+    for (const q of queries) {
+      if (q && q.trim() && !candidates.includes(q.trim())) {
+        candidates.push(q.trim());
+      }
+    }
+  }
+
+  if (candidates.length === 0) return undefined;
+  if (candidates.length === 1) return candidates[0];
 
   const x = spec.x_axis?.toLowerCase();
   const y = spec.y_axis?.toLowerCase();
+  const title = (spec.title || '').toLowerCase();
   const sampleKeys = spec.data && spec.data.length > 0 ? Object.keys(spec.data[0]).map((k) => k.toLowerCase()) : [];
+  const chartDataCount = spec.data ? spec.data.length : 0;
 
-  let bestQuery = queries[0];
-  let maxScore = -1;
+  const titleWords = title
+    .split(/[\s_\-–,:]+/)
+    .map((w) => w.trim().toLowerCase())
+    .filter((w) => w.length >= 4 && !['chart', 'grafik', 'perbandingan', 'analisis', 'total'].includes(w));
 
-  for (const q of queries) {
+  let bestQuery = candidates[0];
+  let maxScore = -999;
+
+  for (const q of candidates) {
     const qLower = q.toLowerCase();
     let score = 0;
-    if (x && qLower.includes(x)) score += 4;
-    if (y && qLower.includes(y)) score += 4;
-    for (const k of sampleKeys) {
-      if (qLower.includes(k)) score += 1;
+
+    // Heavily penalize raw schema file probes: SELECT * FROM tbl LIMIT 5/10 with no WHERE/GROUP BY
+    if (qLower.includes('select *') && (qLower.includes('limit 5') || qLower.includes('limit 10')) && !qLower.includes('group by') && !qLower.includes('join')) {
+      score -= 100;
     }
+
+    if (x && qLower.includes(x)) score += 6;
+    if (y && qLower.includes(y)) score += 6;
+
+    if (x) {
+      for (const tok of x.split(/[_\s\-]+/)) {
+        if (tok.length >= 3 && qLower.includes(tok)) score += 3;
+      }
+    }
+    if (y) {
+      for (const tok of y.split(/[_\s\-]+/)) {
+        if (tok.length >= 3 && qLower.includes(tok)) score += 3;
+      }
+    }
+
+    for (const k of sampleKeys) {
+      if (qLower.includes(k)) score += 3;
+      for (const tok of k.split(/[_\s\-]+/)) {
+        if (tok.length >= 3 && qLower.includes(tok)) score += 2;
+      }
+    }
+
+    let matchedTitleWords = 0;
+    for (const tw of titleWords) {
+      if (qLower.includes(tw)) {
+        score += 5;
+        matchedTitleWords++;
+      }
+    }
+
+    if (matchedTitleWords >= 2) {
+      score += 15;
+    }
+
+    if ((sampleKeys.length >= 3 || chartDataCount > 5) && qLower.includes('join')) {
+      score += 10;
+    }
+
+    const groupByMatch = qLower.match(/group\s+by\s+([^;]+)/);
+    if (groupByMatch && groupByMatch[1].includes(',')) {
+      if (chartDataCount > 5 || sampleKeys.length >= 3) {
+        score += 10;
+      }
+    }
+
     if (score > maxScore) {
       maxScore = score;
       bestQuery = q;
@@ -75,6 +138,44 @@ function findBestQueryForTable(tbl: TableData, queries?: string[]): string | und
   }
 
   return bestQuery;
+}
+
+function findBestTableForChart(spec: ChartSpec, tables?: TableData[]): TableData | undefined {
+  if (!tables || tables.length === 0) return undefined;
+
+  const isRawProbe = (t: TableData) =>
+    (t.columns || []).some((c) => c === '_row_id' || c.startsWith('unnamed_'));
+
+  // 1. Exact match by SQL query
+  if (spec.sql_query) {
+    const match = tables.find((t) => t.sql_query && t.sql_query.trim() === spec.sql_query?.trim());
+    if (match && !isRawProbe(match)) return match;
+  }
+
+  // 2. Match by column names
+  const x = spec.x_axis?.toLowerCase();
+  const y = spec.y_axis?.toLowerCase();
+  const sampleKeys = spec.data && spec.data.length > 0 ? Object.keys(spec.data[0]).map((k) => k.toLowerCase()) : [];
+
+  let bestTable: TableData | undefined = undefined;
+  let maxScore = 0;
+
+  for (const t of tables) {
+    if (isRawProbe(t)) continue;
+    const cols = (t.columns || []).map((c) => c.toLowerCase());
+    let score = 0;
+    if (x && cols.includes(x)) score += 5;
+    if (y && cols.includes(y)) score += 5;
+    for (const k of sampleKeys) {
+      if (cols.includes(k)) score += 2;
+    }
+    if (score > maxScore) {
+      maxScore = score;
+      bestTable = t;
+    }
+  }
+
+  return bestTable;
 }
 
 const ChatMessageComponent: React.FC<ChatMessageProps> = ({
@@ -286,7 +387,8 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
                     ? (spec) =>
                         onPinChart(
                           spec,
-                          spec.sql_query || findBestQueryForChart(spec, turn.sql_queries)
+                          findBestQueryForChart(spec, turn.sql_queries),
+                          findBestTableForChart(spec, turn.tables)
                         )
                     : undefined
                 }

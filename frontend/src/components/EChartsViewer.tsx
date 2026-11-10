@@ -62,24 +62,52 @@ export const EChartsViewer: React.FC<EChartsViewerProps> = ({
     let xCol = spec.x_axis;
     let yCol = spec.y_axis;
 
-    if (chartData.length === 0 && tables && tables.length > 0) {
-      // Find table that best matches xCol or yCol, otherwise default to tables[0]
-      const matchingTbl =
-        tables.find((t) =>
-          (t.columns || []).some(
-            (c) =>
-              (xCol && c.toLowerCase() === xCol.toLowerCase()) ||
-              (yCol && c.toLowerCase() === yCol.toLowerCase())
-          )
-        ) || tables[0];
+    if (tables && tables.length > 0) {
+      const isRawProbeTable = (t: TableData) =>
+        (t.columns || []).some((c) => c === '_row_id' || c.startsWith('unnamed_'));
 
-      if (matchingTbl.columns && matchingTbl.columns.length >= 2 && matchingTbl.rows && matchingTbl.rows.length > 0) {
-        xCol = matchingTbl.columns[0];
-        yCol = matchingTbl.columns[1];
-        chartData = matchingTbl.rows.map((r) => ({
-          [xCol]: r[0] ?? '(NULL)',
-          [yCol]: r[1] ?? 0,
-        }));
+      // Find table that best matches xCol or yCol and is not a raw file probe
+      let matchingTbl = tables.find((t) =>
+        !isRawProbeTable(t) &&
+        (t.columns || []).some(
+          (c) =>
+            (xCol && c.toLowerCase() === xCol.toLowerCase()) ||
+            (yCol && c.toLowerCase() === yCol.toLowerCase())
+        )
+      );
+
+      // If chartData is empty, accept any non-raw table
+      if (!matchingTbl && chartData.length === 0) {
+        matchingTbl = tables.find((t) => !isRawProbeTable(t));
+      }
+
+      if (
+        matchingTbl &&
+        matchingTbl.columns &&
+        matchingTbl.columns.length >= 2 &&
+        matchingTbl.rows &&
+        matchingTbl.rows.length > 0 &&
+        !isRawProbeTable(matchingTbl)
+      ) {
+        const chartDataColCount = chartData.length > 0 ? Object.keys(chartData[0]).length : 0;
+        const hasMatchingCol = matchingTbl.columns.some(
+          (c) =>
+            (xCol && c.toLowerCase() === xCol.toLowerCase()) ||
+            (yCol && c.toLowerCase() === yCol.toLowerCase())
+        );
+
+        // Fallback to table if chartData is empty or if table has richer multi-series columns with matching keys
+        if (chartData.length === 0 || (matchingTbl.columns.length > chartDataColCount && hasMatchingCol)) {
+          xCol = matchingTbl.columns[0];
+          yCol = matchingTbl.columns[1];
+          chartData = matchingTbl.rows.map((r) => {
+            const rowObj: Record<string, any> = {};
+            matchingTbl.columns.forEach((c, idx) => {
+              rowObj[c] = r[idx] ?? null;
+            });
+            return rowObj;
+          });
+        }
       }
     }
 
@@ -102,6 +130,21 @@ export const EChartsViewer: React.FC<EChartsViewerProps> = ({
     // 2. Intelligent & Type-Aware Column Resolution
     const sampleRow = chartData[0] || {};
     const sampleKeys = Object.keys(sampleRow);
+
+    const isNumericCol = (data: Record<string, any>[], key: string): boolean => {
+      let numCount = 0;
+      let totalNonEmpty = 0;
+      for (const row of data) {
+        const val = row[key];
+        if (val !== null && val !== undefined && val !== '') {
+          totalNonEmpty++;
+          if (typeof val === 'number' || (!isNaN(Number(val)) && !/^\s*$/.test(String(val)))) {
+            numCount++;
+          }
+        }
+      }
+      return totalNonEmpty > 0 && numCount / totalNonEmpty >= 0.6;
+    };
 
     const resolveColumnKey = (
       preferredCol?: string,
@@ -154,18 +197,173 @@ export const EChartsViewer: React.FC<EChartsViewerProps> = ({
       return remaining || sampleKeys[0] || '';
     };
 
-    const resolvedXKey = resolveColumnKey(xCol, 'string');
-    const resolvedYKey = resolveColumnKey(yCol, 'number', resolvedXKey);
+    let resolvedXKey = resolveColumnKey(xCol, 'string');
 
-    const labels = chartData.map((d) => {
-      const val = d[resolvedXKey];
-      return val === null || val === undefined ? '(NULL)' : String(val);
-    });
+    // Intelligent Temporal Alignment:
+    // If resolvedXKey is not a date/period column (e.g. it was assigned "org_id" or "client"),
+    // but sampleKeys contains a temporal column (e.g. "month_period", "month", "date"),
+    // check if the temporal column has multiple periods. If so, time belongs on the X-axis.
+    const isTemporal = (key: string): boolean =>
+      /(month|date|period|time|year|quarter|day|hari|bulan|tahun|tanggal|timestamp|created_at|periode)/i.test(key);
 
-    const rawValues = chartData.map((d) => {
-      const val = d[resolvedYKey];
-      return Number(val) || 0;
+    if (!isTemporal(resolvedXKey)) {
+      const temporalCandidate = sampleKeys.find(
+        (k) => isTemporal(k) && !isNumericCol(chartData, k)
+      );
+      if (temporalCandidate) {
+        resolvedXKey = temporalCandidate;
+      }
+    }
+
+    interface SeriesItem {
+      name: string;
+      data: (number | null)[];
+      color: string;
+    }
+
+    let labels: string[] = [];
+    let seriesList: SeriesItem[] = [];
+
+    const nonXKeys = sampleKeys.filter((k) => k !== resolvedXKey);
+    const numCols = nonXKeys.filter((k) => isNumericCol(chartData, k));
+    const catCols = nonXKeys.filter((k) => !numCols.includes(k));
+
+    // Check if data is in Long / Grouped format (duplicate X categories with distinct series in a categorical column)
+    const xValsRaw = chartData.map((d) => {
+      const v = d[resolvedXKey];
+      return v === null || v === undefined ? '(NULL)' : String(v);
     });
+    const uniqueXVals = Array.from(new Set(xValsRaw));
+    const hasDuplicateX = uniqueXVals.length < xValsRaw.length;
+
+    let isGroupedLongFormat = false;
+    let groupKey = '';
+    let metricKey = '';
+
+    if (hasDuplicateX && catCols.length > 0 && numCols.length > 0) {
+      for (const cat of catCols) {
+        const distinctVals = Array.from(
+          new Set(chartData.map((d) => String(d[cat] ?? '')).filter(Boolean))
+        );
+        if (distinctVals.length >= 2 && distinctVals.length <= 30) {
+          groupKey = cat;
+          isGroupedLongFormat = true;
+          break;
+        }
+      }
+      if (isGroupedLongFormat) {
+        metricKey =
+          numCols.find((k) => yCol && k.toLowerCase() === yCol.toLowerCase()) ||
+          numCols[0];
+      }
+    }
+
+    // Check if X labels were concatenated with series names (e.g. "2025-06 (ORG-101)" or "2025-06: ORG-101")
+    let isConcatenatedX = false;
+    let unpackedXLabels: string[] = [];
+    let unpackedSeriesNames: string[] = [];
+    const concatRegex = /^(.+?)\s*(?:[\(\:\–\—\-]\s*|\s+)([A-Za-z0-9_-]+)\)?$/;
+
+    if (!isGroupedLongFormat && xValsRaw.length >= 2) {
+      const parsedRows = xValsRaw.map((v) => {
+        const m = v.match(concatRegex);
+        return m ? { x: m[1].trim(), s: m[2].trim() } : null;
+      });
+      const validMatches = parsedRows.filter((p): p is { x: string; s: string } => p !== null);
+      if (validMatches.length / xValsRaw.length >= 0.7) {
+        const distinctS = Array.from(new Set(validMatches.map((p) => p.s)));
+        const distinctX = Array.from(new Set(validMatches.map((p) => p.x)));
+        if (distinctS.length >= 2 && distinctS.length <= 20 && distinctX.length >= 1) {
+          isConcatenatedX = true;
+          unpackedXLabels = distinctX;
+          unpackedSeriesNames = distinctS.sort((a, b) =>
+            a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
+          );
+        }
+      }
+    }
+
+    if (isGroupedLongFormat) {
+      // Long / Grouped Format (e.g. client_id = ORG-101, ORG-104)
+      labels = uniqueXVals;
+      const distinctGroups = Array.from(
+        new Set(chartData.map((d) => String(d[groupKey] ?? '')).filter(Boolean))
+      ).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+      seriesList = distinctGroups.map((gVal, idx) => {
+        const seriesData = labels.map((xVal) => {
+          const match = chartData.find(
+            (d) => String(d[resolvedXKey] ?? '') === xVal && String(d[groupKey] ?? '') === gVal
+          );
+          if (!match) return null;
+          const raw = Number(match[metricKey]);
+          return isNaN(raw) ? null : raw;
+        });
+        return {
+          name: gVal,
+          data: seriesData,
+          color: PALETTE[idx % PALETTE.length],
+        };
+      });
+    } else if (isConcatenatedX) {
+      // Unpacked Concatenated Format (e.g. "2025-06 (ORG-101)" -> X: 2025-06, Series: ORG-101)
+      labels = unpackedXLabels;
+      const targetMetricKey =
+        numCols.find((k) => yCol && k.toLowerCase() === yCol.toLowerCase()) ||
+        numCols[0] ||
+        resolveColumnKey(yCol, 'number', resolvedXKey);
+
+      seriesList = unpackedSeriesNames.map((sName, idx) => {
+        const seriesData = labels.map((xCat) => {
+          const matchingRow = chartData.find((d) => {
+            const v = String(d[resolvedXKey] ?? '');
+            const m = v.match(concatRegex);
+            return m && m[1].trim() === xCat && m[2].trim() === sName;
+          });
+          if (!matchingRow) return null;
+          const raw = Number(matchingRow[targetMetricKey]);
+          return isNaN(raw) ? null : raw;
+        });
+        return {
+          name: sName,
+          data: seriesData,
+          color: PALETTE[idx % PALETTE.length],
+        };
+      });
+    } else if (numCols.length >= 2) {
+      // Wide Multi-Series Format (multiple numeric columns e.g. ["ORG-101", "ORG-104"])
+      const filteredNumCols = numCols.filter(
+        (c) => !/^(id|_id|row_id|index|rownum|row_number)$/i.test(c)
+      );
+      const effectiveNumCols = filteredNumCols.length >= 2 ? filteredNumCols : numCols;
+
+      labels = xValsRaw;
+      seriesList = effectiveNumCols.map((colName, idx) => {
+        const seriesData = chartData.map((d) => {
+          const v = Number(d[colName]);
+          return isNaN(v) ? null : v;
+        });
+        return {
+          name: colName,
+          data: seriesData,
+          color: PALETTE[idx % PALETTE.length],
+        };
+      });
+    } else {
+      // Single Series Format
+      const resolvedYKey = resolveColumnKey(yCol, 'number', resolvedXKey);
+      labels = xValsRaw;
+      const singleData = chartData.map((d) => {
+        const v = Number(d[resolvedYKey]);
+        return isNaN(v) ? 0 : v;
+      });
+      seriesList = [
+        {
+          name: spec.y_axis || 'Value',
+          data: singleData,
+          color: PALETTE[0],
+        },
+      ];
+    }
 
     let rawType = (spec.chart_type || 'bar').toLowerCase();
     if (rawType === 'donut') rawType = 'doughnut';
@@ -176,6 +374,7 @@ export const EChartsViewer: React.FC<EChartsViewerProps> = ({
     const isArea = rawType === 'area';
     const isGauge = rawType === 'gauge' || rawType === 'kpi';
     const isScatter = rawType === 'scatter';
+    const isStacked = rawType.includes('stack') || Boolean(spec.title && /\b(stacked|tumpuk)\b/i.test(spec.title));
 
     // 3. Assemble ECharts Configuration Option with Responsive Adapters
     const buildOption = (isCompact: boolean, isUltraCompact: boolean): echarts.EChartsOption => {
@@ -225,20 +424,31 @@ export const EChartsViewer: React.FC<EChartsViewerProps> = ({
                 </div>
               `;
             }
-            if (Array.isArray(params)) {
-              const p = params[0];
-              if (!p) return '';
-              const num = Number(p.value);
-              const formatted = isNaN(num) ? p.value : num.toLocaleString('en-US');
+            if (Array.isArray(params) && params.length > 0) {
+              const axisLabel = params[0].axisValueLabel || params[0].name || '';
+              const rowsHtml = params
+                .filter((p: any) => p && p.value !== undefined && p.value !== null)
+                .map((p: any) => {
+                  const sName = p.seriesName || spec.y_axis || 'Value';
+                  const num = Number(p.value);
+                  const formatted = isNaN(num) ? p.value : num.toLocaleString('en-US');
+                  return `
+                    <div class="flex items-center justify-between gap-3 text-xs py-0.5">
+                      <div class="flex items-center gap-1.5 min-w-0">
+                        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background-color:${p.color};flex-shrink:0;"></span>
+                        <span class="text-slate-300 truncate max-w-[150px]">${sName}</span>
+                      </div>
+                      <span class="font-bold text-slate-100 font-mono shrink-0">${formatted}</span>
+                    </div>
+                  `;
+                })
+                .join('');
+
               return `
-                <div class="font-sans">
-                  <div class="text-slate-400 text-xs mb-1 font-mono">${p.axisValueLabel}</div>
-                  <div class="flex items-center gap-2">
-                    <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background-color:${p.color};"></span>
-                    <span class="text-slate-300 text-xs">${spec.y_axis || 'Value'}:</span>
-                    <span class="font-bold text-slate-100 font-mono">${formatted}</span>
-                  </div>
-                  <div class="text-[9.5px] text-sky-400 mt-1.5 border-t border-white/10 pt-1 font-sans flex items-center gap-1">
+                <div class="font-sans min-w-[140px]">
+                  <div class="text-slate-400 text-[11px] mb-1.5 font-mono border-b border-white/10 pb-1">${axisLabel}</div>
+                  <div class="space-y-0.5">${rowsHtml}</div>
+                  <div class="text-[9.5px] text-sky-400 mt-2 border-t border-white/10 pt-1 font-sans flex items-center gap-1">
                     <span>Click for drill-down ↗</span>
                   </div>
                 </div>
@@ -288,10 +498,18 @@ export const EChartsViewer: React.FC<EChartsViewerProps> = ({
 
       // Specific Configurations per Chart Type
       if (isPie || isDoughnut) {
-        const pieData = labels.map((name, i) => ({
-          name,
-          value: rawValues[i],
-        }));
+        let pieData: { name: string; value: number }[] = [];
+        if (seriesList.length > 1) {
+          pieData = seriesList.map((s) => ({
+            name: s.name,
+            value: s.data.reduce((acc: number, v) => acc + (v || 0), 0),
+          }));
+        } else {
+          pieData = labels.map((name, i) => ({
+            name,
+            value: (seriesList[0]?.data[i] as number) ?? 0,
+          }));
+        }
 
         option.legend = {
           orient: 'horizontal',
@@ -300,7 +518,7 @@ export const EChartsViewer: React.FC<EChartsViewerProps> = ({
           itemWidth: isUltraCompact ? 8 : isCompact ? 12 : 20,
           itemHeight: isUltraCompact ? 6 : isCompact ? 8 : 12,
           itemGap: isCompact ? 6 : 10,
-          type: labels.length > (isUltraCompact ? 2 : isCompact ? 3 : 5) ? 'scroll' : 'plain',
+          type: pieData.length > (isUltraCompact ? 2 : isCompact ? 3 : 5) ? 'scroll' : 'plain',
           pageTextStyle: { color: '#94a3b8', fontSize: 9 },
           pageIconColor: '#008cd0',
           pageIconInactiveColor: '#334155',
@@ -350,7 +568,7 @@ export const EChartsViewer: React.FC<EChartsViewerProps> = ({
           },
         ];
       } else if (isGauge) {
-        const gaugeVal = rawValues.length > 0 ? rawValues[0] : 0;
+        const gaugeVal = (seriesList[0]?.data?.[0] as number) || 0;
         option.series = [
           {
             type: 'gauge',
@@ -422,11 +640,35 @@ export const EChartsViewer: React.FC<EChartsViewerProps> = ({
         ];
       } else {
         // Cartesian (Bar, Line, Area, Scatter)
+        const isMultiSeries = seriesList.length > 1;
+
+        if (isMultiSeries) {
+          option.legend = {
+            show: true,
+            orient: 'horizontal',
+            top: isUltraCompact ? 0 : 2,
+            left: 'center',
+            textStyle: {
+              color: '#94a3b8',
+              fontSize: isUltraCompact ? 8.5 : isCompact ? 9.5 : 11,
+            },
+            itemWidth: isUltraCompact ? 8 : isCompact ? 12 : 16,
+            itemHeight: isUltraCompact ? 6 : isCompact ? 8 : 10,
+            itemGap: isCompact ? 8 : 12,
+            type: seriesList.length > 4 ? 'scroll' : 'plain',
+            pageTextStyle: { color: '#94a3b8', fontSize: 9 },
+            pageIconColor: '#008cd0',
+            pageIconInactiveColor: '#334155',
+          };
+        }
+
         option.grid = {
           left: isUltraCompact ? 6 : 10,
           right: isUltraCompact ? 8 : 14,
           bottom: isUltraCompact ? 8 : isCompact ? 12 : (labels.length > 8 ? 20 : 12),
-          top: isUltraCompact ? 18 : isCompact ? 22 : (effectiveShowToolbox ? 32 : 20),
+          top: isMultiSeries
+            ? (isUltraCompact ? 26 : isCompact ? 30 : (effectiveShowToolbox ? 38 : 32))
+            : (isUltraCompact ? 18 : isCompact ? 22 : (effectiveShowToolbox ? 32 : 20)),
           containLabel: true,
         };
 
@@ -517,76 +759,79 @@ export const EChartsViewer: React.FC<EChartsViewerProps> = ({
         }
 
         if (isScatter) {
+          const rawValues = seriesList[0]?.data ?? [];
           option.series = [
             {
-              name: spec.y_axis,
+              name: seriesList[0]?.name || spec.y_axis,
               type: 'scatter',
               cursor: 'pointer',
               symbolSize: isUltraCompact ? 7 : isCompact ? 8 : (isKiosk ? 14 : 10),
               data: rawValues.map((v, i) => [i, v]),
               itemStyle: {
-                color: '#00d2ee',
+                color: PALETTE[0],
                 shadowBlur: 8,
                 shadowColor: 'rgba(0, 210, 238, 0.4)',
               },
             },
           ];
         } else if (isLine) {
-          option.series = [
-            {
-              name: spec.y_axis,
-              type: 'line',
-              cursor: 'pointer',
-              data: rawValues,
-              smooth: true,
-              showSymbol: rawValues.length <= 25,
-              symbolSize: isUltraCompact ? 5 : isCompact ? 6 : (isKiosk ? 8 : 6),
-              symbol: 'circle',
-              itemStyle: {
-                color: '#00d2ee',
-                borderColor: '#080f1d',
-                borderWidth: 2,
-              },
-              lineStyle: {
-                width: isCompact || isUltraCompact ? 2 : (isKiosk ? 3.5 : 2.5),
-                color: '#008cd0',
-              },
-              areaStyle: isArea
-                ? {
-                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                      { offset: 0, color: 'rgba(0, 140, 208, 0.35)' },
-                      { offset: 1, color: 'rgba(0, 140, 208, 0.02)' },
-                    ]),
-                  }
-                : undefined,
+          option.series = seriesList.map((s) => ({
+            name: s.name,
+            type: 'line' as const,
+            cursor: 'pointer',
+            data: s.data,
+            smooth: true,
+            connectNulls: true,
+            showSymbol: (s.data.length <= 25),
+            symbolSize: isUltraCompact ? 5 : isCompact ? 6 : (isKiosk ? 8 : 6),
+            symbol: 'circle',
+            itemStyle: {
+              color: s.color,
+              borderColor: '#080f1d',
+              borderWidth: 2,
             },
-          ];
-        } else {
-          // Standard Bar Chart
-          option.series = [
-            {
-              name: spec.y_axis,
-              type: 'bar',
-              cursor: 'pointer',
-              data: rawValues,
-              barMaxWidth: isUltraCompact ? 24 : isCompact ? 30 : (isKiosk ? 48 : 36),
-              itemStyle: {
-                borderRadius: [4, 4, 0, 0],
-                color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                  { offset: 0, color: '#00d2ee' },
-                  { offset: 1, color: '#008cd0' },
-                ]),
-              },
-              emphasis: {
-                itemStyle: {
+            lineStyle: {
+              width: isCompact || isUltraCompact ? 2 : (isKiosk ? 3.5 : 2.5),
+              color: s.color,
+            },
+            areaStyle: isArea
+              ? {
                   color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                    { offset: 0, color: '#38bdf8' },
-                    { offset: 1, color: '#0284c7' },
+                    { offset: 0, color: `${s.color}40` },
+                    { offset: 1, color: `${s.color}05` },
                   ]),
-                },
+                }
+              : undefined,
+          }));
+        } else {
+          // Standard Bar Chart (Multi-bar grouped or single bar, with stacked support)
+          option.series = seriesList.map((s) => ({
+            name: s.name,
+            type: 'bar' as const,
+            cursor: 'pointer',
+            data: s.data,
+            stack: isStacked ? 'total' : undefined,
+            barMaxWidth: isUltraCompact
+              ? (seriesList.length > 1 && !isStacked ? 16 : 24)
+              : isCompact
+              ? (seriesList.length > 1 && !isStacked ? 20 : 30)
+              : (isKiosk ? 48 : 36),
+            itemStyle: {
+              borderRadius: isStacked ? 0 : [4, 4, 0, 0],
+              color: seriesList.length > 1
+                ? s.color
+                : new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                    { offset: 0, color: '#00d2ee' },
+                    { offset: 1, color: '#008cd0' },
+                  ]),
+            },
+            emphasis: {
+              itemStyle: {
+                shadowBlur: 8,
+                shadowColor: 'rgba(0, 0, 0, 0.4)',
               },
             },
-          ];
+          }));
         }
       }
 

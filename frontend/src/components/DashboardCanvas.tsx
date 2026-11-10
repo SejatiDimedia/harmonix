@@ -769,6 +769,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                         <div className="w-full h-full flex-1 flex flex-col items-center justify-center min-h-0">
                           <DataChart
                             charts={[w.chart_spec as ChartSpec]}
+                            tables={w.table_data ? [w.table_data] : []}
                             hideHeader={true}
                             showToolbox={false}
                             isKiosk={true}
@@ -1196,6 +1197,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                       <div className="w-full h-full flex-1 min-h-0 flex flex-col print:bg-white">
                         <DataChart
                           charts={[w.chart_spec as ChartSpec]}
+                          tables={w.table_data ? [w.table_data] : []}
                           hideHeader={true}
                           showToolbox={false}
                           onDrillDown={onDrillDown}

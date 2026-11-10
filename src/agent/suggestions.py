@@ -200,6 +200,105 @@ def clean_suggestion_text(text: str) -> str:
     return s
 
 
+def strip_ascii_charts(text: str) -> str:
+    """
+    Strips raw ASCII art pseudo-graphs, character plots, text legends, and
+    chart placement notes from LLM output so only clean narrative and tables remain.
+    """
+    if not text:
+        return ""
+
+    s = text
+
+    # 1. Remove parenthesized or italicized notes about interactive charts
+    s = re.sub(
+        r"(?:^|\n)\s*[\*_]*\s*\(?\s*(?:Note|Catatan)\s*:[^\n]*?(?:interactive|dashboard|chart|grafik)[^\n]*?(?:\)|[\*_])*\.?\s*(?=\n|$)",
+        "\n\n",
+        s,
+        flags=re.IGNORECASE,
+    )
+
+    # 2. Remove fenced code blocks that contain pseudo-charts
+    def is_pseudo_chart(block: str) -> bool:
+        has_symbols = bool(re.search(r"[●■▲◆▼★]", block))
+        has_box_draw = bool(re.search(r"[└┘┌┐│─—+|_~-]{4,}", block))
+        has_ticks = bool(re.search(r"[\d\.,]+[kKmMbB%]?\s*[-|:]", block))
+        has_legend = bool(re.search(r"(?:Legend|Legenda)\s*:", block, re.IGNORECASE))
+        if has_symbols and (has_box_draw or has_ticks or has_legend):
+            return True
+        if has_ticks and has_box_draw:
+            return True
+        if has_legend and (has_symbols or has_box_draw):
+            return True
+        return False
+
+    def filter_code_block(match: re.Match) -> str:
+        content = match.group(0)
+        if is_pseudo_chart(content):
+            return ""
+        return content
+
+    s = re.sub(r"```[a-zA-Z0-9_-]*[ \t]*\r?\n[\s\S]*?```", filter_code_block, s)
+
+    # 3. Line-by-line filtering of bare ASCII/text charts
+    lines = s.split("\n")
+    filtered: list[str] = []
+    in_chart_block = False
+    in_legend_block = False
+
+    for line in lines:
+        stripped = line.strip()
+
+        is_plot_line = bool(
+            re.match(r"^[\d\.,]+[kKmMbB%]?\s*[-|:]", stripped)
+            or re.match(r"^[\|\+\-]+\s*[\d\.,]+[kKmMbB%]", stripped)
+            or (any(sym in stripped for sym in ["●", "■", "▲", "◆", "▼", "★"]) and any(c in stripped for c in ["|", "-", "+", "─"]))
+        )
+
+        is_axis_line = bool(re.search(r"^[└┘┌┐│─—+|_~=\-]{4,}$", stripped))
+        is_legend_header = bool(re.match(r"^(?:Legend|Legenda)\s*:\s*$", stripped, re.IGNORECASE))
+        is_legend_item = bool(re.match(r"^\[(?:[-—~.:*·•\s]+|[A-Za-z0-9_-]+)\]\s*", stripped))
+
+        if is_legend_header:
+            in_chart_block = False
+            in_legend_block = True
+            continue
+
+        if in_legend_block:
+            if is_legend_item or not stripped:
+                continue
+            in_legend_block = False
+
+        if is_plot_line:
+            in_chart_block = True
+            if filtered and re.match(
+                r"^(?:Monthly|Total|Weekly|Daily|Tren|Grafik|Chart|Distribusi|Perbandingan|[A-Za-z0-9_-]+(?:\s+[A-Za-z0-9_-]+){1,3})\s*$",
+                filtered[-1].strip(),
+                re.IGNORECASE,
+            ):
+                filtered.pop()
+            continue
+
+        if in_chart_block:
+            if is_axis_line or is_plot_line:
+                continue
+            if re.match(
+                r"^(?:20\d\d[-/]\d\d|\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b|[A-Za-z0-9_-]+)(?:\s{2,}(?:20\d\d[-/]\d\d|\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b|[A-Za-z0-9_-]+))+\s*$",
+                stripped,
+                re.IGNORECASE,
+            ):
+                continue
+            if not stripped:
+                continue
+            in_chart_block = False
+
+        filtered.append(line)
+
+    res = "\n".join(filtered)
+    res = re.sub(r"\n{3,}", "\n\n", res).strip()
+    return res
+
+
 def extract_suggestions_from_text(answer_text: str) -> tuple[str, list[str]]:
     """
     Extract follow-up questions from the LLM answer text and clean the section
@@ -438,6 +537,7 @@ def get_smart_suggestions(
     """
     clean_answer, extracted = extract_suggestions_from_text(answer_text)
     clean_answer = clean_latex_math_to_unicode(clean_answer)
+    clean_answer = strip_ascii_charts(clean_answer)
 
     # If LLM gave 3 valid suggestions, use them directly
     if len(extracted) >= 3:
