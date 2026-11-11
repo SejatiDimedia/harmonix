@@ -144,22 +144,66 @@
   line-height: 1.25;
 }
 
-/* Markdown Tables (GFM) */
-.markdown-body table {
+/* Markdown Tables & Scroll Container */
+.markdown-table-wrapper {
   width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  margin: 1.25rem 0;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background-color: #0b1322;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  -webkit-overflow-scrolling: touch;
+}
+
+.markdown-table-wrapper::-webkit-scrollbar {
+  height: 6px;
+}
+.markdown-table-wrapper::-webkit-scrollbar-track {
+  background: #090f1a;
+  border-radius: 0 0 0.75rem 0.75rem;
+}
+.markdown-table-wrapper::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 9999px;
+}
+.markdown-table-wrapper::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.markdown-table-wrapper table {
+  width: 100%;
+  min-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 0;
+  font-size: 0.8125rem;
+  background-color: #0b1322;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/* Standalone Markdown Tables Fallback */
+.markdown-body table {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
   border-collapse: separate;
   border-spacing: 0;
   margin: 1.25rem 0;
   font-size: 0.8125rem;
-  background-color: #0f1a2e;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background-color: #0b1322;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 0.75rem;
-  overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  -webkit-overflow-scrolling: touch;
 }
 
 .markdown-body thead {
-  background-color: #14223b;
+  background-color: #0e182b;
 }
 
 .markdown-body th {
@@ -169,17 +213,19 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #f8fafc;
+  color: #94a3b8;
   text-align: left;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  white-space: nowrap;
 }
 
 .markdown-body td {
   padding: 0.625rem 0.875rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-  color: #f8fafc;
+  color: #f1f5f9;
   font-size: 0.8125rem;
   line-height: 1.5;
+  white-space: nowrap;
 }
 
 .markdown-body tbody tr:last-child td {
@@ -187,11 +233,11 @@
 }
 
 .markdown-body tbody tr:nth-child(even) {
-  background-color: #111e33;
+  background-color: #0c1527;
 }
 
 .markdown-body tbody tr:hover {
-  background-color: #162742;
+  background-color: #12203a;
   transition: background-color 0.15s ease;
 }
 

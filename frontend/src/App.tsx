@@ -99,6 +99,7 @@ export const App: React.FC = () => {
   const refreshDashboardMutation = useRefreshDashboardMutation(currentSessionId);
 
   const [inputPrefill, setInputPrefill] = useState('');
+  const [typingTaskId, setTypingTaskId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const hasAutoRestored = useRef(false);
@@ -405,6 +406,7 @@ export const App: React.FC = () => {
                 execution_plan: data.execution_plan,
                 created_at: inFlightTurn.created_at || new Date().toISOString(),
               };
+              setTypingTaskId(completedTurn.task_id);
               appendTurn(completedTurn);
               setStreamingTurn(null);
               refetchSessions();
@@ -543,6 +545,7 @@ export const App: React.FC = () => {
             execution_plan: data.execution_plan,
             created_at: new Date().toISOString(),
           };
+          setTypingTaskId(completedTurn.task_id);
           appendTurn(completedTurn);
           setStreamingTurn(null);
           refetchSessions();
@@ -645,6 +648,7 @@ export const App: React.FC = () => {
             execution_plan: data.execution_plan,
             created_at: new Date().toISOString(),
           };
+          setTypingTaskId(completedTurn.task_id);
           appendTurn(completedTurn);
           setStreamingTurn(null);
           refetchSessions();
@@ -936,6 +940,13 @@ export const App: React.FC = () => {
                       <ChatMessage
                         key={turn.task_id || idx}
                         turn={turn}
+                        isTyping={turn.task_id === typingTaskId}
+                        onTypingComplete={() => {
+                          if (turn.task_id === typingTaskId) {
+                            setTypingTaskId(null);
+                          }
+                        }}
+                        onTypingTick={scrollToBottom}
                         onSelectSuggestion={handleSendMessage}
                         onEditQuery={handleEditQuery}
                         onPinChart={handlePinChart}

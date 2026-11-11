@@ -15,6 +15,9 @@ interface ChatMessageProps {
   turn: ChatTurn;
   isStreaming?: boolean;
   streamingStatus?: string;
+  isTyping?: boolean;
+  onTypingComplete?: () => void;
+  onTypingTick?: () => void;
   onSelectSuggestion: (text: string) => void;
   onEditQuery?: (text: string) => void;
   onPinChart?: (spec: ChartSpec, sqlQuery?: string, tableData?: TableData) => void;
@@ -182,6 +185,9 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
   turn,
   isStreaming,
   streamingStatus,
+  isTyping,
+  onTypingComplete,
+  onTypingTick,
   onSelectSuggestion,
   onEditQuery,
   onPinChart,
@@ -193,6 +199,49 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
   const [showDataFlow, setShowDataFlow] = useState(false);
   const [copiedQuery, setCopiedQuery] = useState(false);
   const [copiedAnswer, setCopiedAnswer] = useState(false);
+
+  const [displayedLength, setDisplayedLength] = useState<number>(() => {
+    return isTyping ? 0 : (turn.answer_text?.length || 0);
+  });
+
+  React.useEffect(() => {
+    if (!isTyping || !turn.answer_text) {
+      setDisplayedLength(turn.answer_text?.length || 0);
+      return;
+    }
+
+    setDisplayedLength(0);
+    const totalLength = turn.answer_text.length;
+    const stepSize = Math.max(3, Math.ceil(totalLength / 60));
+    let current = 0;
+    let tickCount = 0;
+
+    const interval = setInterval(() => {
+      current += stepSize;
+      tickCount++;
+      if (tickCount % 3 === 0) {
+        onTypingTick?.();
+      }
+
+      if (current >= totalLength) {
+        setDisplayedLength(totalLength);
+        clearInterval(interval);
+        onTypingComplete?.();
+      } else {
+        setDisplayedLength(current);
+      }
+    }, 20);
+
+    return () => clearInterval(interval);
+  }, [isTyping, turn.answer_text, onTypingComplete, onTypingTick]);
+
+  const isTypingActive = Boolean(isTyping && turn.answer_text && displayedLength < turn.answer_text.length);
+
+  const currentAnswerText = useMemo(() => {
+    if (!turn.answer_text) return '';
+    if (!isTyping) return turn.answer_text;
+    return turn.answer_text.slice(0, displayedLength);
+  }, [turn.answer_text, isTyping, displayedLength]);
 
   const formatLatency = (ms?: number) => {
     if (!ms) return '0ms';
@@ -238,10 +287,14 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
   };
 
   const sanitizedMarkdown = useMemo(() => {
-    if (!turn.answer_text) return '';
-    const formatted = formatPseudoTableToMarkdown(turn.answer_text);
-    return DOMPurify.sanitize(marked.parse(formatted) as string);
-  }, [turn.answer_text]);
+    if (!currentAnswerText) return '';
+    const formatted = formatPseudoTableToMarkdown(currentAnswerText);
+    const rawHtml = marked.parse(formatted) as string;
+    const wrappedHtml = rawHtml
+      .replace(/<table(?:\s+[^>]*)?>/g, (match) => `<div class="markdown-table-wrapper">${match}`)
+      .replace(/<\/table>/g, '</table></div>');
+    return DOMPurify.sanitize(wrappedHtml);
+  }, [currentAnswerText]);
 
   return (
     <div className="space-y-4">
@@ -367,15 +420,29 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
           )}
 
           {/* Answer Markdown content (Jawaban Inti / Kesimpulan Utama) */}
-          {sanitizedMarkdown && turn.status !== 'CANCELLED' && (
+          {turn.status !== 'CANCELLED' && !isStreaming && (sanitizedMarkdown || isTyping) && (
             <div
-              className="content markdown-body"
-              dangerouslySetInnerHTML={{ __html: sanitizedMarkdown }}
-            />
+              className={`content markdown-body relative ${isTypingActive ? 'cursor-pointer select-none' : ''}`}
+              onClick={() => {
+                if (isTypingActive && turn.answer_text) {
+                  setDisplayedLength(turn.answer_text.length);
+                  onTypingComplete?.();
+                }
+              }}
+              title={isTypingActive ? 'Click to show full answer immediately' : undefined}
+            >
+              {sanitizedMarkdown && <div dangerouslySetInnerHTML={{ __html: sanitizedMarkdown }} />}
+              {isTypingActive && (
+                <span
+                  className="inline-block w-1.5 h-4 ml-1 align-middle bg-sky-400 rounded-sm animate-pulse shadow-sm"
+                  aria-hidden="true"
+                />
+              )}
+            </div>
           )}
 
           {/* Charts (Visualisasi Grafik Utama - Ditampilkan Langsung Bersama Jawaban Inti) */}
-          {turn.charts && turn.charts.length > 0 && (
+          {turn.charts && turn.charts.length > 0 && !isStreaming && (
             <ErrorBoundary fallbackTitle="Failed to render chart visualization">
               <DataChart
                 charts={turn.charts}
@@ -397,10 +464,10 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
           )}
 
           {/* Data Auditor verdict */}
-          {turn.audit_result && <AuditorGate verdict={turn.audit_result} />}
+          {turn.audit_result && !isStreaming && <AuditorGate verdict={turn.audit_result} />}
 
           {/* Collapsible Flow Pengambilan Data (Query SQL, Tabel Mentah & Memori pgvector) */}
-          {hasDataFlow && (
+          {hasDataFlow && !isStreaming && (
             <div className="pt-1 select-none">
               <button
                 type="button"
@@ -648,8 +715,8 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
           </div>
           )}
 
-          {/* Follow-up suggestions */}
-          {turn.follow_up_suggestions && turn.follow_up_suggestions.length > 0 && (
+          {/* Follow-up suggestions (revealed once typing completes) */}
+          {!isTypingActive && turn.follow_up_suggestions && turn.follow_up_suggestions.length > 0 && (
             <FollowUpChips
               suggestions={turn.follow_up_suggestions}
               onSelect={onSelectSuggestion}

@@ -230,7 +230,11 @@ export const BatchResultsModal: React.FC<BatchResultsModalProps> = ({
     if (!content || !content.trim()) return null;
     try {
       const formatted = formatPseudoTableToMarkdown(content);
-      const html = DOMPurify.sanitize(marked.parse(formatted) as string);
+      const rawHtml = marked.parse(formatted) as string;
+      const wrappedHtml = rawHtml
+        .replace(/<table(?:\s+[^>]*)?>/g, (match) => `<div class="markdown-table-wrapper">${match}`)
+        .replace(/<\/table>/g, '</table></div>');
+      const html = DOMPurify.sanitize(wrappedHtml);
       return (
         <div
           className="content markdown-body"
