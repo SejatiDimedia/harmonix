@@ -32,6 +32,7 @@ import { ApprovalBanner } from './components/ApprovalBanner';
 import { MetricsModal } from './components/MetricsModal';
 import { ModelSettingsModal } from './components/ModelSettingsModal';
 import { WatchdogModal } from './components/WatchdogModal';
+import { GoogleSheetsModal } from './components/GoogleSheetsModal';
 import { DashboardCanvas } from './components/DashboardCanvas';
 import { BatchRunner } from './components/BatchRunner';
 import { DesignSystemCatalog } from './components/DesignSystemCatalog';
@@ -75,6 +76,7 @@ export const App: React.FC = () => {
   } = useAppStore();
 
   const [isWatchdogOpen, setIsWatchdogOpen] = useState(false);
+  const [isGoogleSheetsOpen, setIsGoogleSheetsOpen] = useState(false);
 
   // Server Queries via TanStack Query
   const { data: healthData } = useHealthQuery();
@@ -307,6 +309,11 @@ export const App: React.FC = () => {
     },
     [showToast]
   );
+
+  const handleOpenGoogleSheets = useCallback(() => {
+    ensureSession();
+    setIsGoogleSheetsOpen(true);
+  }, [ensureSession]);
 
   // Streaming & Human-in-the-Loop Handlers
   const handleSendMessage = useCallback(
@@ -882,6 +889,7 @@ export const App: React.FC = () => {
           triggeredWatchdogCount={triggeredWatchdogCount}
           onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
           onOpenWatchdog={() => setIsWatchdogOpen(true)}
+          onOpenGoogleSheets={handleOpenGoogleSheets}
           onOpenMetrics={() => {
             if (isMetricsOpen) {
               setIsMetricsOpen(false);
@@ -976,6 +984,7 @@ export const App: React.FC = () => {
               showToast={showToast}
               inputPrefill={inputPrefill}
               onClearPrefill={() => setInputPrefill('')}
+              onOpenGoogleSheets={handleOpenGoogleSheets}
             />
           </>
         ) : activeTab === 'dashboard' ? (
@@ -1027,6 +1036,15 @@ export const App: React.FC = () => {
       <WatchdogModal
         isOpen={isWatchdogOpen}
         onClose={() => setIsWatchdogOpen(false)}
+        showToast={showToast}
+      />
+
+      {/* Google Sheets Connect & Ingestion Modal (FR-50) */}
+      <GoogleSheetsModal
+        isOpen={isGoogleSheetsOpen}
+        onClose={() => setIsGoogleSheetsOpen(false)}
+        sessionId={currentSessionId}
+        onEnsureSession={ensureSession}
         showToast={showToast}
       />
 

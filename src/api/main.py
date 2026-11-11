@@ -77,6 +77,8 @@ async def lifespan(app: FastAPI):
             await init_dashboard_table()
             from src.ingestion.excel_csv_parser import init_uploaded_tables_registry
             await init_uploaded_tables_registry()
+            from src.ingestion.google_sheets import init_google_tables
+            await init_google_tables()
             from src.rag.long_term_memory import seed_golden_memories_if_empty
             await seed_golden_memories_if_empty()
             from src.watchdog.manager import init_watchdog_tables, start_watchdog_scheduler
@@ -1184,6 +1186,176 @@ async def list_watchdog_logs_endpoint(limit: int = 50, rule_id: int | None = Non
         "total": len(logs),
         "logs": [l.model_dump() for l in logs],
     }
+
+
+# ==============================================================================
+# Google Account OAuth 2.0 & Google Sheets Ingestion Endpoints (FR-50)
+# ==============================================================================
+
+@app.get("/v1/auth/google/login", tags=["Google Integration"])
+async def google_login(session_id: str, redirect_uri: str | None = None):
+    """Generate Google OAuth 2.0 consent URL for connecting Google account."""
+    from src.ingestion.google_sheets import get_google_auth_url
+    try:
+        url = get_google_auth_url(session_id=session_id, redirect_uri=redirect_uri)
+        return {"status": "success", "auth_url": url}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error("Failed to generate Google auth URL: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/v1/auth/google/callback", tags=["Google Integration"])
+async def google_callback(code: str, state: str):
+    """Handle Google OAuth 2.0 authorization code exchange and token persistence."""
+    from src.ingestion.google_sheets import handle_google_oauth_callback
+    try:
+        res = await handle_google_oauth_callback(code=code, state=state)
+        user_email = res.get("google_email", "")
+        sess_id = res.get("session_id", "")
+        html_content = f"""<!DOCTYPE html>
+<html>
+<head>
+    <title>Google Account Connected</title>
+    <style>
+        body {{ background: #0b1120; color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }}
+        .card {{ background: #131d32; border: 1px solid rgba(255,255,255,0.08); padding: 2rem 2.5rem; border-radius: 1rem; text-align: center; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5); max-width: 400px; }}
+        .badge {{ background: #052e16; color: #4ade80; border: 1px solid #166534; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.875rem; display: inline-block; margin-bottom: 1rem; }}
+        p {{ color: #94a3b8; font-size: 0.875rem; }}
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="badge">Connected</div>
+        <h2 style="margin: 0 0 0.5rem 0;">Google Account Connected Successfully</h2>
+        <p><strong>{user_email}</strong></p>
+        <p>This window will close automatically...</p>
+    </div>
+    <script>
+        if (window.opener) {{
+            window.opener.postMessage({{
+                type: 'GOOGLE_AUTH_SUCCESS',
+                session_id: '{sess_id}',
+                google_email: '{user_email}'
+            }}, '*');
+            setTimeout(() => window.close(), 1500);
+        }} else {{
+            setTimeout(() => {{ window.location.href = '/'; }}, 2000);
+        }}
+    </script>
+</body>
+</html>"""
+        return HTMLResponse(content=html_content)
+    except Exception as e:
+        logger.error("Google OAuth callback error: %s", e)
+        err_html = f"""<!DOCTYPE html>
+<html>
+<head><title>Authorization Failed</title></head>
+<body style="background: #0b1120; color: #f87171; font-family: sans-serif; padding: 2rem; text-align: center;">
+    <h2>Failed to Connect Google Account</h2>
+    <p style="color: #94a3b8;">{str(e)}</p>
+</body>
+</html>"""
+        return HTMLResponse(content=err_html, status_code=400)
+
+
+@app.get("/v1/auth/google/status", tags=["Google Integration"])
+async def google_auth_status(session_id: str):
+    """Check whether a session has an active connected Google account."""
+    from src.ingestion.google_sheets import get_google_connection_status
+    status = await get_google_connection_status(session_id=session_id)
+    return status.model_dump()
+
+
+@app.delete("/v1/auth/google/disconnect", tags=["Google Integration"])
+async def google_disconnect(session_id: str):
+    """Disconnect Google account from the session and revoke tokens."""
+    from src.ingestion.google_sheets import disconnect_google_account
+    success = await disconnect_google_account(session_id=session_id)
+    return {"status": "success" if success else "not_connected"}
+
+
+class GoogleSheetsMetadataRequest(BaseModel):
+    session_id: str
+    spreadsheet_url: str
+
+
+@app.post("/v1/google-sheets/metadata", tags=["Google Sheets"])
+async def get_google_sheets_metadata_endpoint(payload: GoogleSheetsMetadataRequest):
+    """Retrieve spreadsheet title and list of available sheet tabs for preview."""
+    from src.ingestion.google_sheets import extract_spreadsheet_id, get_valid_access_token, fetch_spreadsheet_metadata
+    try:
+        ss_id = extract_spreadsheet_id(payload.spreadsheet_url)
+        token = await get_valid_access_token(payload.session_id)
+        meta = await fetch_spreadsheet_metadata(token, ss_id)
+        return {"status": "success", "metadata": meta}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error("Failed to fetch Google Sheets metadata: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class ImportGoogleSheetsRequest(BaseModel):
+    session_id: str
+    spreadsheet_url: str
+    selected_sheets: list[str] | None = None
+
+
+@app.post("/v1/google-sheets/import", tags=["Google Sheets"])
+async def import_google_sheets_endpoint(payload: ImportGoogleSheetsRequest):
+    """Ingest selected sheets into PostgreSQL and register in session catalog."""
+    from src.ingestion.google_sheets import ingest_google_sheets
+    try:
+        result = await ingest_google_sheets(
+            session_id=payload.session_id,
+            spreadsheet_url_or_id=payload.spreadsheet_url,
+            selected_sheet_titles=payload.selected_sheets,
+        )
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error("Failed to import Google Sheets: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/v1/google-sheets/resync/{sheet_link_id}", tags=["Google Sheets"])
+async def resync_google_sheet_endpoint(sheet_link_id: str):
+    """Re-sync live data from Google Sheets into corresponding PostgreSQL tables."""
+    from src.ingestion.google_sheets import resync_google_sheet
+    try:
+        res = await resync_google_sheet(sheet_link_id=sheet_link_id)
+        return res
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error("Failed to re-sync Google Sheet %s: %s", sheet_link_id, e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/v1/google-sheets/{session_id}", tags=["Google Sheets"])
+async def list_google_sheets_endpoint(session_id: str):
+    """List all linked Google Sheets for a session."""
+    from src.ingestion.google_sheets import list_session_google_sheets
+    sheets = await list_session_google_sheets(session_id=session_id)
+    return {
+        "status": "success",
+        "session_id": session_id,
+        "sheets": [s.model_dump() for s in sheets],
+        "total": len(sheets),
+    }
+
+
+@app.delete("/v1/google-sheets/{sheet_link_id}", tags=["Google Sheets"])
+async def remove_google_sheet_endpoint(sheet_link_id: str):
+    """Remove a linked Google Sheet and drop its PostgreSQL tables."""
+    from src.ingestion.google_sheets import remove_session_google_sheet
+    success = await remove_session_google_sheet(sheet_link_id=sheet_link_id)
+    if not success:
+        raise HTTPException(status_code=404, detail=f"Link Google Sheets '{sheet_link_id}' tidak ditemukan.")
+    return {"status": "success", "sheet_link_id": sheet_link_id}
 
 
 @app.get("/", response_class=HTMLResponse, tags=["UI"])

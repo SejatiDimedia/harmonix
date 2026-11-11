@@ -24,6 +24,7 @@ interface ChatInputProps {
   showToast?: (message: string) => void;
   inputPrefill?: string;
   onClearPrefill?: () => void;
+  onOpenGoogleSheets?: () => void;
 }
 
 const ChatInputComponent: React.FC<ChatInputProps> = ({
@@ -42,6 +43,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
   showToast,
   inputPrefill,
   onClearPrefill,
+  onOpenGoogleSheets,
 }) => {
   const [query, setQuery] = useState('');
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
@@ -316,6 +318,20 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
                   <Paperclip className="w-4 h-4 text-slate-400 group-hover:text-slate-200 transition-colors" />
                 )}
               </button>
+
+              {/* Connect Google Sheets Button (FR-50) */}
+              {onOpenGoogleSheets && (
+                <button
+                  type="button"
+                  disabled={isUploading || isLoading}
+                  onClick={onOpenGoogleSheets}
+                  aria-label="Connect Google Sheets from your Google Account"
+                  className="group p-2 rounded-xl text-emerald-400 hover:text-emerald-300 hover:bg-emerald-950/40 border border-transparent hover:border-emerald-800/60 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                  title="Connect Google Sheets from your Google Account for SQL analysis & warehouse cross-join (FR-50)"
+                >
+                  <FileSpreadsheet className="w-4 h-4" />
+                </button>
+              )}
 
               {isLoading && (
                 <span className="hidden sm:inline-flex text-[11px] font-mono text-slate-400 select-none mr-0.5">

@@ -448,4 +448,43 @@ export interface WatchdogLog {
   created_at?: string | null;
 }
 
+export interface GoogleAuthStatus {
+  session_id: string;
+  google_email: string;
+  google_name?: string | null;
+  google_picture_url?: string | null;
+  is_connected: boolean;
+  token_expires_at?: string | null;
+}
+
+export interface GoogleSheetTab {
+  sheet_id: number;
+  sheet_title: string;
+  row_count: number;
+  column_count: number;
+  table_name?: string | null;
+}
+
+export interface GoogleSheetMetadata {
+  spreadsheet_id: string;
+  spreadsheet_title: string;
+  tabs: GoogleSheetTab[];
+}
+
+export interface GoogleSheetLink {
+  sheet_link_id: string;
+  session_id: string;
+  spreadsheet_id: string;
+  spreadsheet_title: string;
+  sheet_tabs: Array<{
+    sheet_id: number;
+    sheet_title: string;
+    table_name: string;
+    row_count: number;
+  }>;
+  last_synced_at: string;
+  sync_status: string;
+  row_count_total: number;
+}
+
 

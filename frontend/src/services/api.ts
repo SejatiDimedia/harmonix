@@ -17,6 +17,9 @@ import {
   TableHealthProfile,
   WatchdogRule,
   WatchdogLog,
+  GoogleAuthStatus,
+  GoogleSheetMetadata,
+  GoogleSheetLink,
 } from '../types';
 
 export async function getHealth(): Promise<HealthStatus> {
@@ -446,6 +449,91 @@ export async function fetchWatchdogLogs(limit = 50, ruleId?: number): Promise<{ 
   const url = ruleId ? `/v1/watchdog/logs?rule_id=${ruleId}&limit=${limit}` : `/v1/watchdog/logs?limit=${limit}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error('Failed to load watchdog logs');
+  return res.json();
+}
+
+// Google Account OAuth & Sheets Integration (FR-50)
+
+export async function getGoogleAuthUrl(sessionId: string): Promise<{ status: string; auth_url: string }> {
+  const res = await fetch(`/v1/auth/google/login?session_id=${encodeURIComponent(sessionId)}`);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: 'Failed to generate Google auth URL' }));
+    throw new Error(err.detail || 'Failed to generate Google auth URL');
+  }
+  return res.json();
+}
+
+export async function getGoogleAuthStatus(sessionId: string): Promise<GoogleAuthStatus> {
+  const res = await fetch(`/v1/auth/google/status?session_id=${encodeURIComponent(sessionId)}`);
+  if (!res.ok) throw new Error('Failed to fetch Google auth status');
+  return res.json();
+}
+
+export async function disconnectGoogleAccount(sessionId: string): Promise<{ status: string }> {
+  const res = await fetch(`/v1/auth/google/disconnect?session_id=${encodeURIComponent(sessionId)}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw new Error('Failed to disconnect Google account');
+  return res.json();
+}
+
+export async function getGoogleSheetsMetadata(sessionId: string, spreadsheetUrl: string): Promise<GoogleSheetMetadata> {
+  const res = await fetch('/v1/google-sheets/metadata', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ session_id: sessionId, spreadsheet_url: spreadsheetUrl }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: 'Failed to inspect Google Sheets metadata' }));
+    throw new Error(err.detail || 'Failed to inspect Google Sheets metadata');
+  }
+  const data = await res.json();
+  return data.metadata;
+}
+
+export async function importGoogleSheets(
+  sessionId: string,
+  spreadsheetUrl: string,
+  selectedSheets?: string[]
+): Promise<any> {
+  const res = await fetch('/v1/google-sheets/import', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      session_id: sessionId,
+      spreadsheet_url: spreadsheetUrl,
+      selected_sheets: selectedSheets,
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: 'Failed to import Google Sheets' }));
+    throw new Error(err.detail || 'Failed to import Google Sheets');
+  }
+  return res.json();
+}
+
+export async function resyncGoogleSheet(sheetLinkId: string): Promise<any> {
+  const res = await fetch(`/v1/google-sheets/resync/${encodeURIComponent(sheetLinkId)}`, {
+    method: 'POST',
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: 'Failed to re-sync Google Sheet' }));
+    throw new Error(err.detail || 'Failed to re-sync Google Sheet');
+  }
+  return res.json();
+}
+
+export async function listSessionGoogleSheets(sessionId: string): Promise<{ sheets: GoogleSheetLink[]; total: number }> {
+  const res = await fetch(`/v1/google-sheets/${encodeURIComponent(sessionId)}`);
+  if (!res.ok) throw new Error('Failed to fetch linked Google Sheets');
+  return res.json();
+}
+
+export async function removeGoogleSheet(sheetLinkId: string): Promise<{ status: string }> {
+  const res = await fetch(`/v1/google-sheets/${encodeURIComponent(sheetLinkId)}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw new Error('Failed to remove Google Sheet link');
   return res.json();
 }
 

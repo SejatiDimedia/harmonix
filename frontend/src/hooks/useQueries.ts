@@ -23,6 +23,12 @@ import {
   deleteWatchdogRule,
   runWatchdogRule,
   fetchWatchdogLogs,
+  getGoogleAuthStatus,
+  disconnectGoogleAccount,
+  listSessionGoogleSheets,
+  importGoogleSheets,
+  resyncGoogleSheet,
+  removeGoogleSheet,
 } from '../services/api';
 import { PinWidgetPayload, UpdateAPIKeysPayload, WatchdogRule } from '../types';
 
@@ -250,6 +256,78 @@ export const useRunWatchdogRuleMutation = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['watchdog-rules'] });
       queryClient.invalidateQueries({ queryKey: ['watchdog-logs'] });
+    },
+  });
+};
+
+// Google Account OAuth & Sheets Hooks (FR-50)
+
+export const useGoogleAuthStatusQuery = (sessionId: string | null) => {
+  return useQuery({
+    queryKey: ['google-auth-status', sessionId],
+    queryFn: () => getGoogleAuthStatus(sessionId!),
+    enabled: !!sessionId,
+    staleTime: 1000 * 30,
+  });
+};
+
+export const useSessionGoogleSheetsQuery = (sessionId: string | null) => {
+  return useQuery({
+    queryKey: ['session-google-sheets', sessionId],
+    queryFn: () => listSessionGoogleSheets(sessionId!),
+    enabled: !!sessionId,
+  });
+};
+
+export const useImportGoogleSheetsMutation = (sessionId: string | null) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ url, selectedSheets }: { url: string; selectedSheets?: string[] }) =>
+      importGoogleSheets(sessionId!, url, selectedSheets),
+    onSuccess: () => {
+      if (sessionId) {
+        queryClient.invalidateQueries({ queryKey: ['session-uploaded-tables', sessionId] });
+        queryClient.invalidateQueries({ queryKey: ['session-google-sheets', sessionId] });
+      }
+    },
+  });
+};
+
+export const useResyncGoogleSheetMutation = (sessionId: string | null) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (sheetLinkId: string) => resyncGoogleSheet(sheetLinkId),
+    onSuccess: () => {
+      if (sessionId) {
+        queryClient.invalidateQueries({ queryKey: ['session-uploaded-tables', sessionId] });
+        queryClient.invalidateQueries({ queryKey: ['session-google-sheets', sessionId] });
+        queryClient.invalidateQueries({ queryKey: ['dashboard', sessionId] });
+      }
+    },
+  });
+};
+
+export const useRemoveGoogleSheetMutation = (sessionId: string | null) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (sheetLinkId: string) => removeGoogleSheet(sheetLinkId),
+    onSuccess: () => {
+      if (sessionId) {
+        queryClient.invalidateQueries({ queryKey: ['session-uploaded-tables', sessionId] });
+        queryClient.invalidateQueries({ queryKey: ['session-google-sheets', sessionId] });
+      }
+    },
+  });
+};
+
+export const useDisconnectGoogleMutation = (sessionId: string | null) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => disconnectGoogleAccount(sessionId!),
+    onSuccess: () => {
+      if (sessionId) {
+        queryClient.invalidateQueries({ queryKey: ['google-auth-status', sessionId] });
+      }
     },
   });
 };

@@ -1,5 +1,5 @@
 import React from 'react';
-import { PanelLeft, Activity, ShieldAlert } from 'lucide-react';
+import { PanelLeft, Activity, ShieldAlert, FileSpreadsheet } from 'lucide-react';
 import { HealthStatus, ActiveTab } from '../types';
 import { Button } from './ui';
 
@@ -12,6 +12,7 @@ interface NavbarProps {
   onToggleSidebar: () => void;
   onOpenMetrics: () => void;
   onOpenWatchdog?: () => void;
+  onOpenGoogleSheets?: () => void;
 }
 
 const NavbarComponent: React.FC<NavbarProps> = ({
@@ -23,6 +24,7 @@ const NavbarComponent: React.FC<NavbarProps> = ({
   onToggleSidebar,
   onOpenMetrics,
   onOpenWatchdog,
+  onOpenGoogleSheets,
 }) => {
   const getTabTitle = () => {
     switch (activeTab) {
@@ -86,6 +88,19 @@ const NavbarComponent: React.FC<NavbarProps> = ({
                 {triggeredWatchdogCount}
               </span>
             )}
+          </Button>
+        )}
+
+        {onOpenGoogleSheets && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onOpenGoogleSheets}
+            aria-label="Connect Google Sheets"
+            title="Connect Google Sheets (FR-50)"
+            leftIcon={<FileSpreadsheet className="w-4 h-4 text-emerald-400" />}
+          >
+            <span className="hidden md:inline font-sans text-xs text-slate-300">Sheets</span>
           </Button>
         )}
 

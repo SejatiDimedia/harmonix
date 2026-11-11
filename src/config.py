@@ -1,7 +1,7 @@
 """Configuration management using Pydantic Settings."""
 
 from typing import Literal
-from pydantic import Field
+from pydantic import Field, AliasChoices
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -189,6 +189,25 @@ class Settings(BaseSettings):
     auditor_max_self_corrections: int = Field(
         default=1,
         description="Max self-correction loops when auditor flags high-severity issues",
+    )
+
+    # Google OAuth 2.0 & Sheets Integration settings (FR-50)
+    google_client_id: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("GOOGLE_CLIENT_ID", "VITE_GOOGLE_CLIENT_ID", "google_client_id"),
+        description="Google OAuth 2.0 Client ID for Google Sheets integration (FR-50)",
+    )
+    google_client_secret: str | None = Field(
+        default=None,
+        description="Google OAuth 2.0 Client Secret",
+    )
+    google_redirect_uri: str = Field(
+        default="http://localhost:8000/v1/auth/google/callback",
+        description="Google OAuth 2.0 Redirect URI",
+    )
+    google_token_encryption_key: str | None = Field(
+        default=None,
+        description="32-byte urlsafe base64 key for AES Fernet encryption of OAuth tokens",
     )
 
 
