@@ -279,14 +279,12 @@ class ObservationProcessor:
             elif any(w in uq_lower for w in ("garis", "line", "tren", "trend")) and not any(w in uq_lower for w in ("batang", "bar")):
                 ch.chart_type = "line"
 
-        # 3. Auto-synthesize chart if user requested visuals/dashboard or analysis but model didn't call make_chart
-        chart_keywords = (
+        # 3. Auto-synthesize chart ONLY if user explicitly requested visual charts/graphs but model omitted make_chart
+        explicit_chart_keywords = (
             "grafik", "chart", "visualisasi", "visual", "diagram", "plot",
-            "tren", "trend", "dashboard", "persentase", "porsi", "proporsi",
-            "distribusi", "perbandingan", "komparasi", "analisis", "terlaris",
-            "tertinggi", "terendah"
+            "gambarkan", "visualisasikan"
         )
-        if not final_charts and captured_tables and any(kw in uq_lower for kw in chart_keywords):
+        if not final_charts and captured_tables and any(kw in uq_lower for kw in explicit_chart_keywords):
             # Find eligible tables (exclude schema queries like column_name or table_name)
             candidate_tables = []
             for tbl in captured_tables:

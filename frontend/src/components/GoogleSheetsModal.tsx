@@ -216,7 +216,6 @@ export const GoogleSheetsModal: React.FC<GoogleSheetsModalProps> = ({
       size="2xl"
       icon={<FileSpreadsheet className="w-5 h-5 text-emerald-400" />}
       title="Google Sheets Ingestion Engine"
-      badge={<Badge variant="info" size="xs">FR-50</Badge>}
       subtitle="Connect your Google account to ingest live spreadsheets into SQL analytics tables for cross-join analysis"
     >
       <div className="space-y-5">
@@ -370,11 +369,10 @@ export const GoogleSheetsModal: React.FC<GoogleSheetsModalProps> = ({
                           key={tab.sheet_id}
                           type="button"
                           onClick={() => toggleTabSelection(tab.sheet_title)}
-                          className={`flex items-center justify-between p-2.5 rounded-xl border text-left transition cursor-pointer select-none ${
-                            isSelected
+                          className={`flex items-center justify-between p-2.5 rounded-xl border text-left transition cursor-pointer select-none ${isSelected
                               ? 'bg-sky-500/10 border-sky-500/40 text-white shadow-sm'
                               : 'bg-[#0b1322] border-white/[0.06] text-slate-400 hover:border-white/[0.12] hover:text-slate-200'
-                          }`}
+                            }`}
                         >
                           <div className="flex items-center gap-2 truncate pr-2">
                             {isSelected ? (

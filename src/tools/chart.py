@@ -36,7 +36,8 @@ class MakeChartTool(BaseTool):
     name: str = "make_chart"
     description: str = (
         "Create an interactive visual chart (bar, line, pie, doughnut, scatter) from query results or aggregated data. "
-        "Use this tool when the user asks for a chart, graph, trend, visualization, or when presenting comparative metrics."
+        "CRITICAL: ONLY call this tool when the user EXPLICITLY asks for a chart, graph, diagram, plot, or visual representation in their prompt. "
+        "DO NOT call this tool for normal text, numerical, or tabular answers unless explicitly requested."
     )
     args_schema: type[BaseModel] = MakeChartInput
 

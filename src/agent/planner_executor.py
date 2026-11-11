@@ -91,11 +91,15 @@ SPESIALISASI SUB-AGENT WORKER YANG TERSEDIA:
 3. `chart_specialist`: Ahli visualisasi data bisnis (grafik batang, garis, pie, doughnut) dengan tool `make_chart`.
 
 PEDOMAN DEKOMPOSISI:
-- Jika pertanyaan sederhana (mis. satu metrik tunggal tanpa perbandingan rumit): Buat 1 atau 2 sub-tugas saja (`sql_specialist` -> opsional `chart_specialist`).
-- Jika pertanyaan multi-langkah (mis. bandingkan performa kategori A vs B, hitung rasio perbedaannya, dan visualisasikan): Pecah menjadi sub-tugas berurutan:
+- ATURAN KETAT VISUALISASI CHART:
+  * JANGAN PERNAH menugaskan `chart_specialist` jika pengguna TIDAK secara eksplisit meminta grafik, chart, diagram, visualisasi, atau plot dalam pertanyaannya.
+  * HANYA tugaskan `chart_specialist` jika pengguna secara gamblang meminta visualisasi (misal: "buatkan grafik", "visualisasikan", "tampilkan diagram", "plot tren", "show chart").
+  * Untuk pertanyaan analisis data, pencarian fakta, metrik, ringkasan, atau perbandingan tanpa permintaan visualisasi: CUKUP tugaskan `sql_specialist` dan opsional `calc_specialist`.
+- Jika pertanyaan sederhana: Buat 1 sub-tugas saja (`sql_specialist`).
+- Jika pertanyaan multi-langkah: Pecah menjadi sub-tugas berurutan:
   1. `sql_specialist`: Ambil dataset gabungan yang dibutuhkan.
   2. `calc_specialist`: (Jika perlu) Hitung kalkulasi matematis lanjutan atau rasio di luar SQL.
-  3. `chart_specialist`: (Jika pengguna meminta grafik atau data sangat cocok divisualisasikan) Bentuk spesifikasi chart.
+  3. `chart_specialist`: (HANYA jika pengguna meminta grafik/chart) Bentuk spesifikasi chart.
 
 OUTPUT WAJIB DALAM FORMAT JSON VALID SESUAI SKEMA BERIKUT:
 ```json

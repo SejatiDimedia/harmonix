@@ -359,5 +359,30 @@ async def test_make_chart_multi_series_preservation():
     assert any(d.get("client_id") == "ORG-104" for d in chart["data"])
 
 
+@pytest.mark.asyncio
+async def test_no_chart_when_not_requested():
+    """Verify that if user asks a standard query without chart keywords, no chart is generated."""
+    run_sql_call = ToolCall(
+        id="call_sql_sales",
+        name="run_sql",
+        arguments={"query": "SELECT category, SUM(amount) AS total FROM analytics.sales GROUP BY category"},
+    )
+    canned_responses = [
+        LLMResponse(content="Running query.", tool_calls=[run_sql_call]),
+        LLMResponse(content="Berikut ringkasan total penjualan per kategori.", tool_calls=[]),
+    ]
+    mock_llm = MockLLMProvider(canned_responses=canned_responses)
+    agent = ManualAgentLoop(llm=mock_llm, max_steps=5)
+
+    events = []
+    async for event in agent.run(user_query="Berapa total penjualan dan analisis per kategori?"):
+        events.append(event)
+
+    final_event = next(e for e in events if e["event"] == "final_result")
+    final_charts = final_event["data"]["charts"]
+    assert len(final_charts) == 0
+
+
+
 
 
