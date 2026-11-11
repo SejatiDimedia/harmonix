@@ -30,15 +30,18 @@ import { Modal, Button, Badge, Input, Select, Textarea, Card, Tabs } from './ui'
 interface WatchdogModalProps {
   isOpen: boolean;
   onClose: () => void;
+  sessionId?: string | null;
   showToast?: (msg: string) => void;
 }
 
 export const WatchdogModal: React.FC<WatchdogModalProps> = ({
   isOpen,
   onClose,
+  sessionId,
   showToast,
 }) => {
   const [activeTab, setActiveTab] = useState<'rules' | 'logs'>('rules');
+  const [scopeFilter, setScopeFilter] = useState<'context' | 'session' | 'global' | 'all'>('context');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingRuleId, setEditingRuleId] = useState<number | null>(null);
   const [expandedLogId, setExpandedLogId] = useState<number | null>(null);
@@ -53,6 +56,7 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
   const [thresholdValue, setThresholdValue] = useState<number>(0);
   const [intervalMinutes, setIntervalMinutes] = useState<number>(60);
   const [severity, setSeverity] = useState<'info' | 'warning' | 'critical'>('warning');
+  const [ruleScope, setRuleScope] = useState<'global' | 'session'>('global');
   const [webhookUrl, setWebhookUrl] = useState('');
   const [channelType, setChannelType] = useState('slack');
   const [aiDiagnosisEnabled, setAiDiagnosisEnabled] = useState(true);
@@ -65,8 +69,38 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
   const deleteMutation = useDeleteWatchdogRuleMutation();
   const runMutation = useRunWatchdogRuleMutation();
 
-  const rules = rulesData?.rules || [];
-  const logs = logsData?.logs || [];
+  const allRules = rulesData?.rules || [];
+  const allLogs = logsData?.logs || [];
+
+  // Scoped filtering logic
+  const filteredRules = allRules.filter((r) => {
+    if (scopeFilter === 'session') {
+      return r.scope === 'session' && (!sessionId || r.session_id === sessionId);
+    }
+    if (scopeFilter === 'global') {
+      return r.scope === 'global';
+    }
+    if (scopeFilter === 'context') {
+      return r.scope === 'global' || (sessionId && r.session_id === sessionId);
+    }
+    return true; // 'all'
+  });
+
+  const filteredLogs = allLogs.filter((l) => {
+    if (scopeFilter === 'session') {
+      return l.scope === 'session' && (!sessionId || l.session_id === sessionId);
+    }
+    if (scopeFilter === 'global') {
+      return l.scope === 'global';
+    }
+    if (scopeFilter === 'context') {
+      return l.scope === 'global' || (sessionId && l.session_id === sessionId);
+    }
+    return true; // 'all'
+  });
+
+  const rules = filteredRules;
+  const logs = filteredLogs;
   const triggeredCount = rules.filter((r) => r.last_status === 'triggered').length;
   const activeCount = rules.filter((r) => r.enabled).length;
 
@@ -80,6 +114,7 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
     setThresholdValue(3.5);
     setIntervalMinutes(60);
     setSeverity('warning');
+    setRuleScope(sessionId ? 'session' : 'global');
     setWebhookUrl('');
     setChannelType('slack');
     setAiDiagnosisEnabled(true);
@@ -96,6 +131,7 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
     setThresholdValue(rule.threshold_value);
     setIntervalMinutes(rule.cron_interval_minutes);
     setSeverity(rule.severity);
+    setRuleScope(rule.scope || 'global');
     setWebhookUrl(rule.webhook_url || '');
     setChannelType(rule.channel_type || 'slack');
     setAiDiagnosisEnabled(rule.ai_diagnosis_enabled);
@@ -118,6 +154,8 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
       threshold_value: Number(thresholdValue),
       cron_interval_minutes: Number(intervalMinutes),
       severity,
+      scope: ruleScope,
+      session_id: ruleScope === 'session' ? (sessionId || undefined) : null,
       webhook_url: webhookUrl.trim() || undefined,
       channel_type: channelType,
       ai_diagnosis_enabled: aiDiagnosisEnabled,
@@ -291,6 +329,62 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
           </div>
         </div>
 
+        {/* Scope Context Filter Pill Bar */}
+        <div className="flex items-center justify-between gap-2 p-1.5 bg-[#0b1322] rounded-xl border border-white/[0.06] text-xs">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-[11px] font-medium text-slate-400 px-2">Scope:</span>
+            <button
+              type="button"
+              onClick={() => setScopeFilter('context')}
+              className={`px-3 py-1 rounded-lg transition font-medium cursor-pointer ${
+                scopeFilter === 'context'
+                  ? 'bg-sky-500/15 text-sky-300 border border-sky-500/30'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Active Context ({allRules.filter((r) => r.scope === 'global' || (sessionId && r.session_id === sessionId)).length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setScopeFilter('session')}
+              className={`px-3 py-1 rounded-lg transition font-medium cursor-pointer ${
+                scopeFilter === 'session'
+                  ? 'bg-purple-500/15 text-purple-300 border border-purple-500/30'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              This Session Only ({allRules.filter((r) => r.scope === 'session' && (!sessionId || r.session_id === sessionId)).length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setScopeFilter('global')}
+              className={`px-3 py-1 rounded-lg transition font-medium cursor-pointer ${
+                scopeFilter === 'global'
+                  ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Warehouse Global ({allRules.filter((r) => r.scope === 'global').length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setScopeFilter('all')}
+              className={`px-3 py-1 rounded-lg transition font-medium cursor-pointer ${
+                scopeFilter === 'all'
+                  ? 'bg-white/10 text-white border border-white/20'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              All ({allRules.length})
+            </button>
+          </div>
+          {sessionId && (
+            <span className="text-[10px] text-slate-500 font-mono hidden md:inline px-2">
+              Session: {sessionId.substring(0, 18)}...
+            </span>
+          )}
+        </div>
+
         {/* Form Drawer: Tambah / Edit Rule */}
         {isFormOpen && (
           <form onSubmit={handleSaveRule} className="p-5 rounded-xl border border-white/[0.08] bg-[#0f1d36] space-y-4 shadow-lg">
@@ -306,7 +400,7 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
               </Button>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <Input
                 label="Rule Name"
                 value={ruleName}
@@ -322,6 +416,21 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
                   { value: 'info', label: 'Info' },
                   { value: 'warning', label: 'Warning' },
                   { value: 'critical', label: 'Critical' },
+                ]}
+              />
+              <Select
+                label="Monitoring Scope"
+                value={ruleScope}
+                onChange={(e) => setRuleScope(e.target.value as 'global' | 'session')}
+                options={[
+                  {
+                    value: 'global',
+                    label: 'Core Warehouse (Global)',
+                  },
+                  {
+                    value: 'session',
+                    label: `Current Session (${sessionId ? sessionId.substring(0, 12) + '...' : 'This Chat'})`,
+                  },
                 ]}
               />
             </div>
@@ -466,6 +575,11 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
                           {rule.rule_name}
                         </span>
                         {getSeverityBadge(rule.severity)}
+                        {rule.scope === 'session' ? (
+                          <Badge variant="purple" size="xs">Session Data</Badge>
+                        ) : (
+                          <Badge variant="info" size="xs">Warehouse Global</Badge>
+                        )}
                         {getStatusBadge(rule.last_status)}
                         {!rule.enabled && <Badge variant="neutral">Disabled</Badge>}
                       </div>
@@ -579,6 +693,11 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
                             <span className="text-xs font-semibold text-white">
                               {log.rule_name || `Rule #${log.rule_id}`}
                             </span>
+                            {log.scope === 'session' ? (
+                              <Badge variant="purple" size="xs">Session</Badge>
+                            ) : (
+                              <Badge variant="info" size="xs">Global</Badge>
+                            )}
                             <span className="text-[10px] text-slate-500 font-mono">
                               {log.created_at ? new Date(log.created_at).toLocaleString('en-US') : '-'}
                             </span>

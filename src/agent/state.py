@@ -543,6 +543,10 @@ async def delete_session(session_id: str) -> bool:
                 text("DELETE FROM analytics.dashboard_widgets WHERE session_id = :session_id;"),
                 {"session_id": session_id},
             )
+            await session.execute(
+                text("DELETE FROM analytics.watchdog_rules WHERE session_id = :session_id;"),
+                {"session_id": session_id},
+            )
         except Exception:
             pass
         await session.commit()

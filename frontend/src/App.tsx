@@ -85,7 +85,7 @@ export const App: React.FC = () => {
   const { data: sessionDetailsData } = useSessionDetailsQuery(currentSessionId);
   const { data: metricsData, refetch: refetchMetrics } = useMetricsQuery();
   const { data: dashboardData, isLoading: isDashboardLoading } = useDashboardQuery(currentSessionId);
-  const { data: watchdogRulesData } = useWatchdogRulesQuery();
+  const { data: watchdogRulesData } = useWatchdogRulesQuery(currentSessionId);
 
   const triggeredWatchdogCount = (watchdogRulesData?.rules || []).filter(
     (r) => r.last_status === 'triggered'
@@ -1036,6 +1036,7 @@ export const App: React.FC = () => {
       <WatchdogModal
         isOpen={isWatchdogOpen}
         onClose={() => setIsWatchdogOpen(false)}
+        sessionId={currentSessionId}
         showToast={showToast}
       />
 

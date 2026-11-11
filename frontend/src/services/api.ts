@@ -391,8 +391,12 @@ export async function retryQueueJob(jobId: string): Promise<any> {
 // Watchdog & Metric Alerting API (FR-49)
 // =============================================================================
 
-export async function fetchWatchdogRules(): Promise<{ total: number; rules: WatchdogRule[] }> {
-  const res = await fetch('/v1/watchdog/rules');
+export async function fetchWatchdogRules(sessionId?: string | null, scope?: string | null): Promise<{ total: number; rules: WatchdogRule[] }> {
+  const params = new URLSearchParams();
+  if (sessionId) params.append('session_id', sessionId);
+  if (scope) params.append('scope', scope);
+  const q = params.toString() ? `?${params.toString()}` : '';
+  const res = await fetch(`/v1/watchdog/rules${q}`);
   if (!res.ok) throw new Error('Failed to load watchdog rules');
   return res.json();
 }
@@ -445,9 +449,12 @@ export async function runWatchdogRule(ruleId: number): Promise<{ status: string;
   return res.json();
 }
 
-export async function fetchWatchdogLogs(limit = 50, ruleId?: number): Promise<{ total: number; logs: WatchdogLog[] }> {
-  const url = ruleId ? `/v1/watchdog/logs?rule_id=${ruleId}&limit=${limit}` : `/v1/watchdog/logs?limit=${limit}`;
-  const res = await fetch(url);
+export async function fetchWatchdogLogs(limit = 50, ruleId?: number, sessionId?: string | null): Promise<{ total: number; logs: WatchdogLog[] }> {
+  const params = new URLSearchParams();
+  params.append('limit', limit.toString());
+  if (ruleId) params.append('rule_id', ruleId.toString());
+  if (sessionId) params.append('session_id', sessionId);
+  const res = await fetch(`/v1/watchdog/logs?${params.toString()}`);
   if (!res.ok) throw new Error('Failed to load watchdog logs');
   return res.json();
 }

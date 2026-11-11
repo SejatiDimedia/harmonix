@@ -201,18 +201,18 @@ export const useDeleteUploadedTableMutation = (sessionId: string | null) => {
 // Watchdog Query & Mutation Hooks
 // =============================================================================
 
-export const useWatchdogRulesQuery = () => {
+export const useWatchdogRulesQuery = (sessionId?: string | null, scope?: string | null) => {
   return useQuery({
-    queryKey: ['watchdog-rules'],
-    queryFn: fetchWatchdogRules,
+    queryKey: ['watchdog-rules', sessionId || 'all', scope || 'all'],
+    queryFn: () => fetchWatchdogRules(sessionId, scope),
     refetchInterval: 30000,
   });
 };
 
-export const useWatchdogLogsQuery = (limit = 50, ruleId?: number) => {
+export const useWatchdogLogsQuery = (limit = 50, ruleId?: number, sessionId?: string | null) => {
   return useQuery({
-    queryKey: ['watchdog-logs', limit, ruleId],
-    queryFn: () => fetchWatchdogLogs(limit, ruleId),
+    queryKey: ['watchdog-logs', limit, ruleId || 'all', sessionId || 'all'],
+    queryFn: () => fetchWatchdogLogs(limit, ruleId, sessionId),
     refetchInterval: 15000,
   });
 };

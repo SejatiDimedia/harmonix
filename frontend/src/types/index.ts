@@ -422,6 +422,8 @@ export interface WatchdogRule {
   cron_interval_minutes: number;
   enabled: boolean;
   severity: 'info' | 'warning' | 'critical';
+  scope?: 'global' | 'session';
+  session_id?: string | null;
   webhook_url?: string | null;
   channel_type: string;
   ai_diagnosis_enabled: boolean;
@@ -436,6 +438,8 @@ export interface WatchdogLog {
   id: number;
   rule_id: number;
   rule_name?: string | null;
+  scope?: 'global' | 'session';
+  session_id?: string | null;
   metric_value?: number | null;
   threshold_value?: number | null;
   operator?: string | null;

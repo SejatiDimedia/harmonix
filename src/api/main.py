@@ -1098,14 +1098,28 @@ async def delete_memory_endpoint(memory_id: int):
 # ==============================================================================
 
 @app.get("/v1/watchdog/rules", tags=["Watchdog"])
-async def list_watchdog_rules_endpoint():
-    """List all configured watchdog monitoring rules."""
+async def list_watchdog_rules_endpoint(
+    session_id: str | None = None,
+    scope: str | None = None,
+):
+    """List configured watchdog monitoring rules with optional session/scope filtering."""
     from src.watchdog.manager import list_rules
-    rules = await list_rules()
+    rules = await list_rules(session_id=session_id, scope=scope)
     return {
         "status": "success",
         "total": len(rules),
         "rules": [r.model_dump() for r in rules],
+    }
+
+
+@app.get("/v1/watchdog/triggered-count", tags=["Watchdog"])
+async def get_triggered_watchdog_count_endpoint(session_id: str | None = None):
+    """Get the count of currently triggered watchdog rules for current context."""
+    from src.watchdog.manager import get_triggered_count
+    count = await get_triggered_count(session_id=session_id)
+    return {
+        "status": "success",
+        "triggered_count": count,
     }
 
 
@@ -1177,10 +1191,14 @@ async def run_watchdog_rule_endpoint(rule_id: int):
 
 
 @app.get("/v1/watchdog/logs", tags=["Watchdog"])
-async def list_watchdog_logs_endpoint(limit: int = 50, rule_id: int | None = None):
+async def list_watchdog_logs_endpoint(
+    limit: int = 50,
+    rule_id: int | None = None,
+    session_id: str | None = None,
+):
     """Retrieve recent watchdog execution logs and trigger history."""
     from src.watchdog.manager import get_logs
-    logs = await get_logs(limit=limit, rule_id=rule_id)
+    logs = await get_logs(limit=limit, rule_id=rule_id, session_id=session_id)
     return {
         "status": "success",
         "total": len(logs),

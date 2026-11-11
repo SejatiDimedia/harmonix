@@ -19,6 +19,7 @@ logger = logging.getLogger("harmonix.watchdog")
 
 RuleSeverity = Literal["info", "warning", "critical"]
 RuleStatus = Literal["pending", "healthy", "triggered", "error"]
+RuleScope = Literal["global", "session"]
 
 
 class WatchdogRuleCreate(BaseModel):
@@ -31,6 +32,8 @@ class WatchdogRuleCreate(BaseModel):
     cron_interval_minutes: int = 60
     enabled: bool = True
     severity: RuleSeverity = "warning"
+    scope: RuleScope = "global"
+    session_id: str | None = None
     webhook_url: str | None = None
     channel_type: str = "slack"
     ai_diagnosis_enabled: bool = True
@@ -46,6 +49,8 @@ class WatchdogRuleUpdate(BaseModel):
     cron_interval_minutes: int | None = None
     enabled: bool | None = None
     severity: RuleSeverity | None = None
+    scope: RuleScope | None = None
+    session_id: str | None = None
     webhook_url: str | None = None
     channel_type: str | None = None
     ai_diagnosis_enabled: bool | None = None
@@ -62,6 +67,8 @@ class WatchdogRuleModel(BaseModel):
     cron_interval_minutes: int
     enabled: bool
     severity: RuleSeverity
+    scope: RuleScope = "global"
+    session_id: str | None = None
     webhook_url: str | None = None
     channel_type: str
     ai_diagnosis_enabled: bool
@@ -76,6 +83,8 @@ class WatchdogLogModel(BaseModel):
     id: int
     rule_id: int
     rule_name: str | None = None
+    scope: RuleScope = "global"
+    session_id: str | None = None
     metric_value: float | None = None
     threshold_value: float | None = None
     operator: str | None = None
@@ -108,6 +117,8 @@ async def init_watchdog_tables() -> None:
                 cron_interval_minutes INT NOT NULL DEFAULT 60,
                 enabled BOOLEAN NOT NULL DEFAULT TRUE,
                 severity VARCHAR(20) NOT NULL DEFAULT 'warning',
+                scope VARCHAR(20) NOT NULL DEFAULT 'global',
+                session_id VARCHAR(64) DEFAULT NULL,
                 webhook_url TEXT,
                 channel_type VARCHAR(20) DEFAULT 'slack',
                 ai_diagnosis_enabled BOOLEAN NOT NULL DEFAULT TRUE,
@@ -119,11 +130,17 @@ async def init_watchdog_tables() -> None:
             );
         """))
 
+        await session.execute(text("ALTER TABLE analytics.watchdog_rules ADD COLUMN IF NOT EXISTS scope VARCHAR(20) NOT NULL DEFAULT 'global';"))
+        await session.execute(text("ALTER TABLE analytics.watchdog_rules ADD COLUMN IF NOT EXISTS session_id VARCHAR(64) DEFAULT NULL;"))
+        await session.execute(text("CREATE INDEX IF NOT EXISTS idx_watchdog_rules_scope_session ON analytics.watchdog_rules(scope, session_id);"))
+
         await session.execute(text("""
             CREATE TABLE IF NOT EXISTS analytics.watchdog_logs (
                 id SERIAL PRIMARY KEY,
                 rule_id INTEGER REFERENCES analytics.watchdog_rules(id) ON DELETE CASCADE,
                 rule_name VARCHAR(150),
+                scope VARCHAR(20) NOT NULL DEFAULT 'global',
+                session_id VARCHAR(64) DEFAULT NULL,
                 metric_value NUMERIC,
                 threshold_value NUMERIC,
                 operator VARCHAR(10),
@@ -136,6 +153,10 @@ async def init_watchdog_tables() -> None:
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
             );
         """))
+
+        await session.execute(text("ALTER TABLE analytics.watchdog_logs ADD COLUMN IF NOT EXISTS scope VARCHAR(20) NOT NULL DEFAULT 'global';"))
+        await session.execute(text("ALTER TABLE analytics.watchdog_logs ADD COLUMN IF NOT EXISTS session_id VARCHAR(64) DEFAULT NULL;"))
+        await session.execute(text("CREATE INDEX IF NOT EXISTS idx_watchdog_logs_session ON analytics.watchdog_logs(session_id, created_at DESC);"))
 
         await session.execute(text("""
             CREATE INDEX IF NOT EXISTS idx_watchdog_logs_rule
@@ -359,6 +380,8 @@ async def evaluate_rule(rule_id: int) -> WatchdogLogModel:
     operator = row["operator"]
     threshold_value = float(row["threshold_value"])
     severity = row["severity"]
+    scope = row.get("scope") or "global"
+    session_id = row.get("session_id")
     webhook_url = row["webhook_url"]
     channel_type = row["channel_type"] or "slack"
     ai_diagnosis_enabled = bool(row["ai_diagnosis_enabled"])
@@ -433,11 +456,11 @@ async def evaluate_rule(rule_id: int) -> WatchdogLogModel:
         log_res = await session.execute(
             text("""
                 INSERT INTO analytics.watchdog_logs (
-                    rule_id, rule_name, metric_value, threshold_value, operator,
+                    rule_id, rule_name, scope, session_id, metric_value, threshold_value, operator,
                     is_triggered, status, ai_diagnosis_summary, webhook_sent,
                     webhook_response_code, error_message, created_at
                 ) VALUES (
-                    :rule_id, :rule_name, :metric_value, :threshold_value, :operator,
+                    :rule_id, :rule_name, :scope, :session_id, :metric_value, :threshold_value, :operator,
                     :is_triggered, :status, :ai_diagnosis_summary, :webhook_sent,
                     :webhook_response_code, :error_message, :created_at
                 )
@@ -446,6 +469,8 @@ async def evaluate_rule(rule_id: int) -> WatchdogLogModel:
             {
                 "rule_id": rule_id,
                 "rule_name": rule_name,
+                "scope": scope,
+                "session_id": session_id,
                 "metric_value": metric_value,
                 "threshold_value": threshold_value,
                 "operator": operator,
@@ -483,6 +508,8 @@ async def evaluate_rule(rule_id: int) -> WatchdogLogModel:
         id=new_log_id or 0,
         rule_id=rule_id,
         rule_name=rule_name,
+        scope=scope,
+        session_id=session_id,
         metric_value=metric_value,
         threshold_value=threshold_value,
         operator=operator,
@@ -496,10 +523,37 @@ async def evaluate_rule(rule_id: int) -> WatchdogLogModel:
     )
 
 
-async def list_rules() -> list[WatchdogRuleModel]:
-    """List all watchdog rules ordered by id."""
+async def list_rules(session_id: str | None = None, scope: str | None = None) -> list[WatchdogRuleModel]:
+    """List watchdog rules with optional filtering by session and scope."""
     async with get_db_session() as session:
-        res = await session.execute(text("SELECT * FROM analytics.watchdog_rules ORDER BY id ASC;"))
+        if scope == "global":
+            res = await session.execute(
+                text("SELECT * FROM analytics.watchdog_rules WHERE scope = 'global' ORDER BY id ASC;")
+            )
+        elif scope == "session":
+            if session_id:
+                res = await session.execute(
+                    text("SELECT * FROM analytics.watchdog_rules WHERE scope = 'session' AND session_id = :session_id ORDER BY id ASC;"),
+                    {"session_id": session_id},
+                )
+            else:
+                res = await session.execute(
+                    text("SELECT * FROM analytics.watchdog_rules WHERE scope = 'session' ORDER BY id ASC;")
+                )
+        elif session_id:
+            # Active context: show core warehouse global rules + rules specific to this session
+            res = await session.execute(
+                text("""
+                    SELECT * FROM analytics.watchdog_rules
+                    WHERE scope = 'global' OR session_id = :session_id
+                    ORDER BY id ASC;
+                """),
+                {"session_id": session_id},
+            )
+        else:
+            res = await session.execute(
+                text("SELECT * FROM analytics.watchdog_rules ORDER BY id ASC;")
+            )
         rows = res.mappings().fetchall()
         return [WatchdogRuleModel(**dict(r)) for r in rows]
 
@@ -512,11 +566,11 @@ async def create_rule(input_data: WatchdogRuleCreate) -> WatchdogRuleModel:
                 INSERT INTO analytics.watchdog_rules (
                     rule_name, description, sql_query, target_column, operator,
                     threshold_value, cron_interval_minutes, enabled, severity,
-                    webhook_url, channel_type, ai_diagnosis_enabled
+                    webhook_url, channel_type, ai_diagnosis_enabled, scope, session_id
                 ) VALUES (
                     :rule_name, :description, :sql_query, :target_column, :operator,
                     :threshold_value, :cron_interval_minutes, :enabled, :severity,
-                    :webhook_url, :channel_type, :ai_diagnosis_enabled
+                    :webhook_url, :channel_type, :ai_diagnosis_enabled, :scope, :session_id
                 )
                 RETURNING *;
             """),
@@ -565,21 +619,45 @@ async def delete_rule(rule_id: int) -> bool:
         return deleted is not None
 
 
-async def get_logs(limit: int = 50, rule_id: int | None = None) -> list[WatchdogLogModel]:
-    """Retrieve recent watchdog execution logs."""
+async def get_logs(limit: int = 50, rule_id: int | None = None, session_id: str | None = None) -> list[WatchdogLogModel]:
+    """Retrieve recent watchdog execution logs with optional rule and session filtering."""
     async with get_db_session() as session:
+        conditions = []
+        params: dict[str, Any] = {"limit": limit}
+
         if rule_id:
+            conditions.append("rule_id = :rule_id")
+            params["rule_id"] = rule_id
+
+        if session_id:
+            conditions.append("(scope = 'global' OR session_id = :session_id OR session_id IS NULL)")
+            params["session_id"] = session_id
+
+        where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+        query = f"SELECT * FROM analytics.watchdog_logs {where_clause} ORDER BY created_at DESC LIMIT :limit;"
+
+        res = await session.execute(text(query), params)
+        rows = res.mappings().fetchall()
+        return [WatchdogLogModel(**dict(r)) for r in rows]
+
+
+async def get_triggered_count(session_id: str | None = None) -> int:
+    """Count currently triggered watchdog rules relevant to context."""
+    async with get_db_session() as session:
+        if session_id:
             res = await session.execute(
-                text("SELECT * FROM analytics.watchdog_logs WHERE rule_id = :rule_id ORDER BY created_at DESC LIMIT :limit;"),
-                {"rule_id": rule_id, "limit": limit},
+                text("""
+                    SELECT COUNT(*) FROM analytics.watchdog_rules
+                    WHERE last_status = 'triggered' AND enabled = TRUE
+                      AND (scope = 'global' OR session_id = :session_id);
+                """),
+                {"session_id": session_id},
             )
         else:
             res = await session.execute(
-                text("SELECT * FROM analytics.watchdog_logs ORDER BY created_at DESC LIMIT :limit;"),
-                {"limit": limit},
+                text("SELECT COUNT(*) FROM analytics.watchdog_rules WHERE last_status = 'triggered' AND enabled = TRUE;")
             )
-        rows = res.mappings().fetchall()
-        return [WatchdogLogModel(**dict(r)) for r in rows]
+        return res.scalar() or 0
 
 
 async def run_scheduler_tick() -> None:
