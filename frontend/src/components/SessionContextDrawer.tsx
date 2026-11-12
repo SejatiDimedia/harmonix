@@ -8,6 +8,7 @@ import {
   FileText,
   Code,
   Tag,
+  Info,
 } from 'lucide-react';
 import {
   useSessionContextQuery,
@@ -255,6 +256,75 @@ export const SessionContextDrawer: React.FC<SessionContextDrawerProps> = ({
           activeTab={activeTab}
           onChange={(id) => setActiveTab(id as any)}
         />
+
+        {/* Contextual Case Usage Guide Banner */}
+        <div className="p-3.5 rounded-xl bg-[#091120] border border-sky-500/20 text-xs text-slate-300 space-y-2 select-none shadow-sm">
+          <div className="flex items-center gap-2 text-sky-400 font-semibold font-sans text-xs">
+            <Info className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+            <span>
+              {activeTab === 'columns' && 'Use Case Guide: When to Use Column Mappings?'}
+              {activeTab === 'formulas' && 'Use Case Guide: When to Use Custom Formulas?'}
+              {activeTab === 'rules' && 'Use Case Guide: When to Use Business Notes?'}
+            </span>
+          </div>
+
+          {activeTab === 'columns' && (
+            <div className="text-[11px] text-slate-300 space-y-1.5 font-sans leading-relaxed">
+              <p className="text-slate-200">
+                Use this tab when your database tables or imported Excel/Sheets files contain:
+              </p>
+              <ul className="list-disc pl-4 space-y-1 text-slate-400">
+                <li>
+                  <strong className="text-slate-200">Abbreviated or cryptic column names</strong>: E.g., mapping column <code className="text-sky-300 font-mono">net_amt</code> to <em>Net Payable Amount</em>, or <code className="text-sky-300 font-mono">br_code</code> to <em>Store Branch Code</em>.
+                </li>
+                <li>
+                  <strong className="text-slate-200">Integer or status codes without metadata</strong>: E.g., status column <code className="text-sky-300 font-mono">fld_st</code> with values <code className="text-sky-300 font-mono">9 = Completed, 3 = Cancelled, 4 = Refunded</code>.
+                </li>
+                <li>
+                  <strong className="text-slate-200">Ambiguous competing columns</strong>: Disambiguating which timestamp or metric is primary (e.g., <code className="text-sky-300 font-mono">order_date</code> vs <code className="text-sky-300 font-mono">estimated_delivery_date</code>).
+                </li>
+              </ul>
+            </div>
+          )}
+
+          {activeTab === 'formulas' && (
+            <div className="text-[11px] text-slate-300 space-y-1.5 font-sans leading-relaxed">
+              <p className="text-slate-200">
+                Use this tab when defining session-specific metric formulas or department calculations:
+              </p>
+              <ul className="list-disc pl-4 space-y-1 text-slate-400">
+                <li>
+                  <strong className="text-slate-200">Department-specific metric definitions</strong>: Calculating <code className="text-sky-300 font-mono">Gross Margin = revenue - cogs - operational_rebate</code> based on your Finance team's standard.
+                </li>
+                <li>
+                  <strong className="text-slate-200">Derived KPI formulas</strong>: Calculations such as <code className="text-sky-300 font-mono">ARPU = total_revenue / active_users</code> or specialized conversion ratios.
+                </li>
+                <li>
+                  <strong className="text-slate-200">Promotion to global standard</strong>: Verified formulas can be published to the enterprise metric catalog via the <em>Promote to Global</em> action.
+                </li>
+              </ul>
+            </div>
+          )}
+
+          {activeTab === 'rules' && (
+            <div className="text-[11px] text-slate-300 space-y-1.5 font-sans leading-relaxed">
+              <p className="text-slate-200">
+                Use this tab for operational filtering constraints, assumptions, and analytical boundaries:
+              </p>
+              <ul className="list-disc pl-4 space-y-1 text-slate-400">
+                <li>
+                  <strong className="text-slate-200">Historical data exclusions & migrations</strong>: E.g., <em>"Exclude all transactions prior to January 1, 2024 due to legacy system migration."</em>
+                </li>
+                <li>
+                  <strong className="text-slate-200">Internal test accounts & bot filters</strong>: E.g., <em>"Exclude organization ID 999 or @internal.corp email domains from retention analysis."</em>
+                </li>
+                <li>
+                  <strong className="text-slate-200">Currency or operational assumptions</strong>: E.g., <em>"Apply fixed FX rate of 1 USD = 16,000 IDR for international transactions."</em>
+                </li>
+              </ul>
+            </div>
+          )}
+        </div>
 
         {/* TAB 1: Column Mappings */}
         {activeTab === 'columns' && (
