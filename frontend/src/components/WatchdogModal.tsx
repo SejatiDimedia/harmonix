@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  ShieldAlert,
+  Bell,
   Play,
   Plus,
   RefreshCw,
@@ -260,9 +260,9 @@ export const WatchdogModal: React.FC<WatchdogModalProps> = ({
         isOpen={isOpen}
         onClose={onClose}
         size="4xl"
-        icon={<ShieldAlert className="w-5 h-5 text-rose-400" />}
-        title="Metric Watchdog & Anomaly Alerting"
-        subtitle="Automated threshold monitoring, root-cause diagnosis, and notification routing for data warehouse metrics."
+        icon={<Bell className="w-5 h-5 text-rose-400" />}
+        title="Data Anomaly Alerts"
+        subtitle="Automated threshold monitoring, root-cause diagnosis, and notification routing for warehouse metrics."
         footer={
           <div className="flex items-center justify-between w-full">
             <span className="text-xs text-slate-400">
