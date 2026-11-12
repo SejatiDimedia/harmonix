@@ -164,6 +164,64 @@ async def seed_glossary_if_empty() -> None:
         logger.info("Successfully seeded %d metrics into analytics.metric_glossary.", len(DEFAULT_METRICS))
 
 
+async def promote_to_metric_glossary(
+    metric_name: str,
+    business_definition: str,
+    calculation_formula: str,
+    sql_expression: str = "",
+    relevant_tables: list[str] | None = None,
+) -> dict[str, Any]:
+    """Promote a session-scoped metric or formula to global analytics.metric_glossary (FR-51)."""
+    if not metric_name or not metric_name.strip():
+        raise ValueError("metric_name is required")
+    if not business_definition or not business_definition.strip():
+        raise ValueError("business_definition is required")
+
+    clean_name = metric_name.strip()
+    clean_def = business_definition.strip()
+    clean_formula = calculation_formula.strip() if calculation_formula else clean_def
+    clean_sql = sql_expression.strip() if sql_expression else ""
+    tables = [t.strip() for t in (relevant_tables or []) if t and t.strip()]
+
+    await init_glossary_table()
+    text_to_embed = f"{clean_name}: {clean_def} Formula: {clean_formula}"
+    vec = embedding_engine.embed_text(text_to_embed)
+
+    async with get_db_session() as session:
+        await session.execute(
+            text("""
+                INSERT INTO analytics.metric_glossary 
+                (metric_name, business_definition, calculation_formula, sql_expression, relevant_tables, embedding)
+                VALUES (:name, :definition, :formula, :sql, :tables, :embedding)
+                ON CONFLICT (metric_name) DO UPDATE 
+                SET business_definition = EXCLUDED.business_definition,
+                    calculation_formula = EXCLUDED.calculation_formula,
+                    sql_expression = EXCLUDED.sql_expression,
+                    relevant_tables = EXCLUDED.relevant_tables,
+                    embedding = EXCLUDED.embedding;
+            """),
+            {
+                "name": clean_name,
+                "definition": clean_def,
+                "formula": clean_formula,
+                "sql": clean_sql,
+                "tables": tables,
+                "embedding": str(vec),
+            },
+        )
+        await session.commit()
+        logger.info("Successfully promoted '%s' to analytics.metric_glossary (FR-51).", clean_name)
+
+    return {
+        "status": "promoted",
+        "metric_name": clean_name,
+        "business_definition": clean_def,
+        "calculation_formula": clean_formula,
+        "sql_expression": clean_sql,
+        "relevant_tables": tables,
+    }
+
+
 # ==============================================================================
 # Hybrid Search (Dense Vector + BM25 via Reciprocal Rank Fusion)
 # ==============================================================================

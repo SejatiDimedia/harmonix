@@ -20,6 +20,8 @@ import {
   GoogleAuthStatus,
   GoogleSheetMetadata,
   GoogleSheetLink,
+  CustomContext,
+  SessionContextResponse,
 } from '../types';
 
 export async function getHealth(): Promise<HealthStatus> {
@@ -543,6 +545,58 @@ export async function removeGoogleSheet(sheetLinkId: string): Promise<{ status: 
   if (!res.ok) throw new Error('Failed to remove Google Sheet link');
   return res.json();
 }
+
+export async function fetchSessionContext(sessionId: string): Promise<SessionContextResponse> {
+  const res = await fetch(`/v1/sessions/${encodeURIComponent(sessionId)}/context`);
+  if (!res.ok) throw new Error('Failed to fetch session context');
+  return res.json();
+}
+
+export async function updateSessionContext(sessionId: string, context: CustomContext): Promise<SessionContextResponse> {
+  const res = await fetch(`/v1/sessions/${encodeURIComponent(sessionId)}/context`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ custom_context: context }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: 'Failed to update session context' }));
+    throw new Error(err.detail || 'Failed to update session context');
+  }
+  return res.json();
+}
+
+export async function promoteContextToGlossary(
+  sessionId: string,
+  payload: { metric_name: string; sql_formula?: string; description: string; domain?: string; relevant_tables?: string[] }
+): Promise<any> {
+  const res = await fetch(`/v1/sessions/${encodeURIComponent(sessionId)}/context/promote-glossary`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: 'Failed to promote metric to glossary' }));
+    throw new Error(err.detail || 'Failed to promote metric to glossary');
+  }
+  return res.json();
+}
+
+export async function clarifyTask(
+  taskId: string,
+  payload: { choice: string; context_key?: string; category?: string }
+): Promise<any> {
+  const res = await fetch(`/v1/tasks/${encodeURIComponent(taskId)}/clarify`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: 'Failed to submit clarification' }));
+    throw new Error(err.detail || 'Failed to submit clarification');
+  }
+  return res.json();
+}
+
 
 
 

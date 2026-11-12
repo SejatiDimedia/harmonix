@@ -29,8 +29,12 @@ import {
   importGoogleSheets,
   resyncGoogleSheet,
   removeGoogleSheet,
+  fetchSessionContext,
+  updateSessionContext,
+  promoteContextToGlossary,
+  clarifyTask,
 } from '../services/api';
-import { PinWidgetPayload, UpdateAPIKeysPayload, WatchdogRule } from '../types';
+import { PinWidgetPayload, UpdateAPIKeysPayload, WatchdogRule, CustomContext } from '../types';
 
 export const useHealthQuery = () => {
   return useQuery({
@@ -331,4 +335,49 @@ export const useDisconnectGoogleMutation = (sessionId: string | null) => {
     },
   });
 };
+
+export const useSessionContextQuery = (sessionId: string | null) =>
+  useQuery({
+    queryKey: ['session-context', sessionId],
+    queryFn: () => fetchSessionContext(sessionId!),
+    enabled: !!sessionId,
+    staleTime: 1000 * 30,
+  });
+
+export const useUpdateSessionContextMutation = (sessionId: string | null) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (context: CustomContext) => updateSessionContext(sessionId!, context),
+    onSuccess: (data) => {
+      if (sessionId) {
+        queryClient.setQueryData(['session-context', sessionId], data);
+        queryClient.invalidateQueries({ queryKey: ['session', sessionId] });
+      }
+    },
+  });
+};
+
+export const usePromoteToGlossaryMutation = (sessionId: string | null) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: { metric_name: string; sql_formula?: string; description: string; domain?: string; relevant_tables?: string[] }) =>
+      promoteContextToGlossary(sessionId!, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['metrics'] });
+    },
+  });
+};
+
+export const useClarifyTaskMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ taskId, choice, contextKey, category }: { taskId: string; choice: string; contextKey?: string; category?: string }) =>
+      clarifyTask(taskId, { choice, context_key: contextKey, category }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sessions'] });
+      queryClient.invalidateQueries({ queryKey: ['session-context'] });
+    },
+  });
+};
+
 

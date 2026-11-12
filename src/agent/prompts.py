@@ -1,5 +1,6 @@
 """Standardized system prompts and guidelines for Data Analyst AI Agents (DRY Principle)."""
 
+import re
 from typing import Any
 
 BASE_ANALYST_SYSTEM_PROMPT = """ROLE:
@@ -222,4 +223,105 @@ async def build_analyst_system_prompt(
         except Exception:
             pass
 
+    # 5. Inject Session-Specific Business Context & Column Rules (FR-51 Dynamic Session Context)
+    if session_id:
+        try:
+            from src.agent.state import get_session_custom_context
+            custom_ctx = await get_session_custom_context(session_id)
+            if custom_ctx:
+                session_context_section = format_session_context_for_prompt(custom_ctx)
+                if session_context_section:
+                    sections.append(session_context_section)
+        except Exception:
+            pass
+
     return "".join(sections)
+
+
+def format_session_context_for_prompt(custom_context: dict[str, Any], max_chars: int = 4000) -> str:
+    """Format session-scoped column mappings, formulas, and business rules for prompt injection (FR-51).
+
+    Enforces sanitization against prompt injection and strict budget cap (~1,000 tokens / 4,000 chars)
+    with priority: column_mappings > custom_formulas > business_rules.
+    """
+    if not custom_context or not isinstance(custom_context, dict):
+        return ""
+
+    col_mappings = custom_context.get("column_mappings") or {}
+    custom_formulas = custom_context.get("custom_formulas") or {}
+    business_rules = custom_context.get("business_rules") or []
+
+    if not col_mappings and not custom_formulas and not business_rules:
+        return ""
+
+    def _sanitize(text: Any) -> str:
+        t = str(text or "")
+        t = re.sub(r"(?i)<\/?(?:system|script|im_start|im_end|prompt)[^>]*>", "", t)
+        t = re.sub(r"(?i)ignore\s+(?:all\s+)?(?:prior|previous)\s+instructions", "[FILTERED_INSTRUCTION]", t)
+        t = re.sub(r"[`]{3,}", "```", t)
+        return t.strip()
+
+    lines = [
+        "\n\n# KONTEKS BISNIS & ATURAN KOLOM KHUSUS SESI INI (FR-51 SESSION BUSINESS CONTEXT):",
+        "Konteks di bawah didefinisikan secara khusus oleh pengguna untuk sesi percakapan ini.",
+        "Anda WAJIB memprioritaskan dan mengaplikasikan aturan ini saat menganalisis skema dan merumuskan kueri SQL:"
+    ]
+
+    total_chars = sum(len(l) for l in lines)
+
+    # Priority 1: Column Mappings & Status Codes
+    if col_mappings:
+        col_lines = ["\n## Pemetaan Kolom & Kode Status (Column Mappings):"]
+        for col, info in col_mappings.items():
+            clean_col = _sanitize(col)
+            if isinstance(info, dict):
+                desc = _sanitize(info.get("description", ""))
+                vals = info.get("values", {})
+                val_str = ", ".join(f"'{k}' = \"{_sanitize(v)}\"" for k, v in vals.items()) if isinstance(vals, dict) else ""
+                entry = f"- Kolom `{clean_col}`: {val_str}" if val_str else f"- Kolom `{clean_col}`"
+                if desc:
+                    entry += f" (Keterangan: {desc})"
+            else:
+                entry = f"- Kolom `{clean_col}`: {_sanitize(str(info))}"
+
+            if total_chars + len(entry) < max_chars:
+                col_lines.append(entry)
+                total_chars += len(entry)
+        if len(col_lines) > 1:
+            lines.extend(col_lines)
+
+    # Priority 2: Custom Formulas
+    if custom_formulas and total_chars < max_chars:
+        formula_lines = ["\n## Formula Metrik Khusus (Custom Formulas):"]
+        for name, form_info in custom_formulas.items():
+            clean_name = _sanitize(name)
+            if isinstance(form_info, dict):
+                formula_expr = _sanitize(form_info.get("formula", ""))
+                formula_desc = _sanitize(form_info.get("description", ""))
+                f_entry = f"- Metrik `{clean_name}`: `{formula_expr}`"
+                if formula_desc:
+                    f_entry += f" (Definisi: {formula_desc})"
+            else:
+                f_entry = f"- Metrik `{clean_name}`: `{_sanitize(str(form_info))}`"
+
+            if total_chars + len(f_entry) < max_chars:
+                formula_lines.append(f_entry)
+                total_chars += len(f_entry)
+        if len(formula_lines) > 1:
+            lines.extend(formula_lines)
+
+    # Priority 3: Business Rules
+    if business_rules and total_chars < max_chars:
+        rule_lines = ["\n## Aturan Bisnis Khusus (Business Rules):"]
+        for r in business_rules:
+            clean_r = _sanitize(str(r))
+            r_entry = f"- {clean_r}"
+            if total_chars + len(r_entry) < max_chars:
+                rule_lines.append(r_entry)
+                total_chars += len(r_entry)
+        if len(rule_lines) > 1:
+            lines.extend(rule_lines)
+
+    lines.append("\nPEDOMAN: Jangan pernah mengabaikan atau mengganti pemetaan kolom dan formula di atas saat membuat kueri SQL.")
+    return "\n".join(lines)
+

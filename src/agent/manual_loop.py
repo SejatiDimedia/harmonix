@@ -38,6 +38,7 @@ from src.observability.tracer import AgentTracer
 from src.rag.long_term_memory import retrieve_relevant_memories, store_successful_query
 from src.tools.base import BaseTool
 from src.tools.chart import MakeChartTool
+from src.tools.clarification import RequestClarificationTool
 from src.tools.database import GetSchemaTool, RunSQLTool
 from src.tools.glossary import SearchGlossaryTool
 from src.tools.pii import PIIMasker
@@ -76,6 +77,7 @@ class ManualAgentLoop:
             CalculateTool(),
             MakeChartTool(),
             ScratchpadTool(),
+            RequestClarificationTool(),
         ]
         self.tools: dict[str, BaseTool] = {t.name: t for t in tool_instances}
         self.openai_tools = [t.to_openai_schema() for t in tool_instances]
@@ -610,6 +612,56 @@ class ManualAgentLoop:
                         yield {
                             "event": "approval_required",
                             "data": approval_payload,
+                        }
+                        return
+
+                    # Check if tool requested User Clarification (FR-51)
+                    if isinstance(observation, dict) and observation.get("status") == "CLARIFICATION_REQUIRED":
+                        clarification_payload = {
+                            "task_id": task_id,
+                            "session_id": session_id,
+                            "step": step,
+                            "tool_call_id": tool_call.id,
+                            "question": observation.get("question", ""),
+                            "options": observation.get("options", []),
+                            "context_key": observation.get("context_key", ""),
+                            "category": observation.get("category", "column_mapping"),
+                            "user_query": user_query,
+                        }
+                        self.term_logger.log_thought(
+                            f"[Clarification Needed] {observation.get('question')} | Options: {observation.get('options')}"
+                        )
+                        try:
+                            await save_task_checkpoint(
+                                task_id=task_id,
+                                status=AgentTaskStatus.WAITING_APPROVAL,
+                                current_step=step,
+                                messages=messages,
+                                user_query=user_query,
+                                session_id=session_id,
+                                pending_approval=clarification_payload,
+                                analyst_provider=getattr(self.llm, "provider_name", getattr(self.llm, "provider", None)),
+                                analyst_model=getattr(self.llm, "model", None),
+                            )
+                        except Exception as e:
+                            logger.warning("Clarification checkpoint save failed: %s", e)
+
+                        tracer.end_span(
+                            root_span.span_id,
+                            status=SpanStatus.APPROVAL_REQUIRED,
+                            metadata={"pending_clarification": task_id},
+                        )
+                        await tracer.flush(
+                            status="WAITING_CLARIFICATION",
+                            total_tokens=total_tokens,
+                            prompt_tokens=prompt_tokens,
+                            completion_tokens=completion_tokens,
+                            step_count=step,
+                        )
+
+                        yield {
+                            "event": "clarification_required",
+                            "data": clarification_payload,
                         }
                         return
 

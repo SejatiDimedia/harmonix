@@ -1,8 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
-import { Loader2, Brain, Database, ChevronDown, Copy, Check, Pencil, RotateCcw, FileText, Layers, Square, Zap } from 'lucide-react';
-import { ChatTurn, ChartSpec, TableData } from '../types';
+import { Loader2, Brain, Database, ChevronDown, Copy, Check, Pencil, RotateCcw, FileText, Layers, Square, Zap, HelpCircle } from 'lucide-react';
+import { ChatTurn, ChartSpec, TableData, ClarificationPayload } from '../types';
 import { SQLBox } from './SQLBox';
 import { DataTable } from './DataTable';
 import { DataChart } from './DataChart';
@@ -25,6 +25,7 @@ interface ChatMessageProps {
   onDrillDown?: (prompt: string) => void;
   onPrefillChat?: (text: string) => void;
   onCancel?: () => void;
+  onClarify?: (clarification: ClarificationPayload, choice: string) => void;
 }
 
 function findBestQueryForChart(spec: ChartSpec, queries?: string[]): string | undefined {
@@ -195,6 +196,7 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
   onDrillDown,
   onPrefillChat,
   onCancel,
+  onClarify,
 }) => {
   const [showDataFlow, setShowDataFlow] = useState(false);
   const [copiedQuery, setCopiedQuery] = useState(false);
@@ -415,6 +417,39 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({
                   <Pencil className="w-3 h-3 text-slate-400" />
                   <span>Edit Query</span>
                 </button>
+              )}
+            </div>
+          )}
+
+          {/* Clarification Card (FR-51 Human-in-the-Loop Semantic Clarification) */}
+          {turn.clarification && (
+            <div className="p-4 rounded-xl bg-[#0e1726] border border-sky-500/30 text-xs shadow-md my-2 flex flex-col gap-3">
+              <div className="flex items-center gap-2 text-sky-400 font-semibold font-sans text-xs">
+                <HelpCircle className="w-4 h-4 text-sky-400 shrink-0" />
+                <span>Clarification Required (FR-51)</span>
+                {turn.clarification.category && (
+                  <span className="ml-auto text-[10px] font-mono px-2 py-0.5 rounded bg-sky-950/80 text-sky-300 border border-sky-800/40">
+                    {turn.clarification.category}
+                  </span>
+                )}
+              </div>
+              <div className="text-slate-200 text-xs font-sans leading-relaxed">
+                {turn.clarification.question}
+              </div>
+              {turn.clarification.options && turn.clarification.options.length > 0 && (
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {turn.clarification.options.map((opt, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      disabled={!onClarify}
+                      onClick={() => onClarify?.(turn.clarification!, opt)}
+                      className="px-3 py-1.5 rounded-lg text-xs font-sans font-medium bg-[#14243d] hover:bg-[#1b3154] text-sky-200 hover:text-white border border-sky-500/20 hover:border-sky-400/50 transition cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <span>{opt}</span>
+                    </button>
+                  ))}
+                </div>
               )}
             </div>
           )}

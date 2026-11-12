@@ -5,7 +5,7 @@ import json
 import logging
 import uuid
 from pathlib import Path
-from typing import Literal
+from typing import Literal, Any
 from datetime import datetime, timezone
 from fastapi import FastAPI, HTTPException, UploadFile, File, Response, Security, Depends, status
 from fastapi.security import APIKeyHeader, HTTPBearer, HTTPAuthorizationCredentials
@@ -547,7 +547,19 @@ async def resume_task_stream(
         tool_name = pending_appr.get("tool_name", "run_sql")
         sanitized_query = pending_appr.get("sanitized_query", "")
 
-        if decision == "approved":
+        if "question" in pending_appr and "context_key" in pending_appr:
+            user_choice = (request.feedback if (request and request.feedback) else pending_appr.get("choice")) or "Clarified"
+            obs = {
+                "status": "clarified",
+                "message": f"User clarified choice: '{user_choice}'. Applied to active session context.",
+            }
+            resume_messages.append({
+                "role": "tool",
+                "tool_call_id": tool_call_id,
+                "name": "request_clarification",
+                "content": json.dumps(obs, ensure_ascii=False),
+            })
+        elif decision == "approved":
             sql_tool = RunSQLTool()
             obs = await sql_tool.execute(query=sanitized_query, is_approved=True)
             resume_messages.append({
@@ -715,6 +727,164 @@ async def trigger_session_compaction_endpoint(session_id: str):
     llm = registry.create_analyst_llm()
     result = await force_compact_session(session_id=session_id, llm=llm)
     return result
+
+
+# ==============================================================================
+# Dynamic Session Business Context & Column Clarification (FR-51)
+# ==============================================================================
+
+class CustomContextPayload(BaseModel):
+    column_mappings: dict[str, Any] = Field(default_factory=dict)
+    custom_formulas: dict[str, Any] = Field(default_factory=dict)
+    business_rules: list[str] = Field(default_factory=list)
+
+
+class UpdateSessionContextRequest(BaseModel):
+    custom_context: CustomContextPayload
+
+
+class PromoteToGlossaryRequest(BaseModel):
+    metric_name: str = Field(..., min_length=1, max_length=100)
+    sql_formula: str = Field(default="")
+    description: str = Field(..., min_length=1)
+    domain: str = Field(default="General")
+    relevant_tables: list[str] = Field(default_factory=list)
+
+
+class ClarificationAnswerRequest(BaseModel):
+    choice: str = Field(..., min_length=1)
+    context_key: str = Field(default="")
+    category: str = Field(default="column_mapping")
+
+
+@app.get("/v1/sessions/{session_id}/context", tags=["Session Context (FR-51)"])
+async def get_session_context_endpoint(session_id: str):
+    """Retrieve custom business context, column mappings, and formulas for a session (FR-51)."""
+    from src.agent.state import get_session_custom_context
+    ctx = await get_session_custom_context(session_id=session_id)
+    ctx_str = json.dumps(ctx, ensure_ascii=False)
+    # 1 token ~= 4 chars rule of thumb
+    token_est = max(1, len(ctx_str) // 4)
+    return {
+        "session_id": session_id,
+        "custom_context": ctx,
+        "token_count_estimate": token_est,
+        "max_token_budget": 1000,
+    }
+
+
+@app.put("/v1/sessions/{session_id}/context", tags=["Session Context (FR-51)"])
+async def update_session_context_endpoint(
+    session_id: str,
+    payload: UpdateSessionContextRequest,
+    _auth: bool = Depends(verify_api_auth),
+):
+    """Update or add session-scoped column mappings, formulas, and business rules (FR-51)."""
+    from src.agent.state import save_session_custom_context
+    ctx_dict = payload.custom_context.model_dump()
+    raw_str = json.dumps(ctx_dict, ensure_ascii=False)
+    if len(raw_str) > 4000:
+        raise HTTPException(
+            status_code=400,
+            detail="Session business context exceeds max budget (~1,000 tokens / 4,000 characters). Please condense rules.",
+        )
+    saved = await save_session_custom_context(session_id=session_id, context=ctx_dict)
+    token_est = max(1, len(json.dumps(saved, ensure_ascii=False)) // 4)
+    return {
+        "status": "success",
+        "session_id": session_id,
+        "custom_context": saved,
+        "token_count_estimate": token_est,
+        "max_token_budget": 1000,
+    }
+
+
+@app.post("/v1/sessions/{session_id}/context/promote-glossary", tags=["Session Context (FR-51)"])
+async def promote_context_to_glossary_endpoint(
+    session_id: str,
+    payload: PromoteToGlossaryRequest,
+    _auth: bool = Depends(verify_api_auth),
+):
+    """Promote a session-scoped metric formula to global analytics.metric_glossary (FR-51)."""
+    from src.rag.glossary import promote_to_metric_glossary
+    try:
+        promoted = await promote_to_metric_glossary(
+            metric_name=payload.metric_name,
+            business_definition=payload.description,
+            calculation_formula=payload.sql_formula or payload.description,
+            sql_expression="",
+            relevant_tables=payload.relevant_tables,
+        )
+        return {
+            "status": "promoted",
+            "session_id": session_id,
+            "metric": promoted,
+        }
+    except Exception as e:
+        logger.error("Failed to promote metric to glossary: %s", e)
+        raise HTTPException(status_code=400, detail=f"Promotion failed: {e}")
+
+
+@app.post("/v1/tasks/{task_id}/clarify", tags=["Session Context (FR-51)"])
+async def clarify_task_endpoint(
+    task_id: str,
+    payload: ClarificationAnswerRequest,
+    _auth: bool = Depends(verify_api_auth),
+):
+    """Answer an agent proactive clarification request and auto-save choice to session context (FR-51)."""
+    record = await get_task_record(task_id)
+    if not record:
+        raise HTTPException(status_code=404, detail=f"Task '{task_id}' not found.")
+
+    pending_appr = record.pending_approval or {}
+    session_id = record.session_id
+
+    # Auto-save choice to session custom_context if session_id exists
+    if session_id:
+        from src.agent.state import get_session_custom_context, save_session_custom_context
+        current_ctx = await get_session_custom_context(session_id=session_id)
+        ctx_key = payload.context_key or pending_appr.get("context_key") or "clarified_selection"
+        category = payload.category or pending_appr.get("category", "column_mapping")
+
+        if category == "column_mapping":
+            col_map = current_ctx.get("column_mappings", {})
+            col_map[ctx_key] = {
+                "description": pending_appr.get("question", "User Clarified Column"),
+                "selected_value": payload.choice,
+            }
+            current_ctx["column_mappings"] = col_map
+        elif category == "custom_formula":
+            form_map = current_ctx.get("custom_formulas", {})
+            form_map[ctx_key] = payload.choice
+            current_ctx["custom_formulas"] = form_map
+        else:
+            rules = current_ctx.get("business_rules", [])
+            rules.append(f"{ctx_key}: {payload.choice}")
+            current_ctx["business_rules"] = rules
+
+        await save_session_custom_context(session_id=session_id, context=current_ctx)
+
+    # Update pending approval state to approved with choice
+    pending_appr["decision"] = "approved"
+    pending_appr["choice"] = payload.choice
+    await save_task_checkpoint(
+        task_id=task_id,
+        status=AgentTaskStatus.RESUMED,
+        current_step=record.current_step,
+        messages=record.messages,
+        user_query=record.user_query,
+        session_id=session_id,
+        pending_approval=pending_appr,
+        analyst_provider=record.analyst_provider,
+        analyst_model=record.analyst_model,
+    )
+
+    return {
+        "status": "clarified",
+        "task_id": task_id,
+        "session_id": session_id,
+        "choice": payload.choice,
+    }
 
 
 # ==============================================================================

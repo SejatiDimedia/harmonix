@@ -1,5 +1,5 @@
 import React from 'react';
-import { PanelLeft, Activity, ShieldAlert, FileSpreadsheet } from 'lucide-react';
+import { PanelLeft, Activity, ShieldAlert, FileSpreadsheet, BookOpen } from 'lucide-react';
 import { HealthStatus, ActiveTab } from '../types';
 import { Button } from './ui';
 
@@ -9,10 +9,12 @@ interface NavbarProps {
   isSidebarOpen?: boolean;
   isMetricsOpen?: boolean;
   triggeredWatchdogCount?: number;
+  activeContextCount?: number;
   onToggleSidebar: () => void;
   onOpenMetrics: () => void;
   onOpenWatchdog?: () => void;
   onOpenGoogleSheets?: () => void;
+  onOpenContext?: () => void;
 }
 
 const NavbarComponent: React.FC<NavbarProps> = ({
@@ -21,10 +23,12 @@ const NavbarComponent: React.FC<NavbarProps> = ({
   isSidebarOpen = true,
   isMetricsOpen = false,
   triggeredWatchdogCount = 0,
+  activeContextCount = 0,
   onToggleSidebar,
   onOpenMetrics,
   onOpenWatchdog,
   onOpenGoogleSheets,
+  onOpenContext,
 }) => {
   const getTabTitle = () => {
     switch (activeTab) {
@@ -101,6 +105,24 @@ const NavbarComponent: React.FC<NavbarProps> = ({
             leftIcon={<FileSpreadsheet className="w-4 h-4 text-emerald-400" />}
           >
             <span className="hidden md:inline font-sans text-xs text-slate-300">Sheets</span>
+          </Button>
+        )}
+
+        {onOpenContext && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onOpenContext}
+            aria-label="Session Business Context (FR-51)"
+            title="Session Business Context & Column Clarification (FR-51)"
+            leftIcon={<BookOpen className="w-4 h-4 text-sky-400" />}
+          >
+            <span className="hidden md:inline font-sans text-xs text-slate-300">Context</span>
+            {activeContextCount > 0 && (
+              <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-sky-500/20 text-sky-300 font-mono leading-none">
+                {activeContextCount}
+              </span>
+            )}
           </Button>
         )}
 

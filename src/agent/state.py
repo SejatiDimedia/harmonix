@@ -83,7 +83,7 @@ async def init_task_state_table() -> None:
             );
         """))
 
-        # Table 3: Session Metadata & Custom Titles (FR-33, Session Renaming & FR-14 Compaction)
+        # Table 3: Session Metadata & Custom Titles (FR-33, Session Renaming & FR-14 Compaction, FR-51 Custom Context)
         await session.execute(text("""
             CREATE TABLE IF NOT EXISTS analytics.chat_sessions (
                 session_id VARCHAR(100) PRIMARY KEY,
@@ -91,6 +91,7 @@ async def init_task_state_table() -> None:
                 compacted_summary TEXT,
                 compacted_turn_count INT DEFAULT 0,
                 last_compacted_at TIMESTAMP,
+                custom_context JSONB DEFAULT '{"column_mappings": {}, "custom_formulas": {}, "business_rules": []}'::jsonb,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
@@ -102,6 +103,16 @@ async def init_task_state_table() -> None:
             ADD COLUMN IF NOT EXISTS compacted_summary TEXT,
             ADD COLUMN IF NOT EXISTS compacted_turn_count INT DEFAULT 0,
             ADD COLUMN IF NOT EXISTS last_compacted_at TIMESTAMP;
+        """))
+
+        # Migration: Ensure FR-51 custom_context column and GIN index exist (FR-51)
+        await session.execute(text("""
+            ALTER TABLE analytics.chat_sessions
+            ADD COLUMN IF NOT EXISTS custom_context JSONB DEFAULT '{"column_mappings": {}, "custom_formulas": {}, "business_rules": []}'::jsonb;
+        """))
+        await session.execute(text("""
+            CREATE INDEX IF NOT EXISTS idx_chat_sessions_custom_context
+            ON analytics.chat_sessions USING gin (custom_context);
         """))
 
         # Index on session_id for multi-turn short-term memory lookup (FR-16)
@@ -368,15 +379,21 @@ async def get_session_details(session_id: str) -> dict[str, Any] | None:
         return None
     await init_task_state_table()
     async with get_db_session() as session:
-        # Check custom title and compacted context (FR-14)
+        # Check custom title, compacted context (FR-14), and custom context (FR-51)
         title_res = await session.execute(
-            text("SELECT title, compacted_summary, compacted_turn_count FROM analytics.chat_sessions WHERE session_id = :session_id;"),
+            text("SELECT title, compacted_summary, compacted_turn_count, custom_context FROM analytics.chat_sessions WHERE session_id = :session_id;"),
             {"session_id": session_id},
         )
         custom_row = title_res.fetchone()
         custom_title = custom_row[0] if custom_row else None
         compacted_summary = custom_row[1] if custom_row else None
         compacted_turn_count = custom_row[2] if custom_row else 0
+        raw_context = custom_row[3] if custom_row and custom_row[3] else None
+        custom_context = raw_context if isinstance(raw_context, dict) else (json.loads(raw_context) if raw_context else {
+            "column_mappings": {},
+            "custom_formulas": {},
+            "business_rules": [],
+        })
 
         query = text("""
             SELECT task_id, status, user_query, final_result, analyst_provider, analyst_model, created_at, updated_at, working_memory
@@ -429,10 +446,64 @@ async def get_session_details(session_id: str) -> dict[str, Any] | None:
             "total_turns": len(turns),
             "compacted_summary": compacted_summary,
             "compacted_turn_count": compacted_turn_count or 0,
+            "custom_context": custom_context,
             "active_provider": active_provider,
             "active_model": active_model,
             "turns": turns,
         }
+
+
+async def get_session_custom_context(session_id: str) -> dict[str, Any]:
+    """Retrieve custom business context, column mappings, and formulas for a session (FR-51)."""
+    if not session_id:
+        return {"column_mappings": {}, "custom_formulas": {}, "business_rules": []}
+    await init_task_state_table()
+    async with get_db_session() as session:
+        query = text("""
+            SELECT custom_context
+            FROM analytics.chat_sessions
+            WHERE session_id = :session_id;
+        """)
+        res = await session.execute(query, {"session_id": session_id})
+        row = res.fetchone()
+        if row and row[0]:
+            ctx = row[0] if isinstance(row[0], dict) else json.loads(row[0])
+            return {
+                "column_mappings": ctx.get("column_mappings", {}),
+                "custom_formulas": ctx.get("custom_formulas", {}),
+                "business_rules": ctx.get("business_rules", []),
+            }
+        return {"column_mappings": {}, "custom_formulas": {}, "business_rules": []}
+
+
+async def save_session_custom_context(session_id: str, context: dict[str, Any]) -> dict[str, Any]:
+    """Persist updated custom business context for a session (FR-51)."""
+    if not session_id:
+        raise ValueError("session_id is required")
+
+    cleaned_context = {
+        "column_mappings": context.get("column_mappings", {}) if isinstance(context.get("column_mappings"), dict) else {},
+        "custom_formulas": context.get("custom_formulas", {}) if isinstance(context.get("custom_formulas"), dict) else {},
+        "business_rules": context.get("business_rules", []) if isinstance(context.get("business_rules"), list) else [],
+    }
+
+    await init_task_state_table()
+    async with get_db_session() as session:
+        query = text("""
+            INSERT INTO analytics.chat_sessions (session_id, title, custom_context, updated_at)
+            VALUES (:session_id, 'Percakapan', :custom_context, CURRENT_TIMESTAMP)
+            ON CONFLICT (session_id)
+            DO UPDATE SET 
+                custom_context = :custom_context,
+                updated_at = CURRENT_TIMESTAMP;
+        """)
+        await session.execute(query, {
+            "session_id": session_id,
+            "custom_context": json.dumps(cleaned_context),
+        })
+        await session.commit()
+        logger.info("Saved FR-51 custom business context for session %s.", session_id)
+        return cleaned_context
 
 
 async def get_session_compacted_summary(session_id: str) -> tuple[str | None, int]:

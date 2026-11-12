@@ -168,7 +168,39 @@ export interface ChatTurn {
   memories_recalled?: LongTermMemoryItem[];
   working_memory?: Record<string, string>;
   execution_plan?: ExecutionPlan;
+  clarification?: ClarificationPayload;
   created_at?: string;
+}
+
+export interface ColumnMappingItem {
+  description?: string;
+  values?: Record<string, string>;
+  selected_value?: string;
+}
+
+export interface CustomContext {
+  column_mappings: Record<string, ColumnMappingItem | string>;
+  custom_formulas: Record<string, string | { formula: string; description?: string }>;
+  business_rules: string[];
+}
+
+export interface SessionContextResponse {
+  session_id: string;
+  custom_context: CustomContext;
+  token_count_estimate: number;
+  max_token_budget: number;
+}
+
+export interface ClarificationPayload {
+  task_id: string;
+  session_id?: string;
+  step?: number;
+  tool_call_id?: string;
+  question: string;
+  options: string[];
+  context_key: string;
+  category: string;
+  user_query?: string;
 }
 
 export interface ChatSessionDetail {
@@ -177,6 +209,7 @@ export interface ChatSessionDetail {
   total_turns: number;
   compacted_summary?: string | null;
   compacted_turn_count?: number;
+  custom_context?: CustomContext;
   active_provider?: string;
   active_model?: string;
   turns: ChatTurn[];
