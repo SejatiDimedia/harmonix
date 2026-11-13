@@ -50,6 +50,10 @@ class Settings(BaseSettings):
         default="postgresql+asyncpg://harmonix_user:harmonix_pass@127.0.0.1:5433/harmonix_db",
         description="Async SQLAlchemy database connection URL",
     )
+    database_readonly_url: str | None = Field(
+        default=None,
+        description="Optional dedicated read-only database connection URL for Text-to-SQL run_sql tool (P1 Security)",
+    )
 
     # LLM Provider settings (Zero-cost options)
     llm_provider: Literal["ollama", "gemini", "groq", "openrouter", "9router", "mock"] = Field(

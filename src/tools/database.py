@@ -7,7 +7,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import settings
-from src.db.connection import get_db_session
+from src.db.connection import get_db_session, get_readonly_db_session
 from src.tools.base import BaseTool
 from src.tools.guardrails import SQLGuardrail, SQLValidationError, QueryRiskAssessment
 
@@ -76,7 +76,7 @@ class GetSchemaTool(BaseTool):
         seen = set()
         resolved_tables = [t for t in raw_tables if not (t.lower() in seen or seen.add(t.lower()))]
 
-        async with get_db_session() as session:
+        async with get_readonly_db_session() as session:
             # 1. If no specific tables requested, return overview of all tables
             if not resolved_tables:
                 query = text("""
@@ -226,7 +226,7 @@ class RunSQLTool(BaseTool):
         timeout_ms = int(settings.sql_execution_timeout_seconds * 1000)
         start_time = time.perf_counter()
 
-        async with get_db_session() as session:
+        async with get_readonly_db_session() as session:
             try:
                 # Set local statement timeout for this transaction
                 await session.execute(text(f"SET LOCAL statement_timeout = {timeout_ms};"))

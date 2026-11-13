@@ -37,6 +37,30 @@ async_session_factory = async_sessionmaker(
     expire_on_commit=False,
 )
 
+# Dedicated Read-Only Engine & Factory for Text-to-SQL (P1 Least-Privilege Role Separation)
+readonly_url = settings.database_readonly_url or settings.database_url
+readonly_engine: AsyncEngine = (
+    engine
+    if readonly_url == settings.database_url
+    else create_async_engine(
+        readonly_url,
+        echo=False,
+        poolclass=NullPool if use_null_pool else None,
+        pool_pre_ping=True,
+        **({} if use_null_pool else {"pool_size": 5, "max_overflow": 10}),
+    )
+)
+
+async_readonly_session_factory = (
+    async_session_factory
+    if readonly_engine is engine
+    else async_sessionmaker(
+        bind=readonly_engine,
+        class_=AsyncSession,
+        expire_on_commit=False,
+    )
+)
+
 
 @asynccontextmanager
 async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
@@ -47,6 +71,18 @@ async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
         except Exception as e:
             await session.rollback()
             logger.error("Database session rolled back due to error: %s", e)
+            raise
+
+
+@asynccontextmanager
+async def get_readonly_db_session() -> AsyncGenerator[AsyncSession, None]:
+    """Provide a dedicated read-only async database session for analytical queries (P1 Security)."""
+    async with async_readonly_session_factory() as session:
+        try:
+            yield session
+        except Exception as e:
+            await session.rollback()
+            logger.error("Readonly database session rolled back due to error: %s", e)
             raise
 
 
