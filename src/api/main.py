@@ -70,7 +70,7 @@ from src.dashboard.manager import (
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifecycle events: validate production security, seed metric glossary, init state tables, traces table, dashboard table, and watchdog on startup."""
-    # 0. Production Security Hardening & Fail-Fast Validation (P0 Security)
+    # 0. Production Security Hardening & Fail-Fast Validation (P0/P2 Security)
     if settings.app_env.lower() == "production":
         if not settings.api_auth_key or len(settings.api_auth_key.strip()) < 16:
             raise RuntimeError(
@@ -82,6 +82,9 @@ async def lifespan(app: FastAPI):
             logger.warning(
                 "SECURITY WARNING: 'ADMIN_API_KEY' is not explicitly set in production; falling back to 'API_AUTH_KEY'."
             )
+
+    from src.ingestion.google_sheets import validate_google_token_encryption_key
+    validate_google_token_encryption_key()
 
     try:
         if await check_db_health():

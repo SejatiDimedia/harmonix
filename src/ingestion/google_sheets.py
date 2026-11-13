@@ -89,13 +89,49 @@ class GoogleSheetLinkSummary(BaseModel):
     row_count_total: int
 
 
+_fallback_warned = False
+
+
+def validate_google_token_encryption_key() -> None:
+    """Validate Google OAuth token encryption configuration for production readiness (P2 Security)."""
+    key = settings.google_token_encryption_key
+    is_prod = settings.app_env.lower() == "production"
+    is_google_configured = bool(settings.google_client_id)
+
+    if key:
+        try:
+            Fernet(key.encode("utf-8"))
+        except Exception as e:
+            raise ValueError(
+                f"Invalid 'GOOGLE_TOKEN_ENCRYPTION_KEY' configuration: {e}. "
+                "Expected a valid 32-byte urlsafe base64 Fernet key."
+            ) from e
+    elif is_prod and is_google_configured:
+        raise RuntimeError(
+            "FATAL SECURITY CONFIGURATION ERROR: In production mode with Google integration enabled "
+            "('GOOGLE_CLIENT_ID' is set), 'GOOGLE_TOKEN_ENCRYPTION_KEY' must be explicitly configured "
+            "with a dedicated 32-byte urlsafe base64 Fernet key. Deriving key from database URL is strictly forbidden in production."
+        )
+
+
 def _get_cipher() -> Fernet:
     """Obtain symmetric Fernet cipher using configured key or deterministic hash."""
+    global _fallback_warned
     if settings.google_token_encryption_key:
         try:
             return Fernet(settings.google_token_encryption_key.encode("utf-8"))
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error("Configured GOOGLE_TOKEN_ENCRYPTION_KEY is invalid: %s", e)
+            if settings.app_env.lower() == "production":
+                raise
+
+    if not _fallback_warned:
+        logger.warning(
+            "SECURITY WARNING: 'GOOGLE_TOKEN_ENCRYPTION_KEY' is not configured. "
+            "Using deterministic key derived from database URL salt. For production security, generate and set a dedicated Fernet key."
+        )
+        _fallback_warned = True
+
     # Deterministically derive 32-byte key from database URL salt
     derived = hashlib.sha256((settings.database_url + "harmonix_google_oauth_salt_2026").encode("utf-8")).digest()
     return Fernet(base64.urlsafe_b64encode(derived))
