@@ -1,7 +1,8 @@
 """Configuration management using Pydantic Settings."""
 
-from typing import Literal
-from pydantic import Field, AliasChoices
+from typing import Literal, Any
+import json
+from pydantic import Field, AliasChoices, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -30,6 +31,20 @@ class Settings(BaseSettings):
         ],
         description="Allowed origins for CORS (no wildcard permitted when credentials enabled)",
     )
+
+    @field_validator("cors_allowed_origins", mode="before")
+    @classmethod
+    def parse_cors_origins(cls, v: Any) -> list[str]:
+        """Support comma-separated string, JSON array, or list of origins for CORS."""
+        if isinstance(v, str):
+            v_strip = v.strip()
+            if v_strip.startswith("[") and v_strip.endswith("]"):
+                try:
+                    return json.loads(v_strip)
+                except Exception:
+                    pass
+            return [o.strip() for o in v_strip.split(",") if o.strip()]
+        return v
     api_auth_key: str | None = Field(
         default=None,
         description="Optional API key for endpoint security (X-API-Key or Bearer token)",

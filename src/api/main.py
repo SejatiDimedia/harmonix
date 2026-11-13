@@ -82,6 +82,20 @@ async def lifespan(app: FastAPI):
             logger.warning(
                 "SECURITY WARNING: 'ADMIN_API_KEY' is not explicitly set in production; falling back to 'API_AUTH_KEY'."
             )
+        # Validate CORS origins: disallow wildcard with credentials and warn if only localhost
+        if "*" in settings.cors_allowed_origins:
+            raise RuntimeError(
+                "FATAL SECURITY CONFIGURATION ERROR: Wildcard origin '*' is strictly forbidden "
+                "in CORS configuration when 'allow_credentials=True'. Specify explicit production domains."
+            )
+        is_all_local = all(
+            "localhost" in o or "127.0.0.1" in o for o in settings.cors_allowed_origins
+        )
+        if is_all_local:
+            logger.warning(
+                "SECURITY WARNING: Production server is configured with localhost CORS origins only. "
+                "Update 'CORS_ALLOWED_ORIGINS' in your environment to match your production frontend domain."
+            )
 
     from src.ingestion.google_sheets import validate_google_token_encryption_key
     validate_google_token_encryption_key()
