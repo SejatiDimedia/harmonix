@@ -210,5 +210,23 @@ class Settings(BaseSettings):
         description="32-byte urlsafe base64 key for AES Fernet encryption of OAuth tokens",
     )
 
+    # API Security & Rate Limiting settings (P1 Security)
+    rate_limit_enabled: bool = Field(
+        default=True,
+        description="Enable rate limiting on intensive API endpoints (/chat, /upload, /batch)",
+    )
+    rate_limit_chat_per_minute: int = Field(
+        default=30,
+        description="Maximum chat/agent stream requests per client IP/key per minute",
+    )
+    rate_limit_upload_per_minute: int = Field(
+        default=10,
+        description="Maximum file upload requests per client IP/key per minute",
+    )
+    rate_limit_batch_per_minute: int = Field(
+        default=10,
+        description="Maximum batch analysis submissions per client IP/key per minute",
+    )
+
 
 settings = Settings()

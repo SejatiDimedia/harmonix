@@ -47,6 +47,7 @@ from src.llm.keys_manager import (
 )
 from src.rag.glossary import seed_glossary_if_empty
 from src.tools.database import RunSQLTool
+from src.api.rate_limiter import rate_limit_chat, rate_limit_upload, rate_limit_batch
 
 logging.basicConfig(level=settings.log_level)
 logger = logging.getLogger("harmonix.api")
@@ -314,6 +315,7 @@ async def get_metrics():
 async def chat_stream(
     request: ChatRequest,
     _auth: bool = Depends(verify_api_auth),
+    _rate_limit: None = Depends(rate_limit_chat),
 ):
     """Send question to the agent and receive real-time SSE stream events:
 
@@ -915,6 +917,7 @@ from src.batch.engine import BatchProcessingEngine, CreateBatchRequest
 async def submit_batch_job(
     payload: CreateBatchRequest,
     _auth: bool = Depends(verify_api_auth),
+    _rate_limit: None = Depends(rate_limit_batch),
 ):
     """Submit a bulk batch of natural language analytical questions for background processing (FR-42)."""
     record = await BatchProcessingEngine.create_batch(
@@ -1115,6 +1118,7 @@ async def upload_files_to_session(
     session_id: str,
     files: list[UploadFile] = File(...),
     _auth: bool = Depends(verify_api_auth),
+    _rate_limit: None = Depends(rate_limit_upload),
 ):
     """Upload one or more CSV/Excel files and convert each sheet into dynamic PostgreSQL tables."""
     from src.ingestion.excel_csv_parser import (
