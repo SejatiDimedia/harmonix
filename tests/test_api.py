@@ -419,6 +419,47 @@ async def test_models_keys_production_protection():
 
 
 @pytest.mark.asyncio
+async def test_production_auth_misconfiguration_protection():
+    """Verify production mode rejects requests with 500 if API_AUTH_KEY is missing (P0 Security)."""
+    from src.config import settings
+
+    original_env = settings.app_env
+    original_key = settings.api_auth_key
+    try:
+        settings.app_env = "production"
+        settings.api_auth_key = None
+
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            resp = await client.get("/v1/models/keys")
+            assert resp.status_code == 500
+            assert "production mode without 'API_AUTH_KEY'" in resp.json()["detail"]
+    finally:
+        settings.app_env = original_env
+        settings.api_auth_key = original_key
+
+
+@pytest.mark.asyncio
+async def test_production_lifespan_fail_fast():
+    """Verify server lifespan raises RuntimeError if starting in production without strong API_AUTH_KEY."""
+    from src.config import settings
+    from src.api.main import lifespan
+
+    original_env = settings.app_env
+    original_key = settings.api_auth_key
+    try:
+        settings.app_env = "production"
+        settings.api_auth_key = "short"  # < 16 chars
+
+        with pytest.raises(RuntimeError) as exc_info:
+            async with lifespan(app):
+                pass
+        assert "FATAL SECURITY CONFIGURATION ERROR" in str(exc_info.value)
+    finally:
+        settings.app_env = original_env
+        settings.api_auth_key = original_key
+
+
+@pytest.mark.asyncio
 async def test_models_keys_format_validation():
     """Verify API key submission performs format validation (P0-4)."""
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:

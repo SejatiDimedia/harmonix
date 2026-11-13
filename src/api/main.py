@@ -68,7 +68,20 @@ from src.dashboard.manager import (
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Lifecycle events: seed metric glossary, init state tables, traces table, dashboard table, and watchdog on startup."""
+    """Lifecycle events: validate production security, seed metric glossary, init state tables, traces table, dashboard table, and watchdog on startup."""
+    # 0. Production Security Hardening & Fail-Fast Validation (P0 Security)
+    if settings.app_env.lower() == "production":
+        if not settings.api_auth_key or len(settings.api_auth_key.strip()) < 16:
+            raise RuntimeError(
+                "FATAL SECURITY CONFIGURATION ERROR: In production mode ('APP_ENV=production'), "
+                "'API_AUTH_KEY' must be configured with a strong key (at least 16 characters). "
+                "Server startup aborted to prevent exposing unprotected API endpoints."
+            )
+        if not settings.admin_api_key:
+            logger.warning(
+                "SECURITY WARNING: 'ADMIN_API_KEY' is not explicitly set in production; falling back to 'API_AUTH_KEY'."
+            )
+
     try:
         if await check_db_health():
             await seed_glossary_if_empty()
@@ -126,6 +139,11 @@ async def verify_api_auth(
     """Verify standard API authentication via X-API-Key header or Bearer token."""
     expected_key = settings.api_auth_key
     if not expected_key:
+        if settings.app_env.lower() == "production":
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Security misconfiguration: Server is running in production mode without 'API_AUTH_KEY' configured.",
+            )
         return True  # If no auth key is configured (dev baseline), allow access
 
     token = api_key or (credentials.credentials if credentials else None)
